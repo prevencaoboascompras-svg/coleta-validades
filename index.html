@@ -389,7 +389,7 @@ body{
 </head>
 <body>
 
-<div class="offline-bar" id="offlineBar">📡 Sem conexão — os registros serão salvos localmente</div>
+<div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> Sem conexão — os registros serão salvos localmente</div>
 
 <!-- HEADER -->
 <header class="hdr">
@@ -398,7 +398,7 @@ body{
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
-    ⚙️
+    <i class="ti ti-settings"></i>
     <span class="pend-dot" id="pendDot"></span>
   </button>
 </header>
@@ -416,14 +416,14 @@ body{
 
   <!-- Idle — irmão do scannerView, posição absolute sobre ele -->
   <div class="scan-state" id="stateIdle">
-    <div class="scan-state-icon">📷</div>
+    <div class="scan-state-icon"><i class="ti ti-camera"></i></div>
     <div class="scan-state-txt">Toque para ativar a câmera<br>e bipar o código de barras</div>
     <button class="scan-start-btn" onclick="iniciarScanner()">Ativar Câmera</button>
   </div>
 
   <!-- Error -->
   <div class="scan-state" id="stateErro" style="display:none">
-    <div class="scan-state-icon">🚫</div>
+    <div class="scan-state-icon"><i class="ti ti-ban"></i></div>
     <div class="scan-state-txt" id="erroMsg">Câmera indisponível</div>
     <button class="scan-start-btn" onclick="iniciarScanner()">Tentar novamente</button>
   </div>
@@ -435,7 +435,7 @@ body{
 <div class="code-row">
   <span class="barcode-icon">▌▌▌▌▌▌</span>
   <span class="code-val empty" id="codeDisplay">Aguardando leitura…</span>
-  <button class="rescan-btn" id="rescanBtn" onclick="toggleManual()">✏️ manual</button>
+  <button class="rescan-btn" id="rescanBtn" onclick="toggleManual()"><i class="ti ti-pencil"></i> manual</button>
 </div>
 
 <!-- MANUAL INPUT -->
@@ -449,36 +449,36 @@ body{
 <div class="form-body">
 
   <div>
-    <div class="field-lbl">📅 Data de Validade</div>
+    <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
     <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
-      <span class="dt-icon">📅</span>
+      <span class="dt-icon"><i class="ti ti-calendar"></i></span>
       <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
-      <span style="color:var(--tx2);font-size:13px">▼</span>
+      <span style="color:var(--tx2);font-size:13px"><i class="ti ti-chevron-down"></i></span>
     </div>
     <!-- campo hidden para compatibilidade com o resto do código -->
     <input type="hidden" id="fValidade">
   </div>
 
   <div>
-    <div class="field-lbl">🏪 Setor</div>
+    <div class="field-lbl"><i class="ti ti-building-store"></i> Setor</div>
     <select class="field-select" id="fSetor">
       <option value="">Selecione o setor…</option>
-      <option value="Açougue">🥩 Açougue</option>
-      <option value="Bebidas">🍺 Bebidas</option>
-      <option value="Congelados">🧊 Congelados</option>
-      <option value="FLV">🥦 FLV</option>
-      <option value="Frios">🧀 Frios</option>
-      <option value="Laticínios">🥛 Laticínios</option>
-      <option value="Outros">📦 Outros</option>
-      <option value="Perfumaria">🧴 Perfumaria</option>
-      <option value="Pet">🐾 Pet</option>
-      <option value="Seca">🛒 Seca</option>
-      <option value="Seca doce">🍫 Seca Doce</option>
+      <option value="Açougue">Açougue</option>
+      <option value="Bebidas">Bebidas</option>
+      <option value="Congelados">Congelados</option>
+      <option value="FLV">FLV</option>
+      <option value="Frios">Frios</option>
+      <option value="Laticínios">Laticínios</option>
+      <option value="Outros">Outros</option>
+      <option value="Perfumaria">Perfumaria</option>
+      <option value="Pet">Pet</option>
+      <option value="Seca">Seca</option>
+      <option value="Seca doce">Seca Doce</option>
     </select>
   </div>
 
   <div>
-    <div class="field-lbl">📦 Quantidade</div>
+    <div class="field-lbl"><i class="ti ti-package"></i> Quantidade</div>
     <div class="qty-row">
       <button class="qty-btn" onclick="alterarQty(-1)">−</button>
       <div class="qty-divider"></div>
@@ -489,7 +489,7 @@ body{
   </div>
 
   <button class="submit-btn" id="submitBtn" onclick="registrar()">
-    <span id="submitIcon">✓</span>
+    <span id="submitIcon"><i class="ti ti-check"></i></span>
     <span id="submitTxt">REGISTRAR VALIDADE</span>
   </button>
 
@@ -512,10 +512,10 @@ body{
   <div class="modal-box">
     <div class="modal-title">
       Configurações
-      <button class="modal-close" onclick="fecharConfig()">✕</button>
+      <button class="modal-close" onclick="fecharConfig()"><i class="ti ti-x"></i></button>
     </div>
 
-    <label class="modal-lbl">👤 Seu E-mail (quem está coletando)</label>
+    <label class="modal-lbl"><i class="ti ti-user"></i> Seu E-mail (quem está coletando)</label>
     <input type="email" class="modal-inp" id="cfgEmail"
       placeholder="seuemail@gmail.com">
 
@@ -524,7 +524,7 @@ body{
       placeholder="https://script.google.com/macros/s/…/exec">
 
     <button class="resend-btn" id="resendBtn" onclick="reenviarPendentes()">
-      📤 Reenviar registros pendentes (<span id="resendCount">0</span>)
+      <i class="ti ti-upload"></i> Reenviar registros pendentes (<span id="resendCount">0</span>)
     </button>
 
     <div class="modal-divider"></div>
@@ -557,20 +557,15 @@ body{
 <!-- WELCOME / PRIMEIRO USO -->
 <div class="welcome-modal" id="welcomeModal">
   <div class="welcome-box">
-    <div class="welcome-logo">🛒</div>
+    <div class="welcome-logo"><i class="ti ti-shopping-cart"></i></div>
     <div class="welcome-title">Coleta de Validades</div>
     <div class="welcome-sub">Boas Compras — configure seu acesso<br>para começar a registrar produtos</div>
     <div class="welcome-field">
-      <label class="welcome-lbl">👤 Seu e-mail</label>
+      <label class="welcome-lbl"><i class="ti ti-user"></i> Seu e-mail</label>
       <input type="email" class="welcome-inp" id="wEmail"
         placeholder="seuemail@boascompras.com.br" autocomplete="email">
     </div>
-    <div class="welcome-field">
-      <label class="welcome-lbl">🔗 URL do Apps Script</label>
-      <input type="url" class="welcome-inp" id="wUrl"
-        placeholder="https://script.google.com/macros/s/…/exec">
-    </div>
-    <button class="welcome-btn" onclick="salvarWelcome()">✓ Começar</button>
+    <button class="welcome-btn" onclick="salvarWelcome()"><i class="ti ti-check"></i> Começar</button>
     <span class="welcome-skip" onclick="fecharWelcome()">Configurar depois</span>
   </div>
 </div>
@@ -584,12 +579,33 @@ var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
 
-function loadCfg() { return JSON.parse(localStorage.getItem(K_CFG)  || '{}'); }
-function saveCfg(o){ localStorage.setItem(K_CFG,  JSON.stringify(o)); }
-function loadHist(){ return JSON.parse(localStorage.getItem(K_HIST) || '[]'); }
-function saveHist(a){ localStorage.setItem(K_HIST, JSON.stringify(a)); }
-function loadPend(){ return JSON.parse(localStorage.getItem(K_PEND) || '[]'); }
-function savePend(a){ localStorage.setItem(K_PEND, JSON.stringify(a)); }
+// URL padrão do Apps Script (já configurada para o usuário)
+var DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwjsogX93Xxfb5jyFy1IqknZ7lk2OOaOOG_oOhpGdKETgZgIkTrZOBY36_UzS35Ns8s/exec';
+
+// Fallback em memória caso localStorage não esteja disponível
+// (ex.: iframe sandbox, modo privado restrito). Sem isso, qualquer
+// onclick que toca em loadCfg/saveCfg lança SecurityError e o botão
+// parece "não clicável".
+var _memStore = {};
+var _hasLS = (function(){
+  try { var k='__t'+Date.now(); localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }
+  catch(e){ return false; }
+})();
+function _get(k, def){
+  try { return _hasLS ? (localStorage.getItem(k) || def) : (_memStore[k] || def); }
+  catch(e){ return _memStore[k] || def; }
+}
+function _set(k, v){
+  try { if (_hasLS) localStorage.setItem(k, v); else _memStore[k] = v; }
+  catch(e){ _memStore[k] = v; }
+}
+
+function loadCfg() { try { var c = JSON.parse(_get(K_CFG,  '{}')); if (!c.url) c.url = DEFAULT_URL; return c; } catch(e){ return { url: DEFAULT_URL }; } }
+function saveCfg(o){ _set(K_CFG,  JSON.stringify(o)); }
+function loadHist(){ try { return JSON.parse(_get(K_HIST, '[]')); } catch(e){ return []; } }
+function saveHist(a){ _set(K_HIST, JSON.stringify(a)); }
+function loadPend(){ try { return JSON.parse(_get(K_PEND, '[]')); } catch(e){ return []; } }
+function savePend(a){ _set(K_PEND, JSON.stringify(a)); }
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
@@ -810,7 +826,7 @@ function exibirCodigo(code) {
       el.onclick = function() { resetCodigo(); iniciarScanner(); };
       // Troca botão manual por "reescanear"
       var btn = document.getElementById('rescanBtn');
-      btn.textContent = '🔄 outro';
+      btn.innerHTML = '<i class="ti ti-refresh"></i> outro';
       btn.onclick = function() { resetCodigo(); iniciarScanner(); };
     }
   }, 30);
@@ -825,7 +841,7 @@ function resetCodigo() {
   el.style.cursor = '';
   el.title = '';
   var btn = document.getElementById('rescanBtn');
-  btn.textContent = '✏️ manual';
+  btn.innerHTML = '<i class="ti ti-pencil"></i> manual';
   btn.onclick = toggleManual;
 }
 
@@ -881,7 +897,7 @@ function registrar() {
   if (!codigo)  { mostrarToast('Escaneie ou informe o código de barras', 'err'); return; }
   if (!valRaw)  { mostrarToast('Informe a data de validade', 'err'); return; }
   if (!setor)   { mostrarToast('Selecione o setor', 'err'); return; }
-  if (!email)   { mostrarToast('⚙️ Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
+  if (!email)   { mostrarToast('Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
 
   // Já está em DD/MM/YYYY (vem do drum picker)
   var validade = valRaw;
@@ -902,24 +918,24 @@ function registrar() {
   // UI loading
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
-  document.getElementById('submitIcon').textContent = '⏳';
+  document.getElementById('submitIcon').innerHTML = '<i class="ti ti-loader-2"></i>';
   document.getElementById('submitTxt').textContent  = 'ENVIANDO…';
 
   enviar(dados)
     .then(function() {
       registrarHistorico(dados, 'ok');
-      mostrarToast('✓ Registrado com sucesso!', 'ok');
+      mostrarToast('Registrado com sucesso!', 'ok');
       resetAposEnvio();
     })
     .catch(function() {
       salvarPendente(dados);
       registrarHistorico(dados, 'pend');
-      mostrarToast('⚠️ Salvo localmente — sem conexão', 'warn');
+      mostrarToast('Salvo localmente — sem conexão', 'warn');
       resetAposEnvio();
     })
     .finally(function() {
       btn.disabled = false;
-      document.getElementById('submitIcon').textContent = '✓';
+      document.getElementById('submitIcon').innerHTML = '<i class="ti ti-check"></i>';
       document.getElementById('submitTxt').textContent  = 'REGISTRAR VALIDADE';
     });
 }
@@ -978,7 +994,7 @@ async function reenviarPendentes() {
 
   if (fail === 0) {
     savePend([]);
-    mostrarToast('✓ ' + ok + ' registro(s) enviado(s)!', 'ok');
+    mostrarToast(ok + ' registro(s) enviado(s)!', 'ok');
   } else {
     mostrarToast(ok + ' enviados, ' + fail + ' falharam', 'err');
   }
@@ -997,9 +1013,11 @@ function atualizarPendUI() {
 //  HISTORY
 // ═══════════════════════════════════════════════════════════
 var SETOR_EMOJI = {
-  Acougue:'🥩', Bebidas:'🍺', Congelados:'🧊', FLV:'🥦',
-  Frios:'🧀', Laticinios:'🥛', Outros:'📦', Pet:'🐾',
-  Seca:'🛒', 'Seca doce':'🍫'
+  'Açougue':'<i class="ti ti-meat"></i>', Acougue:'<i class="ti ti-meat"></i>',
+  Bebidas:'<i class="ti ti-beer"></i>', Congelados:'<i class="ti ti-snowflake"></i>', FLV:'<i class="ti ti-leaf"></i>',
+  Frios:'<i class="ti ti-cheese"></i>', 'Laticínios':'<i class="ti ti-milk"></i>', Laticinios:'<i class="ti ti-milk"></i>',
+  Outros:'<i class="ti ti-package"></i>', Perfumaria:'<i class="ti ti-spray"></i>', Pet:'<i class="ti ti-paw"></i>',
+  Seca:'<i class="ti ti-shopping-cart"></i>', 'Seca doce':'<i class="ti ti-candy"></i>'
 };
 
 function registrarHistorico(dados, status) {
@@ -1017,14 +1035,14 @@ function renderHistorico() {
     return;
   }
   list.innerHTML = arr.slice(0, 10).map(function(item) {
-    var emoji  = SETOR_EMOJI[item.setor] || '📦';
-    var status = item.status === 'ok' ? '✅' : item.status === 'pend' ? '⏳' : '❌';
+    var emoji  = SETOR_EMOJI[item.setor] || '<i class="ti ti-package"></i>';
+    var status = item.status === 'ok' ? '<i class="ti ti-circle-check"></i>' : item.status === 'pend' ? '<i class="ti ti-loader-2"></i>' : '<i class="ti ti-circle-x"></i>';
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
     return '<div class="hist-item">'
       + '<div style="flex:1;min-width:0">'
       +   '<div class="hist-code">' + item.codigo + '</div>'
-      +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;📅 ' + item.validade + '&nbsp;•&nbsp;x' + item.quantidade + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
+      +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;x' + item.quantidade + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
       + '</div>'
       + '<div class="hist-status">' + status + '</div>'
       + '</div>';
@@ -1272,39 +1290,31 @@ function confirmarDrum() {
 // ═══════════════════════════════════════════════════════════
 function verificarPrimeiroUso() {
   var cfg = loadCfg();
-  if (!cfg.email || !cfg.url) {
-    // Pré-preencher se tiver parcialmente
-    if (cfg.email) document.getElementById('wEmail').value = cfg.email;
-    if (cfg.url)   document.getElementById('wUrl').value   = cfg.url;
+  // URL já vem padrão via DEFAULT_URL — só precisamos do e-mail
+  if (!cfg.email) {
     document.getElementById('welcomeModal').classList.add('open');
   }
 }
 
 function salvarWelcome() {
   var email = document.getElementById('wEmail').value.trim().toLowerCase();
-  var url   = document.getElementById('wUrl').value.trim();
 
   if (!email) {
     document.getElementById('wEmail').style.borderColor = 'var(--err)';
     document.getElementById('wEmail').focus();
     return;
   }
-  if (!url) {
-    document.getElementById('wUrl').style.borderColor = 'var(--err)';
-    document.getElementById('wUrl').focus();
-    return;
-  }
 
   var cfg = loadCfg();
   cfg.email = email;
-  cfg.url   = url;
+  if (!cfg.url) cfg.url = DEFAULT_URL;
   saveCfg(cfg);
 
   // Atualizar header
-  document.querySelector('.hdr-sub').textContent = '👤 ' + email;
+  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + email;
 
   fecharWelcome();
-  mostrarToast('✅ Configuração salva!', 'ok');
+  mostrarToast('Configuração salva!', 'ok');
 }
 
 function fecharWelcome() {
@@ -1321,7 +1331,7 @@ function fecharWelcome() {
   if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
   // Mostrar email no header se configurado
   if (cfg.email) {
-    document.querySelector('.hdr-sub').textContent = '👤 ' + cfg.email;
+    document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + cfg.email;
   }
 
   renderHistorico();
