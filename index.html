@@ -60,11 +60,8 @@ body{
   height:min(240px, 40vw);min-height:180px;
   margin:16px;border-radius:var(--r);border:1px solid var(--bd);
 }
-#scannerView{width:100%;height:100%}
-#scannerView video{width:100%!important;height:100%!important;object-fit:cover!important;display:block}
-#scannerView > div{width:100%!important;height:100%!important;border:none!important;padding:0!important}
-#scannerView canvas{display:none!important}
-#scannerView img{display:none!important}
+#scannerView{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+#scannerView video{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;position:absolute;inset:0}
 
 /* corner brackets */
 .corner{position:absolute;width:26px;height:26px;border-color:var(--accent);border-style:solid}
@@ -287,7 +284,8 @@ body{
 
 <!-- SCANNER -->
 <div class="scan-wrap" id="scanWrap">
-  <div id="scannerView"></div>
+  <!-- video vai aqui via JS -->
+  <div id="scannerView" style="width:100%;height:100%;position:absolute;inset:0;"></div>
 
   <div class="corner tl"></div>
   <div class="corner tr"></div>
@@ -295,7 +293,7 @@ body{
   <div class="corner br"></div>
   <div class="laser" id="laser"></div>
 
-  <!-- Idle -->
+  <!-- Idle — irmão do scannerView, posição absolute sobre ele -->
   <div class="scan-state" id="stateIdle">
     <div class="scan-state-icon">📷</div>
     <div class="scan-state-txt">Toque para ativar a câmera<br>e bipar o código de barras</div>
@@ -422,7 +420,7 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/browser@0.1.4/umd/index.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -441,63 +439,174 @@ function savePend(a){ localStorage.setItem(K_PEND, JSON.stringify(a)); }
 // ═══════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════
-var scanner      = null;
 var scannerAtivo = false;
 var codigoAtual  = '';
 var manualAberto = false;
 
+// motor ativo: 'native' | 'zxing' | null
+var _motorAtivo  = null;
+// referências para parar
+var _videoStream  = null;
+var _videoEl      = null;
+var _zxingReader  = null;
+var _nativeLoop   = null;
+
 // ═══════════════════════════════════════════════════════════
-//  SCANNER
+//  SCANNER — dual engine
+//  1º tenta BarcodeDetector nativo (Android Chrome, rápido)
+//  2º fallback ZXing WASM (iOS Safari, Firefox, etc.)
 // ═══════════════════════════════════════════════════════════
-function iniciarScanner() {
+async function iniciarScanner() {
   document.getElementById('stateIdle').style.display = 'none';
   document.getElementById('stateErro').style.display = 'none';
 
-  if (!scanner) {
+  // Se já existe stream ativo, apenas mostra laser
+  if (scannerAtivo) {
+    document.getElementById('laser').style.display = 'block';
+    return;
+  }
+
+  var constraints = {
+    video: {
+      facingMode: { ideal: 'environment' },
+      width:  { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  };
+
+  var stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(err) {
+    var msg = 'Câmera não disponível';
+    if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
+      msg = 'Permissão de câmera negada — verifique as configurações do navegador';
+    else if (/[Nn]ot[Ff]ound|[Dd]evices/.test(String(err)))
+      msg = 'Câmera não encontrada neste dispositivo';
+    mostrarErroScanner(msg);
+    return;
+  }
+
+  _videoStream = stream;
+
+  // Monta elemento <video> dentro de #scannerView
+  var wrap = document.getElementById('scannerView');
+  wrap.innerHTML = '';
+  var vid = document.createElement('video');
+  vid.setAttribute('playsinline', '');
+  vid.setAttribute('autoplay', '');
+  vid.setAttribute('muted', '');
+  vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+  wrap.appendChild(vid);
+  _videoEl = vid;
+  vid.srcObject = stream;
+  await vid.play().catch(function(){});
+
+  scannerAtivo = true;
+  document.getElementById('laser').style.display = 'block';
+
+  // Tenta motor nativo primeiro
+  if (typeof BarcodeDetector !== 'undefined') {
     try {
-      var fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.ITF
-      ] : undefined;
-      scanner = new Html5Qrcode('scannerView', { formatsToSupport: fmts, verbose: false });
-    } catch(e) {
-      mostrarErroScanner('Falha ao inicializar o scanner');
+      var formatos = ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'];
+      var supported = await BarcodeDetector.getSupportedFormats().catch(function(){ return formatos; });
+      var usarFmts = formatos.filter(function(f){ return supported.includes(f); });
+      if (!usarFmts.length) usarFmts = formatos;
+      var detector = new BarcodeDetector({ formats: usarFmts });
+      _motorAtivo = 'native';
+
+      var canvas = document.createElement('canvas');
+      var ctx    = canvas.getContext('2d');
+
+      var loop = async function() {
+        if (!scannerAtivo || _motorAtivo !== 'native') return;
+        if (vid.readyState >= 2) {
+          canvas.width  = vid.videoWidth  || 640;
+          canvas.height = vid.videoHeight || 480;
+          ctx.drawImage(vid, 0, 0);
+          try {
+            var results = await detector.detect(canvas);
+            if (results && results.length > 0) {
+              onScanSuccess(results[0].rawValue);
+              return;
+            }
+          } catch(e) {}
+        }
+        _nativeLoop = requestAnimationFrame(loop);
+      };
+      _nativeLoop = requestAnimationFrame(loop);
       return;
+    } catch(e) {
+      // BarcodeDetector falhou, cai para ZXing
     }
   }
 
-  scanner.start(
-    { facingMode: 'environment' },
-    { fps: 15, qrbox: { width: 260, height: 90 } },
-    function(code) { onScanSuccess(code); }
-  ).then(function() {
-    scannerAtivo = true;
-    document.getElementById('laser').style.display = 'block';
-  }).catch(function(err) {
-    var msg = 'Câmera não disponível';
-    if (/[Pp]ermission|[Nn]ot[Aa]llowed/.test(String(err))) msg = 'Permissão de câmera negada — verifique as configurações do navegador';
-    else if (/[Nn]ot[Ff]ound/.test(String(err))) msg = 'Câmera não encontrada';
-    mostrarErroScanner(msg);
-  });
+  // Fallback: ZXing WASM
+  if (typeof ZXingBrowser !== 'undefined') {
+    try {
+      _motorAtivo = 'zxing';
+      var hints = new Map();
+      // formatos suportados pelo ZXing
+      var fmtZx = [
+        ZXingBrowser.BarcodeFormat.EAN_13,
+        ZXingBrowser.BarcodeFormat.EAN_8,
+        ZXingBrowser.BarcodeFormat.CODE_128,
+        ZXingBrowser.BarcodeFormat.CODE_39,
+        ZXingBrowser.BarcodeFormat.UPC_A,
+        ZXingBrowser.BarcodeFormat.UPC_E,
+        ZXingBrowser.BarcodeFormat.ITF
+      ].filter(Boolean);
+      if (fmtZx.length) hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, fmtZx);
+
+      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
+      _zxingReader = reader;
+
+      reader.decodeFromStream(stream, vid, function(result, err) {
+        if (result) onScanSuccess(result.getText());
+      });
+      return;
+    } catch(e) {}
+  }
+
+  // Nenhum motor disponível
+  mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
 }
 
 function pararScanner() {
-  if (scanner && scannerAtivo) {
-    scanner.stop().catch(function(){});
-    scannerAtivo = false;
-  }
+  scannerAtivo = false;
   document.getElementById('laser').style.display = 'none';
+
+  if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
+
+  if (_zxingReader) {
+    try { _zxingReader.reset(); } catch(e) {}
+    _zxingReader = null;
+  }
+
+  if (_videoStream) {
+    _videoStream.getTracks().forEach(function(t){ t.stop(); });
+    _videoStream = null;
+  }
+
+  if (_videoEl) {
+    _videoEl.srcObject = null;
+    _videoEl = null;
+  }
+
+  _motorAtivo = null;
+
+  // Limpa apenas o video do scannerView, overlays são irmãos
+  var wrap = document.getElementById('scannerView');
+  wrap.innerHTML = '';
+  document.getElementById('stateIdle').style.display = 'flex';
+  document.getElementById('stateErro').style.display = 'none';
 }
 
 function mostrarErroScanner(msg) {
   document.getElementById('erroMsg').textContent = msg;
   document.getElementById('stateErro').style.display = 'flex';
   document.getElementById('laser').style.display = 'none';
+  scannerAtivo = false;
 }
 
 function onScanSuccess(code) {
