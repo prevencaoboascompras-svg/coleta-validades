@@ -3,25 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#121212">
+<meta name="theme-color" content="#fcfbf8">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>AURA Validades — Supermercado Boas Compras</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Coleta de Validades</title>
+<link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#121212;--surf:#1C1C1C;--card:#252525;
-  --accent:#00D28A;--accent2:#00A870;
-  --yellow:#FF9800;--yellow2:#F57C00;
-  --warn:#FF9800;--err:#F44336;
-  --tx:#FFFFFF;--tx2:#A0A0A0;
-  --bd:rgba(255,255,255,.08);--bds:rgba(255,255,255,.15);
-  --r:12px;--mono:'JetBrains Mono',monospace;
+  --bg:#ffffff;--bg3:#eeede8;--surf:#f5f5f3;--card:#eeede8;
+  --accent:#E24B4A;--accent2:#B83B3A;
+  --warn:#BA7517;--err:#E24B4A;
+  --tx:#1a1a18;--tx2:#6b6b67;
+  --bd:rgba(0,0,0,.12);--bds:rgba(0,0,0,.22);
+  --r:12px;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1c;--bg3:#323230;--surf:#282825;--card:#323230;
+  --tx:#f0efe8;--tx2:#9b9b95;
+  --bd:rgba(255,255,255,.1);--bds:rgba(255,255,255,.2);
+}}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  background:var(--bg);color:var(--tx);
+  background:var(--bg3);color:var(--tx);
   min-height:100vh;max-width:480px;margin:0 auto;
   overflow-x:hidden;-webkit-tap-highlight-color:transparent;
 }
@@ -37,7 +42,7 @@ body{
 .hdr{
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 20px 14px;position:sticky;top:0;
-  background:var(--bg);z-index:20;border-bottom:1px solid var(--bd);
+  background:var(--bg3);z-index:20;border-bottom:1px solid var(--bd);
 }
 .hdr-title{font-size:17px;font-weight:600;letter-spacing:-.01em}
 .hdr-title span{color:var(--accent)}
@@ -75,21 +80,21 @@ body{
 .laser{
   position:absolute;left:22px;right:22px;height:2px;pointer-events:none;
   background:linear-gradient(90deg,transparent,var(--accent) 20%,var(--accent) 80%,transparent);
-  box-shadow:0 0 6px var(--accent),0 0 18px rgba(0,210,138,.5);
+  box-shadow:0 0 6px var(--accent),0 0 18px rgba(226,75,74,.5);
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
 
 /* idle / error overlays */
 .scan-state{
-  position:absolute;inset:0;background:rgba(18,18,18,.95);
+  position:absolute;inset:0;background:color-mix(in oklab, var(--bg) 92%, transparent);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;text-align:center;padding:24px;
 }
 .scan-state-icon{font-size:38px;line-height:1}
 .scan-state-txt{font-size:13px;color:var(--tx2);line-height:1.5}
 .scan-start-btn{
-  padding:12px 32px;background:var(--accent);color:#000;font-weight:700;
+  padding:12px 32px;background:var(--accent);color:#fff;font-weight:700;
   font-size:15px;border:none;border-radius:30px;cursor:pointer;
   letter-spacing:.02em;-webkit-tap-highlight-color:transparent;
 }
@@ -146,7 +151,7 @@ body{
   outline:none;-webkit-appearance:none;appearance:none;
   transition:border-color .15s,box-shadow .15s;
 }
-.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.12)}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(226,75,74,.12)}
 .field-select{
   width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
   border-radius:10px;padding:0 40px 0 16px;font-size:16px;color:var(--tx);
@@ -167,7 +172,7 @@ body{
   font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:background .1s;user-select:none;
 }
-.qty-btn:active{background:rgba(0,210,138,.15)}
+.qty-btn:active{background:rgba(226,75,74,.15)}
 .qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
 .qty-input{
   flex:1;text-align:center;font-size:22px;font-weight:700;
@@ -177,7 +182,7 @@ body{
 
 /* submit */
 .submit-btn{
-  width:100%;height:58px;background:var(--accent);color:#000;
+  width:100%;height:58px;background:var(--accent);color:#fff;
   font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
   letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:8px;
   transition:background .12s,transform .08s;-webkit-tap-highlight-color:transparent;
@@ -209,7 +214,7 @@ body{
   transform:translateX(-50%) translateY(80px);
   background:var(--card);border:1px solid var(--bd);border-radius:30px;
   padding:12px 22px;font-size:14px;font-weight:500;
-  box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:999;
   transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .22s;
   opacity:0;white-space:nowrap;display:flex;align-items:center;gap:8px;
 }
@@ -220,7 +225,7 @@ body{
 
 /* ── SETTINGS MODAL ── */
 .modal-bg{
-  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
   display:none;align-items:flex-end;justify-content:center;
 }
 .modal-bg.open{display:flex}
@@ -253,17 +258,17 @@ body{
   margin-bottom:16px;overflow-x:auto;white-space:pre;
 }
 .modal-save-btn{
-  width:100%;height:50px;background:var(--accent);color:#000;
+  width:100%;height:50px;background:var(--accent);color:#fff;
   font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;
 }
 .modal-save-btn:active{background:var(--accent2)}
 .resend-btn{
-  width:100%;height:46px;background:rgba(245,158,11,.15);color:var(--warn);
+  width:100%;height:46px;background:rgba(186,117,23,.15);color:var(--warn);
   font-weight:700;font-size:14px;border:1px solid var(--warn);border-radius:10px;
   cursor:pointer;margin-bottom:12px;display:none;
 }
 .resend-btn.show{display:block}
-.resend-btn:active{background:rgba(245,158,11,.25)}
+.resend-btn:active{background:rgba(186,117,23,.25)}
 .modal-divider{height:1px;background:var(--bd);margin:18px 0}
 
 /* ── DRUM PICKER (seletor de data estilo iOS) ── */
@@ -279,7 +284,7 @@ body{
 .drum-trigger .dt-icon{font-size:18px;opacity:.6}
 
 .drum-modal{
-  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
   display:none;align-items:flex-end;justify-content:center;
 }
 .drum-modal.open{display:flex}
@@ -319,7 +324,7 @@ body{
 .drum-sel-line{
   position:absolute;left:12px;right:12px;
   top:50%;transform:translateY(-50%);
-  height:44px;background:rgba(0,210,138,.1);
+  height:44px;background:rgba(226,75,74,.1);
   border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);
   border-radius:10px;pointer-events:none;z-index:1;
 }
@@ -339,7 +344,7 @@ body{
 
 /* ── POPUP PRIMEIRO USO ── */
 .welcome-modal{
-  position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;
+  position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;
   display:none;align-items:center;justify-content:center;padding:24px;
 }
 .welcome-modal.open{display:flex}
@@ -367,10 +372,10 @@ body{
   border-radius:10px;color:var(--tx);font-size:15px;outline:none;
   -webkit-appearance:none;transition:border-color .15s;
 }
-.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.1)}
+.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(226,75,74,.1)}
 .welcome-inp::placeholder{color:var(--tx2)}
 .welcome-btn{
-  width:100%;height:52px;background:var(--accent);color:#000;
+  width:100%;height:52px;background:var(--accent);color:#fff;
   font-size:16px;font-weight:700;border:none;border-radius:12px;
   cursor:pointer;margin-top:8px;letter-spacing:.03em;
 }
@@ -388,12 +393,9 @@ body{
 
 <!-- HEADER -->
 <header class="hdr">
-  <div style="display:flex;align-items:center;gap:12px">
-    <img src="logo.png" alt="Boas Compras" style="height:42px;width:auto;border-radius:6px">
-    <div>
-      <div class="hdr-title">AURA <span>Validades</span></div>
-      <div class="hdr-sub">Coleta de produtos</div>
-    </div>
+  <div>
+    <div class="hdr-title">Coleta de <span>Validades</span></div>
+    <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
     ⚙️
@@ -555,9 +557,9 @@ body{
 <!-- WELCOME / PRIMEIRO USO -->
 <div class="welcome-modal" id="welcomeModal">
   <div class="welcome-box">
-    <div class="welcome-logo"><img src="logo.png" alt="Boas Compras" style="height:80px;width:auto;border-radius:10px"></div>
-    <div class="welcome-title">AURA Validades</div>
-    <div class="welcome-sub">Supermercado Boas Compras<br>Configure seu acesso para começar</div>
+    <div class="welcome-logo">🛒</div>
+    <div class="welcome-title">Coleta de Validades</div>
+    <div class="welcome-sub">Boas Compras — configure seu acesso<br>para começar a registrar produtos</div>
     <div class="welcome-field">
       <label class="welcome-lbl">👤 Seu e-mail</label>
       <input type="email" class="welcome-inp" id="wEmail"
@@ -573,7 +575,6 @@ body{
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/barcode-detector@2.2.7/dist/es2018.min.js"></script>
 <script src="https://unpkg.com/@zxing/browser@0.1.4/umd/index.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -644,37 +645,22 @@ async function iniciarScanner() {
   _videoStream = stream;
 
   // Monta elemento <video> dentro de #scannerView
-  // iOS Safari: playsinline e muted são CRÍTICOS
   var wrap = document.getElementById('scannerView');
   wrap.innerHTML = '';
   var vid = document.createElement('video');
-  vid.setAttribute('playsinline', 'playsinline');
-  vid.setAttribute('webkit-playsinline', 'webkit-playsinline');
+  vid.setAttribute('playsinline', '');
   vid.setAttribute('autoplay', '');
   vid.setAttribute('muted', '');
-  vid.muted = true;
-  vid.playsInline = true;
   vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
   wrap.appendChild(vid);
   _videoEl = vid;
   vid.srcObject = stream;
-  
-  try { await vid.play(); } catch(e) {}
-
-  // Aguarda vídeo estar pronto (importante no iOS)
-  await new Promise(function(resolve) {
-    if (vid.readyState >= 2) { resolve(); return; }
-    vid.onloadedmetadata = function() {
-      if (vid.readyState >= 2) { resolve(); return; }
-      vid.onplaying = function() { resolve(); };
-    };
-    setTimeout(resolve, 3000);
-  });
+  await vid.play().catch(function(){});
 
   scannerAtivo = true;
   document.getElementById('laser').style.display = 'block';
 
-  // Tenta BarcodeDetector (agora funciona no iOS via polyfill)
+  // Tenta motor nativo primeiro
   if (typeof BarcodeDetector !== 'undefined') {
     try {
       var formatos = ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'];
@@ -686,50 +672,36 @@ async function iniciarScanner() {
 
       var canvas = document.createElement('canvas');
       var ctx    = canvas.getContext('2d');
-      var scanning = false;
 
       var loop = async function() {
-        if (!scannerAtivo || _motorAtivo !== 'native' || scanning) {
-          _nativeLoop = requestAnimationFrame(loop);
-          return;
-        }
-        
+        if (!scannerAtivo || _motorAtivo !== 'native') return;
         if (vid.readyState >= 2) {
-          scanning = true;
           canvas.width  = vid.videoWidth  || 640;
           canvas.height = vid.videoHeight || 480;
           ctx.drawImage(vid, 0, 0);
-          
           try {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
-              console.log('Barcode detected:', results[0].rawValue);
               onScanSuccess(results[0].rawValue);
               return;
             }
-          } catch(e) {
-            console.error('Detection error:', e);
-          }
-          
-          scanning = false;
+          } catch(e) {}
         }
-        
         _nativeLoop = requestAnimationFrame(loop);
       };
-      
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
-      console.error('BarcodeDetector failed:', e);
       // BarcodeDetector falhou, cai para ZXing
     }
   }
 
-  // Fallback: ZXing com canvas-based decoding
+  // Fallback: ZXing WASM
   if (typeof ZXingBrowser !== 'undefined') {
     try {
       _motorAtivo = 'zxing';
       var hints = new Map();
+      // formatos suportados pelo ZXing
       var fmtZx = [
         ZXingBrowser.BarcodeFormat.EAN_13,
         ZXingBrowser.BarcodeFormat.EAN_8,
@@ -741,48 +713,14 @@ async function iniciarScanner() {
       ].filter(Boolean);
       if (fmtZx.length) hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, fmtZx);
 
-      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 300 });
+      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
       _zxingReader = reader;
 
-      // Usa decodeFromCanvas em vez de decodeFromStream para evitar conflitos no iOS
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
-      var scanning = false;
-
-      var zxLoop = async function() {
-        if (!scannerAtivo || _motorAtivo !== 'zxing' || scanning) {
-          setTimeout(zxLoop, 300);
-          return;
-        }
-
-        if (vid.readyState >= 2) {
-          scanning = true;
-          canvas.width = vid.videoWidth || 640;
-          canvas.height = vid.videoHeight || 480;
-          ctx.drawImage(vid, 0, 0);
-
-          try {
-            var result = await reader.decode(canvas);
-            if (result) {
-              console.log('ZXing detected:', result.getText());
-              onScanSuccess(result.getText());
-              return;
-            }
-          } catch(e) {
-            // Nenhum código encontrado neste frame
-          }
-
-          scanning = false;
-        }
-
-        setTimeout(zxLoop, 300);
-      };
-
-      setTimeout(zxLoop, 500);
+      reader.decodeFromStream(stream, vid, function(result, err) {
+        if (result) onScanSuccess(result.getText());
+      });
       return;
-    } catch(e) {
-      console.error('ZXing failed:', e);
-    }
+    } catch(e) {}
   }
 
   // Nenhum motor disponível
@@ -1393,6 +1331,5 @@ function fecharWelcome() {
   setTimeout(verificarPrimeiroUso, 400);
 })();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
