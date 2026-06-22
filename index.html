@@ -639,22 +639,36 @@ async function iniciarScanner() {
   _videoStream = stream;
 
   // Monta elemento <video> dentro de #scannerView
+  // iOS SAFARI: playsinline e muted DEVEM ser setados antes do srcObject
   var wrap = document.getElementById('scannerView');
   wrap.innerHTML = '';
   var vid = document.createElement('video');
-  vid.setAttribute('playsinline', '');
+  vid.setAttribute('playsinline', 'playsinline');
+  vid.setAttribute('webkit-playsinline', 'webkit-playsinline');
   vid.setAttribute('autoplay', '');
   vid.setAttribute('muted', '');
+  vid.muted = true;
+  vid.playsInline = true;
   vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
   wrap.appendChild(vid);
   _videoEl = vid;
   vid.srcObject = stream;
-  await vid.play().catch(function(){});
+  try { await vid.play(); } catch(e) {}
+
+  // Aguarda vídeo pronto (crítico no iOS Safari)
+  await new Promise(function(resolve) {
+    if (vid.readyState >= 2) { resolve(); return; }
+    vid.onloadedmetadata = function() {
+      if (vid.readyState >= 2) { resolve(); return; }
+      vid.onplaying = function() { resolve(); };
+    };
+    setTimeout(resolve, 3000);
+  });
 
   scannerAtivo = true;
   document.getElementById('laser').style.display = 'block';
 
-  // Tenta motor nativo primeiro
+  // Tenta motor nativo primeiro (Chrome Android)
   if (typeof BarcodeDetector !== 'undefined') {
     try {
       var formatos = ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'];
@@ -690,12 +704,11 @@ async function iniciarScanner() {
     }
   }
 
-  // Fallback: ZXing WASM
+  // Fallback: ZXing WASM — usa decodeFromVideoElement (compatível iOS Safari)
   if (typeof ZXingBrowser !== 'undefined') {
     try {
       _motorAtivo = 'zxing';
       var hints = new Map();
-      // formatos suportados pelo ZXing
       var fmtZx = [
         ZXingBrowser.BarcodeFormat.EAN_13,
         ZXingBrowser.BarcodeFormat.EAN_8,
@@ -707,14 +720,18 @@ async function iniciarScanner() {
       ].filter(Boolean);
       if (fmtZx.length) hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, fmtZx);
 
-      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
+      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 200 });
       _zxingReader = reader;
 
-      reader.decodeFromStream(stream, vid, function(result, err) {
+      // decodeFromVideoElement funciona no iOS Safari
+      // decodeFromStream NÃO funciona reliably no iOS
+      reader.decodeFromVideoElement(vid, function(result, err) {
         if (result) onScanSuccess(result.getText());
       });
       return;
-    } catch(e) {}
+    } catch(e) {
+      console.error('ZXing error:', e);
+    }
   }
 
   // Nenhum motor disponível
@@ -732,14 +749,15 @@ function pararScanner() {
     _zxingReader = null;
   }
 
+  if (_videoEl) {
+    try { _videoEl.pause(); } catch(e) {}
+    _videoEl.srcObject = null;
+    _videoEl = null;
+  }
+
   if (_videoStream) {
     _videoStream.getTracks().forEach(function(t){ t.stop(); });
     _videoStream = null;
-  }
-
-  if (_videoEl) {
-    _videoEl.srcObject = null;
-    _videoEl = null;
   }
 
   _motorAtivo = null;
@@ -1325,5 +1343,6 @@ function fecharWelcome() {
   setTimeout(verificarPrimeiroUso, 400);
 })();
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
