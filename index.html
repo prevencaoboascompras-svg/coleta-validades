@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#E31E24">
+<meta name="theme-color" content="#121212">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Coleta de Validades — Supermercado Boas Compras</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<title>AURA Validades — Supermercado Boas Compras</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#1A0A0B;--surf:#2A1214;--card:#3A1A1C;
-  --accent:#E31E24;--accent2:#B8171C;
-  --yellow:#FFC107;--yellow2:#FFB300;
-  --warn:#FFC107;--err:#EF4444;
-  --tx:#FFFFFF;--tx2:#FFD4D4;
-  --bd:rgba(255,255,255,.12);--bds:rgba(255,255,255,.2);
-  --r:12px;--mono:'JetBrains Mono',monospace;--font:'Fredoka',sans-serif;
+  --bg:#121212;--surf:#1C1C1C;--card:#252525;
+  --accent:#00D28A;--accent2:#00A870;
+  --yellow:#FF9800;--yellow2:#F57C00;
+  --warn:#FF9800;--err:#F44336;
+  --tx:#FFFFFF;--tx2:#A0A0A0;
+  --bd:rgba(255,255,255,.08);--bds:rgba(255,255,255,.15);
+  --r:12px;--mono:'JetBrains Mono',monospace;
 }
 body{
-  font-family:var(--font);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   background:var(--bg);color:var(--tx);
   min-height:100vh;max-width:480px;margin:0 auto;
   overflow-x:hidden;-webkit-tap-highlight-color:transparent;
@@ -75,24 +75,23 @@ body{
 .laser{
   position:absolute;left:22px;right:22px;height:2px;pointer-events:none;
   background:linear-gradient(90deg,transparent,var(--accent) 20%,var(--accent) 80%,transparent);
-  box-shadow:0 0 6px var(--accent),0 0 18px rgba(227,30,36,.5);
+  box-shadow:0 0 6px var(--accent),0 0 18px rgba(0,210,138,.5);
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
 
 /* idle / error overlays */
 .scan-state{
-  position:absolute;inset:0;background:rgba(26,10,11,.92);
+  position:absolute;inset:0;background:rgba(18,18,18,.95);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;text-align:center;padding:24px;
 }
 .scan-state-icon{font-size:38px;line-height:1}
 .scan-state-txt{font-size:13px;color:var(--tx2);line-height:1.5}
 .scan-start-btn{
-  padding:12px 32px;background:var(--accent);color:#FFF;font-weight:700;
+  padding:12px 32px;background:var(--accent);color:#000;font-weight:700;
   font-size:15px;border:none;border-radius:30px;cursor:pointer;
   letter-spacing:.02em;-webkit-tap-highlight-color:transparent;
-  font-family:var(--font);
 }
 .scan-start-btn:active{background:var(--accent2)}
 
@@ -147,7 +146,7 @@ body{
   outline:none;-webkit-appearance:none;appearance:none;
   transition:border-color .15s,box-shadow .15s;
 }
-.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(227,30,36,.15)}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.12)}
 .field-select{
   width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
   border-radius:10px;padding:0 40px 0 16px;font-size:16px;color:var(--tx);
@@ -168,7 +167,7 @@ body{
   font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:background .1s;user-select:none;
 }
-.qty-btn:active{background:rgba(227,30,36,.15)}
+.qty-btn:active{background:rgba(0,210,138,.15)}
 .qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
 .qty-input{
   flex:1;text-align:center;font-size:22px;font-weight:700;
@@ -178,11 +177,10 @@ body{
 
 /* submit */
 .submit-btn{
-  width:100%;height:58px;background:var(--accent);color:#FFF;
+  width:100%;height:58px;background:var(--accent);color:#000;
   font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
   letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:8px;
   transition:background .12s,transform .08s;-webkit-tap-highlight-color:transparent;
-  font-family:var(--font);
 }
 .submit-btn:active{transform:scale(.97);background:var(--accent2)}
 .submit-btn:disabled{opacity:.5;pointer-events:none}
@@ -255,9 +253,8 @@ body{
   margin-bottom:16px;overflow-x:auto;white-space:pre;
 }
 .modal-save-btn{
-  width:100%;height:50px;background:var(--accent);color:#FFF;
+  width:100%;height:50px;background:var(--accent);color:#000;
   font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;
-  font-family:var(--font);
 }
 .modal-save-btn:active{background:var(--accent2)}
 .resend-btn{
@@ -322,7 +319,7 @@ body{
 .drum-sel-line{
   position:absolute;left:12px;right:12px;
   top:50%;transform:translateY(-50%);
-  height:44px;background:rgba(227,30,36,.1);
+  height:44px;background:rgba(0,210,138,.1);
   border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);
   border-radius:10px;pointer-events:none;z-index:1;
 }
@@ -370,13 +367,12 @@ body{
   border-radius:10px;color:var(--tx);font-size:15px;outline:none;
   -webkit-appearance:none;transition:border-color .15s;
 }
-.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(227,30,36,.15)}
+.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.1)}
 .welcome-inp::placeholder{color:var(--tx2)}
 .welcome-btn{
-  width:100%;height:52px;background:var(--accent);color:#FFF;
+  width:100%;height:52px;background:var(--accent);color:#000;
   font-size:16px;font-weight:700;border:none;border-radius:12px;
   cursor:pointer;margin-top:8px;letter-spacing:.03em;
-  font-family:var(--font);
 }
 .welcome-btn:active{background:var(--accent2)}
 .welcome-skip{
@@ -395,8 +391,8 @@ body{
   <div style="display:flex;align-items:center;gap:12px">
     <img src="logo.png" alt="Boas Compras" style="height:42px;width:auto;border-radius:6px">
     <div>
-      <div class="hdr-title">Coleta de <span>Validades</span></div>
-      <div class="hdr-sub">Bipagem de produtos</div>
+      <div class="hdr-title">AURA <span>Validades</span></div>
+      <div class="hdr-sub">Coleta de produtos</div>
     </div>
   </div>
   <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
@@ -560,7 +556,7 @@ body{
 <div class="welcome-modal" id="welcomeModal">
   <div class="welcome-box">
     <div class="welcome-logo"><img src="logo.png" alt="Boas Compras" style="height:80px;width:auto;border-radius:10px"></div>
-    <div class="welcome-title">Coleta de Validades</div>
+    <div class="welcome-title">AURA Validades</div>
     <div class="welcome-sub">Supermercado Boas Compras<br>Configure seu acesso para começar</div>
     <div class="welcome-field">
       <label class="welcome-lbl">👤 Seu e-mail</label>
@@ -577,6 +573,7 @@ body{
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@2.2.7/dist/es2018.min.js"></script>
 <script src="https://unpkg.com/@zxing/browser@0.1.4/umd/index.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -647,7 +644,7 @@ async function iniciarScanner() {
   _videoStream = stream;
 
   // Monta elemento <video> dentro de #scannerView
-  // iOS SAFARI: playsinline e muted DEVEM ser setados antes do srcObject
+  // iOS Safari: playsinline e muted são CRÍTICOS
   var wrap = document.getElementById('scannerView');
   wrap.innerHTML = '';
   var vid = document.createElement('video');
@@ -661,9 +658,10 @@ async function iniciarScanner() {
   wrap.appendChild(vid);
   _videoEl = vid;
   vid.srcObject = stream;
+  
   try { await vid.play(); } catch(e) {}
 
-  // Aguarda vídeo pronto (crítico no iOS Safari)
+  // Aguarda vídeo estar pronto (importante no iOS)
   await new Promise(function(resolve) {
     if (vid.readyState >= 2) { resolve(); return; }
     vid.onloadedmetadata = function() {
@@ -676,7 +674,7 @@ async function iniciarScanner() {
   scannerAtivo = true;
   document.getElementById('laser').style.display = 'block';
 
-  // Tenta motor nativo primeiro (Chrome Android)
+  // Tenta BarcodeDetector (agora funciona no iOS via polyfill)
   if (typeof BarcodeDetector !== 'undefined') {
     try {
       var formatos = ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'];
@@ -688,31 +686,46 @@ async function iniciarScanner() {
 
       var canvas = document.createElement('canvas');
       var ctx    = canvas.getContext('2d');
+      var scanning = false;
 
       var loop = async function() {
-        if (!scannerAtivo || _motorAtivo !== 'native') return;
+        if (!scannerAtivo || _motorAtivo !== 'native' || scanning) {
+          _nativeLoop = requestAnimationFrame(loop);
+          return;
+        }
+        
         if (vid.readyState >= 2) {
+          scanning = true;
           canvas.width  = vid.videoWidth  || 640;
           canvas.height = vid.videoHeight || 480;
           ctx.drawImage(vid, 0, 0);
+          
           try {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
+              console.log('Barcode detected:', results[0].rawValue);
               onScanSuccess(results[0].rawValue);
               return;
             }
-          } catch(e) {}
+          } catch(e) {
+            console.error('Detection error:', e);
+          }
+          
+          scanning = false;
         }
+        
         _nativeLoop = requestAnimationFrame(loop);
       };
+      
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
+      console.error('BarcodeDetector failed:', e);
       // BarcodeDetector falhou, cai para ZXing
     }
   }
 
-  // Fallback: ZXing WASM — usa decodeFromVideoElement (compatível iOS Safari)
+  // Fallback: ZXing com canvas-based decoding
   if (typeof ZXingBrowser !== 'undefined') {
     try {
       _motorAtivo = 'zxing';
@@ -728,17 +741,47 @@ async function iniciarScanner() {
       ].filter(Boolean);
       if (fmtZx.length) hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, fmtZx);
 
-      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 200 });
+      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 300 });
       _zxingReader = reader;
 
-      // decodeFromVideoElement funciona no iOS Safari
-      // decodeFromStream NÃO funciona reliably no iOS
-      reader.decodeFromVideoElement(vid, function(result, err) {
-        if (result) onScanSuccess(result.getText());
-      });
+      // Usa decodeFromCanvas em vez de decodeFromStream para evitar conflitos no iOS
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      var scanning = false;
+
+      var zxLoop = async function() {
+        if (!scannerAtivo || _motorAtivo !== 'zxing' || scanning) {
+          setTimeout(zxLoop, 300);
+          return;
+        }
+
+        if (vid.readyState >= 2) {
+          scanning = true;
+          canvas.width = vid.videoWidth || 640;
+          canvas.height = vid.videoHeight || 480;
+          ctx.drawImage(vid, 0, 0);
+
+          try {
+            var result = await reader.decode(canvas);
+            if (result) {
+              console.log('ZXing detected:', result.getText());
+              onScanSuccess(result.getText());
+              return;
+            }
+          } catch(e) {
+            // Nenhum código encontrado neste frame
+          }
+
+          scanning = false;
+        }
+
+        setTimeout(zxLoop, 300);
+      };
+
+      setTimeout(zxLoop, 500);
       return;
     } catch(e) {
-      console.error('ZXing error:', e);
+      console.error('ZXing failed:', e);
     }
   }
 
@@ -757,15 +800,14 @@ function pararScanner() {
     _zxingReader = null;
   }
 
-  if (_videoEl) {
-    try { _videoEl.pause(); } catch(e) {}
-    _videoEl.srcObject = null;
-    _videoEl = null;
-  }
-
   if (_videoStream) {
     _videoStream.getTracks().forEach(function(t){ t.stop(); });
     _videoStream = null;
+  }
+
+  if (_videoEl) {
+    _videoEl.srcObject = null;
+    _videoEl = null;
   }
 
   _motorAtivo = null;
