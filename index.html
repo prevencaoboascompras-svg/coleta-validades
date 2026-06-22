@@ -3,23 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0E1117">
+<meta name="theme-color" content="#E31E24">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Coleta de Validades</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<title>Coleta de Validades — Supermercado Boas Compras</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0E1117;--surf:#161C2A;--card:#1E2638;
-  --accent:#00D28A;--accent2:#00A870;
-  --warn:#F59E0B;--err:#EF4444;
-  --tx:#E8EAF2;--tx2:#8B8FA8;
-  --bd:rgba(255,255,255,.1);--bds:rgba(255,255,255,.18);
-  --r:12px;--mono:'JetBrains Mono',monospace;
+  --bg:#1A0A0B;--surf:#2A1214;--card:#3A1A1C;
+  --accent:#E31E24;--accent2:#B8171C;
+  --yellow:#FFC107;--yellow2:#FFB300;
+  --warn:#FFC107;--err:#EF4444;
+  --tx:#FFFFFF;--tx2:#FFD4D4;
+  --bd:rgba(255,255,255,.12);--bds:rgba(255,255,255,.2);
+  --r:12px;--mono:'JetBrains Mono',monospace;--font:'Fredoka',sans-serif;
 }
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family:var(--font);
   background:var(--bg);color:var(--tx);
   min-height:100vh;max-width:480px;margin:0 auto;
   overflow-x:hidden;-webkit-tap-highlight-color:transparent;
@@ -74,23 +75,24 @@ body{
 .laser{
   position:absolute;left:22px;right:22px;height:2px;pointer-events:none;
   background:linear-gradient(90deg,transparent,var(--accent) 20%,var(--accent) 80%,transparent);
-  box-shadow:0 0 6px var(--accent),0 0 18px rgba(0,210,138,.5);
+  box-shadow:0 0 6px var(--accent),0 0 18px rgba(227,30,36,.5);
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
 
 /* idle / error overlays */
 .scan-state{
-  position:absolute;inset:0;background:rgba(14,17,23,.92);
+  position:absolute;inset:0;background:rgba(26,10,11,.92);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;text-align:center;padding:24px;
 }
 .scan-state-icon{font-size:38px;line-height:1}
 .scan-state-txt{font-size:13px;color:var(--tx2);line-height:1.5}
 .scan-start-btn{
-  padding:12px 32px;background:var(--accent);color:#000;font-weight:700;
+  padding:12px 32px;background:var(--accent);color:#FFF;font-weight:700;
   font-size:15px;border:none;border-radius:30px;cursor:pointer;
   letter-spacing:.02em;-webkit-tap-highlight-color:transparent;
+  font-family:var(--font);
 }
 .scan-start-btn:active{background:var(--accent2)}
 
@@ -145,7 +147,7 @@ body{
   outline:none;-webkit-appearance:none;appearance:none;
   transition:border-color .15s,box-shadow .15s;
 }
-.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.12)}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(227,30,36,.15)}
 .field-select{
   width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
   border-radius:10px;padding:0 40px 0 16px;font-size:16px;color:var(--tx);
@@ -166,7 +168,7 @@ body{
   font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:background .1s;user-select:none;
 }
-.qty-btn:active{background:rgba(0,210,138,.15)}
+.qty-btn:active{background:rgba(227,30,36,.15)}
 .qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
 .qty-input{
   flex:1;text-align:center;font-size:22px;font-weight:700;
@@ -176,10 +178,11 @@ body{
 
 /* submit */
 .submit-btn{
-  width:100%;height:58px;background:var(--accent);color:#000;
+  width:100%;height:58px;background:var(--accent);color:#FFF;
   font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
   letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:8px;
   transition:background .12s,transform .08s;-webkit-tap-highlight-color:transparent;
+  font-family:var(--font);
 }
 .submit-btn:active{transform:scale(.97);background:var(--accent2)}
 .submit-btn:disabled{opacity:.5;pointer-events:none}
@@ -252,8 +255,9 @@ body{
   margin-bottom:16px;overflow-x:auto;white-space:pre;
 }
 .modal-save-btn{
-  width:100%;height:50px;background:var(--accent);color:#000;
+  width:100%;height:50px;background:var(--accent);color:#FFF;
   font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;
+  font-family:var(--font);
 }
 .modal-save-btn:active{background:var(--accent2)}
 .resend-btn{
@@ -318,7 +322,7 @@ body{
 .drum-sel-line{
   position:absolute;left:12px;right:12px;
   top:50%;transform:translateY(-50%);
-  height:44px;background:rgba(0,210,138,.1);
+  height:44px;background:rgba(227,30,36,.1);
   border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);
   border-radius:10px;pointer-events:none;z-index:1;
 }
@@ -366,12 +370,13 @@ body{
   border-radius:10px;color:var(--tx);font-size:15px;outline:none;
   -webkit-appearance:none;transition:border-color .15s;
 }
-.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.1)}
+.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(227,30,36,.15)}
 .welcome-inp::placeholder{color:var(--tx2)}
 .welcome-btn{
-  width:100%;height:52px;background:var(--accent);color:#000;
+  width:100%;height:52px;background:var(--accent);color:#FFF;
   font-size:16px;font-weight:700;border:none;border-radius:12px;
   cursor:pointer;margin-top:8px;letter-spacing:.03em;
+  font-family:var(--font);
 }
 .welcome-btn:active{background:var(--accent2)}
 .welcome-skip{
@@ -387,9 +392,12 @@ body{
 
 <!-- HEADER -->
 <header class="hdr">
-  <div>
-    <div class="hdr-title">Coleta de <span>Validades</span></div>
-    <div class="hdr-sub">Bipagem de produtos</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="logo.png" alt="Boas Compras" style="height:42px;width:auto;border-radius:6px">
+    <div>
+      <div class="hdr-title">Coleta de <span>Validades</span></div>
+      <div class="hdr-sub">Bipagem de produtos</div>
+    </div>
   </div>
   <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
     ⚙️
@@ -551,9 +559,9 @@ body{
 <!-- WELCOME / PRIMEIRO USO -->
 <div class="welcome-modal" id="welcomeModal">
   <div class="welcome-box">
-    <div class="welcome-logo">🛒</div>
+    <div class="welcome-logo"><img src="logo.png" alt="Boas Compras" style="height:80px;width:auto;border-radius:10px"></div>
     <div class="welcome-title">Coleta de Validades</div>
-    <div class="welcome-sub">Boas Compras — configure seu acesso<br>para começar a registrar produtos</div>
+    <div class="welcome-sub">Supermercado Boas Compras<br>Configure seu acesso para começar</div>
     <div class="welcome-field">
       <label class="welcome-lbl">👤 Seu e-mail</label>
       <input type="email" class="welcome-inp" id="wEmail"
