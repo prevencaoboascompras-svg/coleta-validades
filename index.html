@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0E1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Coleta de Validades</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0E1117;--surf:#161C2A;--card:#1E2638;
+  --accent:#00D28A;--accent2:#00A870;
+  --warn:#F59E0B;--err:#EF4444;
+  --tx:#E8EAF2;--tx2:#8B8FA8;
+  --bd:rgba(255,255,255,.1);--bds:rgba(255,255,255,.18);
+  --r:12px;--mono:'JetBrains Mono',monospace;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--tx);
+  min-height:100vh;max-width:480px;margin:0 auto;
+  overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+}
+
+/* ── OFFLINE BANNER ── */
+.offline-bar{
+  display:none;background:var(--warn);color:#000;
+  font-size:12px;font-weight:700;padding:8px 20px;text-align:center;
+}
+.offline-bar.show{display:block}
+
+/* ── HEADER ── */
+.hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 14px;position:sticky;top:0;
+  background:var(--bg);z-index:20;border-bottom:1px solid var(--bd);
+}
+.hdr-title{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.hdr-title span{color:var(--accent)}
+.hdr-sub{font-size:11px;color:var(--tx2);margin-top:2px}
+.hdr-btn{
+  width:40px;height:40px;border-radius:10px;border:1px solid var(--bd);
+  background:var(--card);color:var(--tx2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  position:relative;flex-shrink:0;
+}
+.pend-dot{
+  position:absolute;top:-3px;right:-3px;width:9px;height:9px;
+  background:var(--warn);border-radius:50%;border:2px solid var(--bg);
+  display:none;
+}
+.pend-dot.show{display:block}
+
+/* ── SCANNER WRAPPER ── */
+.scan-wrap{
+  position:relative;background:#000;overflow:hidden;
+  height:min(240px, 40vw);min-height:180px;
+  margin:16px;border-radius:var(--r);border:1px solid var(--bd);
+}
+#scannerView{width:100%;height:100%}
+#scannerView video{width:100%!important;height:100%!important;object-fit:cover!important;display:block}
+#scannerView > div{width:100%!important;height:100%!important;border:none!important;padding:0!important}
+#scannerView canvas{display:none!important}
+#scannerView img{display:none!important}
+
+/* corner brackets */
+.corner{position:absolute;width:26px;height:26px;border-color:var(--accent);border-style:solid}
+.corner.tl{top:14px;left:14px;border-width:3px 0 0 3px;border-radius:5px 0 0 0}
+.corner.tr{top:14px;right:14px;border-width:3px 3px 0 0;border-radius:0 5px 0 0}
+.corner.bl{bottom:14px;left:14px;border-width:0 0 3px 3px;border-radius:0 0 0 5px}
+.corner.br{bottom:14px;right:14px;border-width:0 3px 3px 0;border-radius:0 0 5px 0}
+
+/* laser */
+.laser{
+  position:absolute;left:22px;right:22px;height:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--accent) 20%,var(--accent) 80%,transparent);
+  box-shadow:0 0 6px var(--accent),0 0 18px rgba(0,210,138,.5);
+  animation:laserSweep 2.2s ease-in-out infinite;display:none;
+}
+@keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
+
+/* idle / error overlays */
+.scan-state{
+  position:absolute;inset:0;background:rgba(14,17,23,.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;text-align:center;padding:24px;
+}
+.scan-state-icon{font-size:38px;line-height:1}
+.scan-state-txt{font-size:13px;color:var(--tx2);line-height:1.5}
+.scan-start-btn{
+  padding:12px 32px;background:var(--accent);color:#000;font-weight:700;
+  font-size:15px;border:none;border-radius:30px;cursor:pointer;
+  letter-spacing:.02em;-webkit-tap-highlight-color:transparent;
+}
+.scan-start-btn:active{background:var(--accent2)}
+
+/* flash */
+.scan-flash{
+  position:absolute;inset:0;background:var(--accent);opacity:0;pointer-events:none;
+  transition:opacity .06s;
+}
+.scan-flash.show{opacity:.4}
+
+/* ── CODE DISPLAY ── */
+.code-row{
+  display:flex;align-items:center;gap:10px;
+  margin:0 16px 6px;padding:13px 15px;
+  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+}
+.barcode-icon{font-size:22px;flex-shrink:0;letter-spacing:-2px;opacity:.6}
+.code-val{
+  font-family:var(--mono);font-size:17px;font-weight:700;
+  color:var(--accent);letter-spacing:.07em;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  cursor:default;
+}
+.code-val.empty{color:var(--tx2);font-size:13px;font-weight:400;font-family:inherit;letter-spacing:normal}
+.rescan-btn{
+  font-size:11px;color:var(--tx2);cursor:pointer;padding:5px 9px;
+  border:1px solid var(--bd);border-radius:7px;background:none;flex-shrink:0;
+  white-space:nowrap;transition:color .12s,border-color .12s;
+}
+.rescan-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ── MANUAL INPUT ── */
+.manual-wrap{margin:0 16px 10px;display:none}
+.manual-wrap.open{display:block}
+.manual-input{
+  width:100%;background:var(--surf);border:1.5px solid var(--accent);
+  border-radius:10px;padding:13px 16px;font-size:17px;
+  font-family:var(--mono);letter-spacing:.06em;color:var(--tx);
+  outline:none;-webkit-appearance:none;
+}
+.manual-input::placeholder{color:var(--tx2);font-family:inherit;letter-spacing:normal;font-size:14px}
+
+/* ── FORM ── */
+.form-body{margin:14px 16px 0;display:flex;flex-direction:column;gap:14px}
+.field-lbl{
+  font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx2);
+  text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;
+}
+.field-input{
+  width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
+  border-radius:10px;padding:0 16px;font-size:16px;color:var(--tx);
+  outline:none;-webkit-appearance:none;appearance:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.12)}
+.field-select{
+  width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
+  border-radius:10px;padding:0 40px 0 16px;font-size:16px;color:var(--tx);
+  outline:none;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B8FA8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;background-size:18px;
+  transition:border-color .15s;
+}
+.field-select:focus{border-color:var(--accent)}
+
+/* qty */
+.qty-row{
+  display:flex;align-items:center;background:var(--surf);
+  border:1px solid var(--bd);border-radius:10px;overflow:hidden;height:54px;
+}
+.qty-btn{
+  width:70px;height:100%;background:none;border:none;color:var(--tx);
+  font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .1s;user-select:none;
+}
+.qty-btn:active{background:rgba(0,210,138,.15)}
+.qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
+.qty-input{
+  flex:1;text-align:center;font-size:22px;font-weight:700;
+  font-family:var(--mono);color:var(--tx);border:none;background:none;
+  outline:none;min-width:0;-webkit-appearance:none;appearance:none;
+}
+
+/* submit */
+.submit-btn{
+  width:100%;height:58px;background:var(--accent);color:#000;
+  font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
+  letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .12s,transform .08s;-webkit-tap-highlight-color:transparent;
+}
+.submit-btn:active{transform:scale(.97);background:var(--accent2)}
+.submit-btn:disabled{opacity:.5;pointer-events:none}
+
+/* ── HISTORY ── */
+.hist-section{margin:20px 16px 36px}
+.hist-hdr{
+  font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx2);
+  text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.hist-hdr-right{margin-left:auto;font-size:11px;color:var(--tx2);cursor:pointer}
+.hist-hdr-right:hover{color:var(--tx)}
+.hist-item{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;
+  background:var(--surf);border:1px solid var(--bd);border-radius:10px;
+  margin-bottom:8px;
+}
+.hist-code{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+.hist-meta{font-size:12px;color:var(--tx2);margin-top:2px}
+.hist-status{margin-left:auto;font-size:20px;flex-shrink:0}
+.hist-empty{text-align:center;color:var(--tx2);font-size:13px;padding:24px}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--card);border:1px solid var(--bd);border-radius:30px;
+  padding:12px 22px;font-size:14px;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .22s;
+  opacity:0;white-space:nowrap;display:flex;align-items:center;gap:8px;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{border-color:var(--accent);color:var(--accent)}
+.toast.err{border-color:var(--err);color:var(--err)}
+.toast.warn{border-color:var(--warn);color:var(--warn)}
+
+/* ── SETTINGS MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal-box{
+  background:var(--surf);border-radius:20px 20px 0 0;
+  padding:24px 20px 44px;width:100%;max-width:480px;
+  max-height:85vh;overflow-y:auto;
+}
+.modal-title{
+  font-size:16px;font-weight:600;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-close{
+  background:none;border:none;color:var(--tx2);font-size:20px;
+  cursor:pointer;padding:0 4px;line-height:1;
+}
+.modal-lbl{
+  font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:7px;display:block;
+}
+.modal-inp{
+  width:100%;padding:13px 14px;background:var(--card);border:1px solid var(--bd);
+  border-radius:10px;color:var(--tx);font-size:14px;outline:none;margin-bottom:16px;
+  -webkit-appearance:none;
+}
+.modal-inp:focus{border-color:var(--accent)}
+.modal-code{
+  background:var(--card);border-radius:10px;padding:14px;
+  font-size:11px;font-family:var(--mono);color:var(--tx2);line-height:1.8;
+  margin-bottom:16px;overflow-x:auto;white-space:pre;
+}
+.modal-save-btn{
+  width:100%;height:50px;background:var(--accent);color:#000;
+  font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;
+}
+.modal-save-btn:active{background:var(--accent2)}
+.resend-btn{
+  width:100%;height:46px;background:rgba(245,158,11,.15);color:var(--warn);
+  font-weight:700;font-size:14px;border:1px solid var(--warn);border-radius:10px;
+  cursor:pointer;margin-bottom:12px;display:none;
+}
+.resend-btn.show{display:block}
+.resend-btn:active{background:rgba(245,158,11,.25)}
+.modal-divider{height:1px;background:var(--bd);margin:18px 0}
+</style>
+</head>
+<body>
+
+<div class="offline-bar" id="offlineBar">📡 Sem conexão — os registros serão salvos localmente</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div>
+    <div class="hdr-title">Coleta de <span>Validades</span></div>
+    <div class="hdr-sub">Bipagem de produtos</div>
+  </div>
+  <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
+    ⚙️
+    <span class="pend-dot" id="pendDot"></span>
+  </button>
+</header>
+
+<!-- SCANNER -->
+<div class="scan-wrap" id="scanWrap">
+  <div id="scannerView"></div>
+
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+  <div class="laser" id="laser"></div>
+
+  <!-- Idle -->
+  <div class="scan-state" id="stateIdle">
+    <div class="scan-state-icon">📷</div>
+    <div class="scan-state-txt">Toque para ativar a câmera<br>e bipar o código de barras</div>
+    <button class="scan-start-btn" onclick="iniciarScanner()">Ativar Câmera</button>
+  </div>
+
+  <!-- Error -->
+  <div class="scan-state" id="stateErro" style="display:none">
+    <div class="scan-state-icon">🚫</div>
+    <div class="scan-state-txt" id="erroMsg">Câmera indisponível</div>
+    <button class="scan-start-btn" onclick="iniciarScanner()">Tentar novamente</button>
+  </div>
+
+  <div class="scan-flash" id="scanFlash"></div>
+</div>
+
+<!-- CODE DISPLAY -->
+<div class="code-row">
+  <span class="barcode-icon">▌▌▌▌▌▌</span>
+  <span class="code-val empty" id="codeDisplay">Aguardando leitura…</span>
+  <button class="rescan-btn" id="rescanBtn" onclick="toggleManual()">✏️ manual</button>
+</div>
+
+<!-- MANUAL INPUT -->
+<div class="manual-wrap" id="manualWrap">
+  <input type="tel" inputmode="numeric" class="manual-input" id="manualInput"
+    placeholder="Digite o código de barras" maxlength="22"
+    oninput="onManualInput(this.value)">
+</div>
+
+<!-- FORM -->
+<div class="form-body">
+
+  <div>
+    <div class="field-lbl">📅 Data de Validade</div>
+    <input type="date" class="field-input" id="fValidade" required>
+  </div>
+
+  <div>
+    <div class="field-lbl">🏪 Setor</div>
+    <select class="field-select" id="fSetor">
+      <option value="">Selecione o setor…</option>
+      <option value="Açougue">🥩 Açougue</option>
+      <option value="Bebidas">🍺 Bebidas</option>
+      <option value="Congelados">🧊 Congelados</option>
+      <option value="FLV">🥦 FLV</option>
+      <option value="Frios">🧀 Frios</option>
+      <option value="Laticínios">🥛 Laticínios</option>
+      <option value="Outros">📦 Outros</option>
+      <option value="Perfumaria">🧴 Perfumaria</option>
+      <option value="Pet">🐾 Pet</option>
+      <option value="Seca">🛒 Seca</option>
+      <option value="Seca doce">🍫 Seca Doce</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="field-lbl">🏷️ Tipo de Registro</div>
+    <select class="field-select" id="fTipo">
+      <option value="">Selecione o tipo…</option>
+      <option value="Vencimento próximo">⚠️ Vencimento próximo</option>
+      <option value="Troca de validade">🔄 Troca de validade</option>
+      <option value="Entrada de mercadoria">📥 Entrada de mercadoria</option>
+      <option value="Inventário">📋 Inventário</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="field-lbl">📦 Quantidade</div>
+    <div class="qty-row">
+      <button class="qty-btn" onclick="alterarQty(-1)">−</button>
+      <div class="qty-divider"></div>
+      <input type="tel" inputmode="numeric" class="qty-input" id="fQty" value="1">
+      <div class="qty-divider"></div>
+      <button class="qty-btn" onclick="alterarQty(+1)">+</button>
+    </div>
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="registrar()">
+    <span id="submitIcon">✓</span>
+    <span id="submitTxt">REGISTRAR VALIDADE</span>
+  </button>
+
+</div>
+
+<!-- HISTORY -->
+<div class="hist-section">
+  <div class="hist-hdr">
+    <span>Últimos registros</span>
+    <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
+  </div>
+  <div id="histList"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="cfgModal" onclick="fecharConfigBg(event)">
+  <div class="modal-box">
+    <div class="modal-title">
+      Configurações
+      <button class="modal-close" onclick="fecharConfig()">✕</button>
+    </div>
+
+    <label class="modal-lbl">👤 Seu E-mail (quem está coletando)</label>
+    <input type="email" class="modal-inp" id="cfgEmail"
+      placeholder="seuemail@gmail.com">
+
+    <label class="modal-lbl">URL do Google Apps Script</label>
+    <input type="url" class="modal-inp" id="cfgUrl"
+      placeholder="https://script.google.com/macros/s/…/exec">
+
+    <button class="resend-btn" id="resendBtn" onclick="reenviarPendentes()">
+      📤 Reenviar registros pendentes (<span id="resendCount">0</span>)
+    </button>
+
+    <div class="modal-divider"></div>
+
+    <label class="modal-lbl">Exemplo de Apps Script (doGet)</label>
+    <div class="modal-code" id="sampleCode"></div>
+
+    <button class="modal-save-btn" onclick="salvarConfig()">Salvar</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════════
+var K_CFG  = 'coleta_cfg';
+var K_HIST = 'coleta_hist';
+var K_PEND = 'coleta_pend';
+
+function loadCfg() { return JSON.parse(localStorage.getItem(K_CFG)  || '{}'); }
+function saveCfg(o){ localStorage.setItem(K_CFG,  JSON.stringify(o)); }
+function loadHist(){ return JSON.parse(localStorage.getItem(K_HIST) || '[]'); }
+function saveHist(a){ localStorage.setItem(K_HIST, JSON.stringify(a)); }
+function loadPend(){ return JSON.parse(localStorage.getItem(K_PEND) || '[]'); }
+function savePend(a){ localStorage.setItem(K_PEND, JSON.stringify(a)); }
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+var scanner      = null;
+var scannerAtivo = false;
+var codigoAtual  = '';
+var manualAberto = false;
+
+// ═══════════════════════════════════════════════════════════
+//  SCANNER
+// ═══════════════════════════════════════════════════════════
+function iniciarScanner() {
+  document.getElementById('stateIdle').style.display = 'none';
+  document.getElementById('stateErro').style.display = 'none';
+
+  if (!scanner) {
+    try {
+      var fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF
+      ] : undefined;
+      scanner = new Html5Qrcode('scannerView', { formatsToSupport: fmts, verbose: false });
+    } catch(e) {
+      mostrarErroScanner('Falha ao inicializar o scanner');
+      return;
+    }
+  }
+
+  scanner.start(
+    { facingMode: 'environment' },
+    { fps: 15, qrbox: { width: 260, height: 90 } },
+    function(code) { onScanSuccess(code); }
+  ).then(function() {
+    scannerAtivo = true;
+    document.getElementById('laser').style.display = 'block';
+  }).catch(function(err) {
+    var msg = 'Câmera não disponível';
+    if (/[Pp]ermission|[Nn]ot[Aa]llowed/.test(String(err))) msg = 'Permissão de câmera negada — verifique as configurações do navegador';
+    else if (/[Nn]ot[Ff]ound/.test(String(err))) msg = 'Câmera não encontrada';
+    mostrarErroScanner(msg);
+  });
+}
+
+function pararScanner() {
+  if (scanner && scannerAtivo) {
+    scanner.stop().catch(function(){});
+    scannerAtivo = false;
+  }
+  document.getElementById('laser').style.display = 'none';
+}
+
+function mostrarErroScanner(msg) {
+  document.getElementById('erroMsg').textContent = msg;
+  document.getElementById('stateErro').style.display = 'flex';
+  document.getElementById('laser').style.display = 'none';
+}
+
+function onScanSuccess(code) {
+  if (!code || code === codigoAtual) return;
+
+  pararScanner();
+
+  // Flash
+  var flash = document.getElementById('scanFlash');
+  flash.classList.add('show');
+  setTimeout(function(){ flash.classList.remove('show'); }, 220);
+
+  // Vibrar
+  if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+
+  // Fechar manual se aberto
+  if (manualAberto) fecharManual();
+
+  // Exibir código com efeito typewriter
+  exibirCodigo(code);
+
+  // Focar validade
+  setTimeout(function(){
+    document.getElementById('fValidade').focus();
+  }, code.length * 30 + 200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CODE DISPLAY — typewriter effect
+// ═══════════════════════════════════════════════════════════
+function exibirCodigo(code) {
+  codigoAtual = code;
+  var el = document.getElementById('codeDisplay');
+  el.classList.remove('empty');
+  el.textContent = '';
+
+  var i = 0;
+  var iv = setInterval(function() {
+    el.textContent = code.slice(0, i + 1) + '▌';
+    i++;
+    if (i >= code.length) {
+      clearInterval(iv);
+      el.textContent = code;
+      el.title = 'Toque para escanear outro produto';
+      el.style.cursor = 'pointer';
+      el.onclick = function() { resetCodigo(); iniciarScanner(); };
+      // Troca botão manual por "reescanear"
+      var btn = document.getElementById('rescanBtn');
+      btn.textContent = '🔄 outro';
+      btn.onclick = function() { resetCodigo(); iniciarScanner(); };
+    }
+  }, 30);
+}
+
+function resetCodigo() {
+  codigoAtual = '';
+  var el = document.getElementById('codeDisplay');
+  el.textContent = 'Aguardando leitura…';
+  el.classList.add('empty');
+  el.onclick = null;
+  el.style.cursor = '';
+  el.title = '';
+  var btn = document.getElementById('rescanBtn');
+  btn.textContent = '✏️ manual';
+  btn.onclick = toggleManual;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MANUAL INPUT
+// ═══════════════════════════════════════════════════════════
+function toggleManual() {
+  if (manualAberto) { fecharManual(); return; }
+  manualAberto = true;
+  pararScanner();
+  var wrap = document.getElementById('manualWrap');
+  wrap.classList.add('open');
+  setTimeout(function(){ document.getElementById('manualInput').focus(); }, 80);
+}
+
+function fecharManual() {
+  manualAberto = false;
+  document.getElementById('manualWrap').classList.remove('open');
+  document.getElementById('manualInput').value = '';
+}
+
+function onManualInput(v) {
+  v = v.trim();
+  if (v.length >= 7) {
+    exibirCodigo(v);
+    fecharManual();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUANTITY
+// ═══════════════════════════════════════════════════════════
+function alterarQty(delta) {
+  var el = document.getElementById('fQty');
+  var v = parseInt(el.value) || 1;
+  el.value = Math.max(1, Math.min(999, v + delta));
+  el.style.transition = 'transform .08s';
+  el.style.transform = 'scale(1.25)';
+  setTimeout(function(){ el.style.transform = ''; }, 100);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  REGISTER
+// ═══════════════════════════════════════════════════════════
+function registrar() {
+  var codigo  = codigoAtual || document.getElementById('manualInput').value.trim();
+  var valRaw  = document.getElementById('fValidade').value;   // YYYY-MM-DD
+  var setor   = document.getElementById('fSetor').value;
+  var tipo    = document.getElementById('fTipo').value;
+  var qty     = parseInt(document.getElementById('fQty').value) || 1;
+  var cfg     = loadCfg();
+  var email   = cfg.email || '';
+
+  if (!codigo)  { mostrarToast('Escaneie ou informe o código de barras', 'err'); return; }
+  if (!valRaw)  { mostrarToast('Informe a data de validade', 'err'); document.getElementById('fValidade').focus(); return; }
+  if (!setor)   { mostrarToast('Selecione o setor', 'err'); return; }
+  if (!tipo)    { mostrarToast('Selecione o tipo de registro', 'err'); return; }
+  if (!email)   { mostrarToast('⚙️ Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
+
+  // YYYY-MM-DD → DD/MM/YYYY
+  var pts = valRaw.split('-');
+  var validade = pts[2] + '/' + pts[1] + '/' + pts[0];
+
+  var dados = {
+    ts: new Date().toISOString(),
+    codigo: codigo,
+    validade: validade,
+    setor: setor,
+    tipo: tipo,
+    quantidade: qty,
+    email: email
+  };
+
+  // Lembrar setor e tipo
+  cfg.lastSetor = setor;
+  cfg.lastTipo  = tipo;
+  saveCfg(cfg);
+
+  // UI loading
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitIcon').textContent = '⏳';
+  document.getElementById('submitTxt').textContent  = 'ENVIANDO…';
+
+  enviar(dados)
+    .then(function() {
+      registrarHistorico(dados, 'ok');
+      mostrarToast('✓ Registrado com sucesso!', 'ok');
+      resetAposEnvio();
+    })
+    .catch(function() {
+      salvarPendente(dados);
+      registrarHistorico(dados, 'pend');
+      mostrarToast('⚠️ Salvo localmente — sem conexão', 'warn');
+      resetAposEnvio();
+    })
+    .finally(function() {
+      btn.disabled = false;
+      document.getElementById('submitIcon').textContent = '✓';
+      document.getElementById('submitTxt').textContent  = 'REGISTRAR VALIDADE';
+    });
+}
+
+async function enviar(dados) {
+  var cfg = loadCfg();
+  if (!cfg.url) throw new Error('sem-url');
+  if (!navigator.onLine) throw new Error('offline');
+
+  // POST com corpo JSON → doPost no Apps Script
+  // Content-Type text/plain evita preflight CORS bloqueado pelo Google
+  var resp = await fetch(cfg.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({
+      ean:        dados.codigo,
+      validade:   dados.validade,
+      setor:      dados.setor,
+      tipo:       dados.tipo      || '',
+      quantidade: dados.quantidade,
+      email:      dados.email     || '',
+      ts:         dados.ts
+    })
+  });
+
+  if (!resp.ok) throw new Error('http-' + resp.status);
+}
+
+function resetAposEnvio() {
+  resetCodigo();
+  document.getElementById('fQty').value = '1';
+  renderHistorico();
+  atualizarPendUI();
+  setTimeout(iniciarScanner, 700);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PENDING
+// ═══════════════════════════════════════════════════════════
+function salvarPendente(dados) {
+  var arr = loadPend();
+  arr.push(dados);
+  savePend(arr);
+  atualizarPendUI();
+}
+
+async function reenviarPendentes() {
+  var arr = loadPend();
+  if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return; }
+  if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return; }
+
+  var ok = 0, fail = 0;
+  for (var i = 0; i < arr.length; i++) {
+    try { await enviar(arr[i]); ok++; }
+    catch(e) { fail++; }
+  }
+
+  if (fail === 0) {
+    savePend([]);
+    mostrarToast('✓ ' + ok + ' registro(s) enviado(s)!', 'ok');
+  } else {
+    mostrarToast(ok + ' enviados, ' + fail + ' falharam', 'err');
+  }
+  atualizarPendUI();
+}
+
+function atualizarPendUI() {
+  var arr = loadPend();
+  var n   = arr.length;
+  document.getElementById('pendDot').classList.toggle('show', n > 0);
+  document.getElementById('resendCount').textContent = n;
+  document.getElementById('resendBtn').classList.toggle('show', n > 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════════════
+var SETOR_EMOJI = {
+  Acougue:'🥩', Bebidas:'🍺', Congelados:'🧊', FLV:'🥦',
+  Frios:'🧀', Laticinios:'🥛', Outros:'📦', Pet:'🐾',
+  Seca:'🛒', 'Seca doce':'🍫'
+};
+
+function registrarHistorico(dados, status) {
+  var arr = loadHist();
+  arr.unshift(Object.assign({}, dados, { status: status }));
+  if (arr.length > 30) arr = arr.slice(0, 30);
+  saveHist(arr);
+}
+
+function renderHistorico() {
+  var arr  = loadHist();
+  var list = document.getElementById('histList');
+  if (!arr.length) {
+    list.innerHTML = '<div class="hist-empty">Nenhum registro nesta sessão</div>';
+    return;
+  }
+  list.innerHTML = arr.slice(0, 10).map(function(item) {
+    var emoji  = SETOR_EMOJI[item.setor] || '📦';
+    var status = item.status === 'ok' ? '✅' : item.status === 'pend' ? '⏳' : '❌';
+    var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+    var tipo   = item.tipo ? ' • ' + item.tipo : '';
+    return '<div class="hist-item">'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div class="hist-code">' + item.codigo + '</div>'
+      +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;📅 ' + item.validade + '&nbsp;•&nbsp;x' + item.quantidade + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
+      + '</div>'
+      + '<div class="hist-status">' + status + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function limparHistorico() {
+  if (!confirm('Limpar histórico desta sessão?')) return;
+  saveHist([]);
+  renderHistorico();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIG MODAL
+// ═══════════════════════════════════════════════════════════
+function abrirConfig() {
+  var cfg = loadCfg();
+  document.getElementById('cfgUrl').value   = cfg.url   || '';
+  document.getElementById('cfgEmail').value = cfg.email || '';
+  document.getElementById('sampleCode').textContent = SAMPLE_SCRIPT;
+  atualizarPendUI();
+  document.getElementById('cfgModal').classList.add('open');
+}
+
+function fecharConfig() {
+  document.getElementById('cfgModal').classList.remove('open');
+}
+
+function fecharConfigBg(e) {
+  if (e.target.id === 'cfgModal') fecharConfig();
+}
+
+function salvarConfig() {
+  var cfg   = loadCfg();
+  cfg.url   = document.getElementById('cfgUrl').value.trim();
+  cfg.email = document.getElementById('cfgEmail').value.trim().toLowerCase();
+  saveCfg(cfg);
+  fecharConfig();
+  mostrarToast('Configuração salva!', 'ok');
+}
+
+var SAMPLE_SCRIPT = [
+  '// Cole este bloco no final do seu script AURA existente',
+  '// NÃO substitua o doGet — apenas ADICIONE o doPost abaixo',
+  '',
+  'function doPost(e) {',
+  '  try {',
+  '    var dados = JSON.parse(e.postData.contents);',
+  '    var ss    = SpreadsheetApp.getActive();',
+  '    var aba   = ss.getSheetByName(CFG.ABA_RESPOSTAS);',
+  '    if (!aba) throw new Error("Aba Respostas não encontrada");',
+  '',
+  '    // Monta data de validade como objeto Date',
+  '    var partes = String(dados.validade).split("/");',
+  '    var dataVal = partes.length === 3',
+  '      ? new Date(partes[2], partes[1]-1, partes[0])',
+  '      : new Date(dados.validade);',
+  '',
+  '    var agora = new Date();',
+  '',
+  '    // Grava na aba Respostas ao formulário 1',
+  '    // A=Carimbo | B=Setor | C=Código | D=Validade | E=Qtd | F=Email',
+  '    aba.appendRow([',
+  '      agora,',
+  '      dados.setor,',
+  '      dados.ean,',
+  '      dataVal,',
+  '      Number(dados.quantidade) || 1,',
+  '      dados.email || ""',
+  '    ]);',
+  '',
+  '    // Dispara o processamento igual ao formulário Google',
+  '    processarNovoEnvioFormulario({',
+  '      values: [agora, dados.setor, dados.ean, dataVal, Number(dados.quantidade)||1]',
+  '    });',
+  '',
+  '    return ContentService',
+  '      .createTextOutput(JSON.stringify({ok:true}))',
+  '      .setMimeType(ContentService.MimeType.JSON);',
+  '',
+  '  } catch(err) {',
+  '    return ContentService',
+  '      .createTextOutput(JSON.stringify({ok:false, erro:err.message}))',
+  '      .setMimeType(ContentService.MimeType.JSON);',
+  '  }',
+  '}'
+].join('\n');
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+var _toastTimer;
+function mostrarToast(msg, tipo) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || '');
+  void t.offsetWidth;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ONLINE / OFFLINE
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('offline', function() {
+  document.getElementById('offlineBar').classList.add('show');
+});
+window.addEventListener('online', function() {
+  document.getElementById('offlineBar').classList.remove('show');
+  // Tenta reenviar pendentes automaticamente
+  var pend = loadPend();
+  if (pend.length) reenviarPendentes();
+});
+if (!navigator.onLine) {
+  document.getElementById('offlineBar').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+(function init() {
+  var cfg = loadCfg();
+
+  // Restaurar setor e tipo da última sessão
+  if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
+  if (cfg.lastTipo)  document.getElementById('fTipo').value  = cfg.lastTipo;
+
+  // Mostrar email no header se configurado
+  if (cfg.email) {
+    document.querySelector('.hdr-sub').textContent = '👤 ' + cfg.email;
+  }
+
+  // Validade padrão = hoje
+  var hoje = new Date();
+  var yy = hoje.getFullYear();
+  var mm = String(hoje.getMonth() + 1).padStart(2, '0');
+  var dd = String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('fValidade').value = yy + '-' + mm + '-' + dd;
+
+  renderHistorico();
+  atualizarPendUI();
+
+  // Aviso se não configurado
+  if (!cfg.url || !cfg.email) {
+    setTimeout(function(){
+      mostrarToast('⚙️ Configure seu e-mail e a URL do Script', 'warn');
+    }, 1500);
+  }
+})();
+</script>
+</body>
+</html>
