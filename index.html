@@ -264,6 +264,121 @@ body{
 .resend-btn.show{display:block}
 .resend-btn:active{background:rgba(245,158,11,.25)}
 .modal-divider{height:1px;background:var(--bd);margin:18px 0}
+
+/* ── DRUM PICKER (seletor de data estilo iOS) ── */
+.drum-trigger{
+  width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
+  border-radius:10px;padding:0 16px;font-size:16px;color:var(--tx);
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:border-color .15s;user-select:none;
+}
+.drum-trigger:active{border-color:var(--accent)}
+.drum-trigger .dt-val{flex:1;font-size:16px}
+.drum-trigger .dt-val.empty{color:var(--tx2)}
+.drum-trigger .dt-icon{font-size:18px;opacity:.6}
+
+.drum-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.drum-modal.open{display:flex}
+.drum-box{
+  background:var(--surf);border-radius:20px 20px 0 0;
+  width:100%;max-width:480px;padding-bottom:env(safe-area-inset-bottom,16px);
+  user-select:none;
+}
+.drum-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 8px;border-bottom:1px solid var(--bd);
+}
+.drum-header-title{font-size:15px;font-weight:600}
+.drum-confirm{
+  background:none;border:none;color:var(--accent);
+  font-size:16px;font-weight:700;cursor:pointer;padding:4px 8px;
+}
+.drum-cancel{
+  background:none;border:none;color:var(--tx2);
+  font-size:14px;cursor:pointer;padding:4px 8px;
+}
+.drum-cols{
+  display:flex;height:220px;overflow:hidden;position:relative;
+}
+/* faixas de seleção */
+.drum-cols::before,.drum-cols::after{
+  content:'';position:absolute;left:0;right:0;pointer-events:none;z-index:2;
+}
+.drum-cols::before{
+  top:0;height:76px;
+  background:linear-gradient(to bottom,var(--surf) 20%,transparent);
+}
+.drum-cols::after{
+  bottom:0;height:76px;
+  background:linear-gradient(to top,var(--surf) 20%,transparent);
+}
+.drum-sel-line{
+  position:absolute;left:12px;right:12px;
+  top:50%;transform:translateY(-50%);
+  height:44px;background:rgba(0,210,138,.1);
+  border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);
+  border-radius:10px;pointer-events:none;z-index:1;
+}
+.drum-col{
+  flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding:88px 0;
+}
+.drum-col::-webkit-scrollbar{display:none}
+.drum-item{
+  height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:500;color:var(--tx2);
+  scroll-snap-align:center;transition:color .15s,font-size .15s;
+  cursor:pointer;
+}
+.drum-item.active{color:var(--tx);font-size:20px;font-weight:700}
+
+/* ── POPUP PRIMEIRO USO ── */
+.welcome-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;
+  display:none;align-items:center;justify-content:center;padding:24px;
+}
+.welcome-modal.open{display:flex}
+.welcome-box{
+  background:var(--surf);border-radius:20px;
+  width:100%;max-width:440px;padding:28px 24px 24px;
+  border:1px solid var(--bd);
+}
+.welcome-logo{
+  font-size:38px;text-align:center;margin-bottom:6px;
+}
+.welcome-title{
+  font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;
+}
+.welcome-sub{
+  font-size:13px;color:var(--tx2);text-align:center;margin-bottom:24px;line-height:1.5;
+}
+.welcome-field{margin-bottom:14px}
+.welcome-lbl{
+  font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.07em;
+  text-transform:uppercase;margin-bottom:6px;display:block;
+}
+.welcome-inp{
+  width:100%;padding:14px 16px;background:var(--card);border:1.5px solid var(--bd);
+  border-radius:10px;color:var(--tx);font-size:15px;outline:none;
+  -webkit-appearance:none;transition:border-color .15s;
+}
+.welcome-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,138,.1)}
+.welcome-inp::placeholder{color:var(--tx2)}
+.welcome-btn{
+  width:100%;height:52px;background:var(--accent);color:#000;
+  font-size:16px;font-weight:700;border:none;border-radius:12px;
+  cursor:pointer;margin-top:8px;letter-spacing:.03em;
+}
+.welcome-btn:active{background:var(--accent2)}
+.welcome-skip{
+  display:block;text-align:center;margin-top:14px;font-size:12px;
+  color:var(--tx2);cursor:pointer;
+}
+.welcome-skip:hover{color:var(--tx)}
 </style>
 </head>
 <body>
@@ -329,7 +444,13 @@ body{
 
   <div>
     <div class="field-lbl">📅 Data de Validade</div>
-    <input type="date" class="field-input" id="fValidade" required>
+    <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
+      <span class="dt-icon">📅</span>
+      <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
+      <span style="color:var(--tx2);font-size:13px">▼</span>
+    </div>
+    <!-- campo hidden para compatibilidade com o resto do código -->
+    <input type="hidden" id="fValidade">
   </div>
 
   <div>
@@ -347,17 +468,6 @@ body{
       <option value="Pet">🐾 Pet</option>
       <option value="Seca">🛒 Seca</option>
       <option value="Seca doce">🍫 Seca Doce</option>
-    </select>
-  </div>
-
-  <div>
-    <div class="field-lbl">🏷️ Tipo de Registro</div>
-    <select class="field-select" id="fTipo">
-      <option value="">Selecione o tipo…</option>
-      <option value="Vencimento próximo">⚠️ Vencimento próximo</option>
-      <option value="Troca de validade">🔄 Troca de validade</option>
-      <option value="Entrada de mercadoria">📥 Entrada de mercadoria</option>
-      <option value="Inventário">📋 Inventário</option>
     </select>
   </div>
 
@@ -417,6 +527,45 @@ body{
     <div class="modal-code" id="sampleCode"></div>
 
     <button class="modal-save-btn" onclick="salvarConfig()">Salvar</button>
+  </div>
+</div>
+
+
+<!-- DRUM DATE PICKER -->
+<div class="drum-modal" id="drumModal" onclick="drumBgClick(event)">
+  <div class="drum-box">
+    <div class="drum-header">
+      <button class="drum-cancel" onclick="fecharDrum()">Cancelar</button>
+      <span class="drum-header-title">Data de Validade</span>
+      <button class="drum-confirm" onclick="confirmarDrum()">OK</button>
+    </div>
+    <div class="drum-cols">
+      <div class="drum-sel-line"></div>
+      <div class="drum-col" id="drumDia"></div>
+      <div class="drum-col" id="drumMes"></div>
+      <div class="drum-col" id="drumAno"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WELCOME / PRIMEIRO USO -->
+<div class="welcome-modal" id="welcomeModal">
+  <div class="welcome-box">
+    <div class="welcome-logo">🛒</div>
+    <div class="welcome-title">Coleta de Validades</div>
+    <div class="welcome-sub">Boas Compras — configure seu acesso<br>para começar a registrar produtos</div>
+    <div class="welcome-field">
+      <label class="welcome-lbl">👤 Seu e-mail</label>
+      <input type="email" class="welcome-inp" id="wEmail"
+        placeholder="seuemail@boascompras.com.br" autocomplete="email">
+    </div>
+    <div class="welcome-field">
+      <label class="welcome-lbl">🔗 URL do Apps Script</label>
+      <input type="url" class="welcome-inp" id="wUrl"
+        placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <button class="welcome-btn" onclick="salvarWelcome()">✓ Começar</button>
+    <span class="welcome-skip" onclick="fecharWelcome()">Configurar depois</span>
   </div>
 </div>
 
@@ -719,34 +868,29 @@ function registrar() {
   var codigo  = codigoAtual || document.getElementById('manualInput').value.trim();
   var valRaw  = document.getElementById('fValidade').value;   // YYYY-MM-DD
   var setor   = document.getElementById('fSetor').value;
-  var tipo    = document.getElementById('fTipo').value;
   var qty     = parseInt(document.getElementById('fQty').value) || 1;
   var cfg     = loadCfg();
   var email   = cfg.email || '';
 
   if (!codigo)  { mostrarToast('Escaneie ou informe o código de barras', 'err'); return; }
-  if (!valRaw)  { mostrarToast('Informe a data de validade', 'err'); document.getElementById('fValidade').focus(); return; }
+  if (!valRaw)  { mostrarToast('Informe a data de validade', 'err'); return; }
   if (!setor)   { mostrarToast('Selecione o setor', 'err'); return; }
-  if (!tipo)    { mostrarToast('Selecione o tipo de registro', 'err'); return; }
   if (!email)   { mostrarToast('⚙️ Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
 
-  // YYYY-MM-DD → DD/MM/YYYY
-  var pts = valRaw.split('-');
-  var validade = pts[2] + '/' + pts[1] + '/' + pts[0];
+  // Já está em DD/MM/YYYY (vem do drum picker)
+  var validade = valRaw;
 
   var dados = {
     ts: new Date().toISOString(),
     codigo: codigo,
     validade: validade,
     setor: setor,
-    tipo: tipo,
     quantidade: qty,
     email: email
   };
 
-  // Lembrar setor e tipo
+  // Lembrar setor
   cfg.lastSetor = setor;
-  cfg.lastTipo  = tipo;
   saveCfg(cfg);
 
   // UI loading
@@ -788,7 +932,6 @@ async function enviar(dados) {
       ean:        dados.codigo,
       validade:   dados.validade,
       setor:      dados.setor,
-      tipo:       dados.tipo      || '',
       quantidade: dados.quantidade,
       email:      dados.email     || '',
       ts:         dados.ts
@@ -994,6 +1137,174 @@ if (!navigator.onLine) {
   document.getElementById('offlineBar').classList.add('show');
 }
 
+
+// ═══════════════════════════════════════════════════════════
+//  DRUM DATE PICKER
+// ═══════════════════════════════════════════════════════════
+var _drumDia = 1, _drumMes = 1, _drumAno = new Date().getFullYear();
+var _drumScrollTimers = {};
+
+var MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function diasNoMes(mes, ano) {
+  return new Date(ano, mes, 0).getDate();
+}
+
+function construirColuna(elId, itens, valorAtual, onSelect) {
+  var el = document.getElementById(elId);
+  el.innerHTML = '';
+  itens.forEach(function(item, i) {
+    var div = document.createElement('div');
+    div.className = 'drum-item' + (item.val === valorAtual ? ' active' : '');
+    div.textContent = item.label;
+    div.dataset.val = item.val;
+    el.appendChild(div);
+  });
+
+  // Scroll para o item ativo
+  var idx = itens.findIndex(function(i){ return i.val === valorAtual; });
+  if (idx >= 0) {
+    requestAnimationFrame(function() {
+      el.scrollTop = idx * 44;
+    });
+  }
+
+  // Detectar item central ao parar scroll
+  el.addEventListener('scroll', function() {
+    clearTimeout(_drumScrollTimers[elId]);
+    _drumScrollTimers[elId] = setTimeout(function() {
+      var idx2 = Math.round(el.scrollTop / 44);
+      idx2 = Math.max(0, Math.min(itens.length - 1, idx2));
+      var novoVal = itens[idx2].val;
+      el.querySelectorAll('.drum-item').forEach(function(d, j) {
+        d.classList.toggle('active', j === idx2);
+      });
+      onSelect(novoVal);
+      // Snap suave
+      el.scrollTo({ top: idx2 * 44, behavior: 'smooth' });
+    }, 80);
+  });
+}
+
+function gerarDias(mes, ano) {
+  var total = diasNoMes(mes, ano);
+  var arr = [];
+  for (var d = 1; d <= total; d++) arr.push({ val: d, label: String(d).padStart(2,'0') });
+  return arr;
+}
+
+function gerarMeses() {
+  return MESES_PT.map(function(m, i){ return { val: i+1, label: m }; });
+}
+
+function gerarAnos() {
+  var base = new Date().getFullYear();
+  var arr = [];
+  for (var y = base; y <= base + 10; y++) arr.push({ val: y, label: String(y) });
+  return arr;
+}
+
+function atualizarColunaDias() {
+  var dias = gerarDias(_drumMes, _drumAno);
+  if (_drumDia > dias.length) _drumDia = dias.length;
+  construirColuna('drumDia', dias, _drumDia, function(v) {
+    _drumDia = v;
+  });
+}
+
+function abrirDrum() {
+  // Inicializar com valor atual ou hoje
+  var hj = new Date();
+  var hidVal = document.getElementById('fValidade').value;
+  if (hidVal) {
+    var p = hidVal.split('/');
+    if (p.length === 3) { _drumDia = +p[0]; _drumMes = +p[1]; _drumAno = +p[2]; }
+  } else {
+    _drumDia = hj.getDate();
+    _drumMes = hj.getMonth() + 1;
+    _drumAno = hj.getFullYear();
+  }
+
+  construirColuna('drumDia', gerarDias(_drumMes, _drumAno), _drumDia, function(v) { _drumDia = v; });
+  construirColuna('drumMes', gerarMeses(), _drumMes, function(v) {
+    _drumMes = v;
+    atualizarColunaDias();
+  });
+  construirColuna('drumAno', gerarAnos(), _drumAno, function(v) {
+    _drumAno = v;
+    atualizarColunaDias();
+  });
+
+  document.getElementById('drumModal').classList.add('open');
+}
+
+function fecharDrum() {
+  document.getElementById('drumModal').classList.remove('open');
+}
+
+function drumBgClick(e) {
+  if (e.target.id === 'drumModal') fecharDrum();
+}
+
+function confirmarDrum() {
+  var dd = String(_drumDia).padStart(2,'0');
+  var mm = String(_drumMes).padStart(2,'0');
+  var yy = _drumAno;
+  var valFormatada = dd + '/' + mm + '/' + yy;
+
+  document.getElementById('fValidade').value = valFormatada;
+
+  var disp = document.getElementById('drumDisplay');
+  disp.textContent = dd + ' de ' + MESES_PT[_drumMes-1] + '. de ' + yy;
+  disp.classList.remove('empty');
+
+  fecharDrum();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WELCOME / PRIMEIRO USO
+// ═══════════════════════════════════════════════════════════
+function verificarPrimeiroUso() {
+  var cfg = loadCfg();
+  if (!cfg.email || !cfg.url) {
+    // Pré-preencher se tiver parcialmente
+    if (cfg.email) document.getElementById('wEmail').value = cfg.email;
+    if (cfg.url)   document.getElementById('wUrl').value   = cfg.url;
+    document.getElementById('welcomeModal').classList.add('open');
+  }
+}
+
+function salvarWelcome() {
+  var email = document.getElementById('wEmail').value.trim().toLowerCase();
+  var url   = document.getElementById('wUrl').value.trim();
+
+  if (!email) {
+    document.getElementById('wEmail').style.borderColor = 'var(--err)';
+    document.getElementById('wEmail').focus();
+    return;
+  }
+  if (!url) {
+    document.getElementById('wUrl').style.borderColor = 'var(--err)';
+    document.getElementById('wUrl').focus();
+    return;
+  }
+
+  var cfg = loadCfg();
+  cfg.email = email;
+  cfg.url   = url;
+  saveCfg(cfg);
+
+  // Atualizar header
+  document.querySelector('.hdr-sub').textContent = '👤 ' + email;
+
+  fecharWelcome();
+  mostrarToast('✅ Configuração salva!', 'ok');
+}
+
+function fecharWelcome() {
+  document.getElementById('welcomeModal').classList.remove('open');
+}
+
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
@@ -1002,29 +1313,16 @@ if (!navigator.onLine) {
 
   // Restaurar setor e tipo da última sessão
   if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
-  if (cfg.lastTipo)  document.getElementById('fTipo').value  = cfg.lastTipo;
-
   // Mostrar email no header se configurado
   if (cfg.email) {
     document.querySelector('.hdr-sub').textContent = '👤 ' + cfg.email;
   }
 
-  // Validade padrão = hoje
-  var hoje = new Date();
-  var yy = hoje.getFullYear();
-  var mm = String(hoje.getMonth() + 1).padStart(2, '0');
-  var dd = String(hoje.getDate()).padStart(2, '0');
-  document.getElementById('fValidade').value = yy + '-' + mm + '-' + dd;
-
   renderHistorico();
   atualizarPendUI();
 
-  // Aviso se não configurado
-  if (!cfg.url || !cfg.email) {
-    setTimeout(function(){
-      mostrarToast('⚙️ Configure seu e-mail e a URL do Script', 'warn');
-    }, 1500);
-  }
+  // Popup de primeiro uso
+  setTimeout(verificarPrimeiroUso, 400);
 })();
 </script>
 </body>
