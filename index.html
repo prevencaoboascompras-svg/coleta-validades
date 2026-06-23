@@ -599,7 +599,7 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/@ericblade/quagga2@1.4.0/dist/quagga.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -643,7 +643,7 @@ var scannerAtivo = false;
 var codigoAtual  = '';
 var manualAberto = false;
 
-// motor ativo: 'native' | 'quagga' | null
+// motor ativo: 'native' | 'html5qr' | null
 var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
@@ -653,13 +653,14 @@ var _nativeLoop   = null;
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
 //  1º BarcodeDetector nativo (Android Chrome, rápido)
-//  2º Quagga2 WASM (iOS Safari, Firefox, etc.)
+//  2º html5-qrcode (iOS Safari, Firefox, etc.)
 // ═══════════════════════════════════════════════════════════
-var _quaggaAtivo = false;
+var _html5qrAtivo = false;
+var _html5qrScanner = null;
 
 // ── FOCUS HELPER ──────────────────────────────────────────
 // Aplica autofocus continuo e tenta ajustar foco de perto
-// Funciona em ambos os motores (native e Quagga2)
+// Funciona em ambos os motores (native e html5-qrcode)
 function applyFocusConstraints(stream) {
   if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
   var track = stream.getVideoTracks()[0];
@@ -785,54 +786,65 @@ async function iniciarScanner() {
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
-      // BarcodeDetector falhou — tenta Quagga2
+      // BarcodeDetector falhou — tenta html5-qrcode
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
 
-  // ── Motor 2: Quagga2 WASM (iOS Safari, Firefox, qualquer browser) ──
-  if (typeof Quagga !== 'undefined') {
+  // ── Motor 2: html5-qrcode (iOS Safari, Firefox, qualquer browser) ──
+  if (typeof Html5Qrcode !== 'undefined') {
     var wrap2 = document.getElementById('scannerView');
-    wrap2.innerHTML = '<div id="quagga-region" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>';
+    wrap2.innerHTML = '<div id="html5qr-region" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>';
 
-    // MutationObserver para pegar o video do Quagga o mais cedo possivel
-    // iOS Safari exige playsinline ANTES do play()
-    var qRegion = document.getElementById('quagga-region');
-    var _qObserver = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        m.addedNodes.forEach(function(node) {
-          if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
-            var v = node.tagName === 'VIDEO' ? node : node.querySelector('video');
-            patchVideoForIOS(v);
-          }
-        });
-      });
+    _html5qrScanner = new Html5Qrcode("html5qr-region", {
+      formatsToSupport: ['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_128', 'CODE_39'],
+      useBarCodeDetectorIfAvailable: false
     });
-    _qObserver.observe(qRegion, { childList: true, subtree: true });
 
-    await new Promise(function(resolve, reject) {
-      Quagga.init({
-        inputStream: {
-          name: 'Live',
-          type: 'LiveStream',
-          target: document.getElementById('quagga-region'),
-          constraints: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 }
-          }
+    var config = {
+      fps: 15,
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
+        // Área de scan menor para focar no centro
+        var minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        return { width: Math.floor(minEdge * 0.7), height: Math.floor(minEdge * 0.4) };
+      },
+      aspectRatio: 16/9,
+      experimentalFeatures: {
+        useBarCodeDetectorIfAvailable: false
+      }
+    };
+
+    try {
+      await _html5qrScanner.start(
+        { facingMode: "environment" },
+        config,
+        function(decodedText) {
+          // Sucesso na leitura
+          if (!scannerAtivo) return;
+          onScanSuccess(decodedText);
         },
-        decoder: {
-          readers: ['ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader'],
-          multiple: false
-        },
-        locate: true,
-        numOfWorkers: 0
-      }, function(err) {
-        if (err) { reject(err); return; }
-        resolve();
-      });
-    }).catch(function(err) {
+        function(errorMessage) {
+          // Frame sem leitura — ignorar
+        }
+      );
+
+      // Aplicar foco continuo e zoom após iniciar
+      var h5Video = document.querySelector('#html5qr-region video');
+      if (h5Video) {
+        patchVideoForIOS(h5Video);
+        h5Video.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;';
+        
+        if (h5Video.srcObject) {
+          applyFocusConstraints(h5Video.srcObject);
+        }
+      }
+
+      _html5qrAtivo = true;
+      _motorAtivo = 'html5qr';
+      scannerAtivo = true;
+      document.getElementById('laser').style.display = 'block';
+
+    } catch(err) {
       var msg = 'Câmera não disponível';
       if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
         msg = 'Permissão de câmera negada — verifique as configurações do Safari';
@@ -840,42 +852,8 @@ async function iniciarScanner() {
         msg = 'Câmera não encontrada neste dispositivo';
       mostrarErroScanner(msg);
       return;
-    });
-
-    if (document.getElementById('stateErro').style.display === 'flex') return;
-
-    // Desconectar observer (nao precisa mais)
-    _qObserver.disconnect();
-
-    // Remove canvas de debug que o Quagga adiciona
-    var dbgCanvas = document.querySelector('#quagga-region canvas.drawingBuffer');
-    if (dbgCanvas) dbgCanvas.style.display = 'none';
-
-    // Ajusta o vídeo interno para preencher o container
-    var qVid = document.querySelector('#quagga-region video');
-    if (qVid) {
-      // Patch para iOS Safari — playsinline é obrigatório
-      patchVideoForIOS(qVid);
-      qVid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
-
-      // Aplicar foco continuo e zoom para codigos pequenos de perto
-      if (qVid.srcObject) {
-        applyFocusConstraints(qVid.srcObject);
-      }
     }
 
-    _quaggaAtivo = true;
-    _motorAtivo = 'quagga';
-    scannerAtivo = true;
-    document.getElementById('laser').style.display = 'block';
-
-    Quagga.start();
-
-    Quagga.onDetected(function(result) {
-      if (!scannerAtivo) return;
-      var code = result && result.codeResult && result.codeResult.code;
-      if (code) onScanSuccess(code);
-    });
     return;
   }
 
@@ -892,9 +870,14 @@ function pararScanner() {
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
-  if (_quaggaAtivo) {
-    try { Quagga.offDetected(); Quagga.stop(); } catch(e) {}
-    _quaggaAtivo = false;
+  if (_html5qrAtivo && _html5qrScanner) {
+    _html5qrScanner.stop().then(function() {
+      _html5qrScanner.clear();
+    }).catch(function(err) {
+      console.warn('Erro ao parar html5-qrcode:', err);
+    });
+    _html5qrAtivo = false;
+    _html5qrScanner = null;
   }
 
   if (_videoStream) {
