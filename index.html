@@ -599,7 +599,7 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@ericblade/quagga2@1.4.0/dist/quagga.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -643,7 +643,7 @@ var scannerAtivo = false;
 var codigoAtual  = '';
 var manualAberto = false;
 
-// motor ativo: 'native' | 'h5q' | null
+// motor ativo: 'native' | 'quagga' | null
 var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
@@ -653,9 +653,9 @@ var _nativeLoop   = null;
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
 //  1º BarcodeDetector nativo (Android Chrome, rápido)
-//  2º html5-qrcode (iOS Safari, Firefox, etc.)
+//  2º Quagga2 WASM (iOS Safari, Firefox, etc.)
 // ═══════════════════════════════════════════════════════════
-var _html5QrScanner = null;
+var _quaggaAtivo = false;
 
 async function iniciarScanner() {
   document.getElementById('stateIdle').style.display = 'none';
@@ -714,40 +714,39 @@ async function iniciarScanner() {
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
-      // BarcodeDetector falhou — tenta html5-qrcode
+      // BarcodeDetector falhou — tenta Quagga2
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
 
-  // ── Motor 2: html5-qrcode (iOS Safari, Firefox) ──
-  if (typeof Html5Qrcode !== 'undefined') {
-    try {
-      // Garante container limpo com id fixo
-      var wrap2 = document.getElementById('scannerView');
-      wrap2.innerHTML = '<div id="h5q-region" style="width:100%;height:100%;"></div>';
+  // ── Motor 2: Quagga2 WASM (iOS Safari, Firefox, qualquer browser) ──
+  if (typeof Quagga !== 'undefined') {
+    var wrap2 = document.getElementById('scannerView');
+    wrap2.innerHTML = '<div id="quagga-region" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>';
 
-      var h5q = new Html5Qrcode('h5q-region', {
-        verbose: false,
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-        ]
+    await new Promise(function(resolve, reject) {
+      Quagga.init({
+        inputStream: {
+          name: 'Live',
+          type: 'LiveStream',
+          target: document.getElementById('quagga-region'),
+          constraints: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        },
+        decoder: {
+          readers: ['ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader'],
+          multiple: false
+        },
+        locate: true,
+        numOfWorkers: 0
+      }, function(err) {
+        if (err) { reject(err); return; }
+        resolve();
       });
-      _html5QrScanner = h5q;
-      _motorAtivo = 'h5q';
-      scannerAtivo = true;
-      document.getElementById('laser').style.display = 'block';
-
-      await h5q.start(
-        { facingMode: 'environment', focusMode: 'continuous' },
-        { fps: 20, qrbox: { width: 200, height: 80 }, aspectRatio: 1.7 },
-        function(decodedText) { onScanSuccess(decodedText); },
-        function() {} // erros de frame são normais
-      );
-      return;
-    } catch(err) {
+    }).catch(function(err) {
       var msg = 'Câmera não disponível';
       if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
         msg = 'Permissão de câmera negada — verifique as configurações do Safari';
@@ -755,7 +754,31 @@ async function iniciarScanner() {
         msg = 'Câmera não encontrada neste dispositivo';
       mostrarErroScanner(msg);
       return;
-    }
+    });
+
+    if (document.getElementById('stateErro').style.display === 'flex') return;
+
+    // Remove canvas de debug que o Quagga adiciona
+    var dbgCanvas = document.querySelector('#quagga-region canvas.drawingBuffer');
+    if (dbgCanvas) dbgCanvas.style.display = 'none';
+
+    // Ajusta o vídeo interno para preencher o container
+    var qVid = document.querySelector('#quagga-region video');
+    if (qVid) qVid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+
+    _quaggaAtivo = true;
+    _motorAtivo = 'quagga';
+    scannerAtivo = true;
+    document.getElementById('laser').style.display = 'block';
+
+    Quagga.start();
+
+    Quagga.onDetected(function(result) {
+      if (!scannerAtivo) return;
+      var code = result && result.codeResult && result.codeResult.code;
+      if (code) onScanSuccess(code);
+    });
+    return;
   }
 
   // Nenhum motor disponível
@@ -768,9 +791,9 @@ function pararScanner() {
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
-  if (_html5QrScanner) {
-    try { _html5QrScanner.stop().catch(function(){}); } catch(e) {}
-    _html5QrScanner = null;
+  if (_quaggaAtivo) {
+    try { Quagga.offDetected(); Quagga.stop(); } catch(e) {}
+    _quaggaAtivo = false;
   }
 
   if (_videoStream) {
