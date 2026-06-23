@@ -922,8 +922,26 @@ function mostrarErroScanner(msg) {
   scannerAtivo = false;
 }
 
+// ── NORMALIZAÇÃO EAN/UPC ──────────────────────────────────
+// EAN-13 com zero na frente (0XXXXXXXXXXXX) = UPC-A (XXXXXXXXXXXX)
+// O coletor USB corta o zero. Normalizamos para ficar igual.
+function normalizarCodigo(code) {
+  if (!code) return code;
+  code = code.trim();
+  // EAN-13 começando com 0 → cortar o zero (equivale a UPC-A)
+  if (code.length === 13 && code.charAt(0) === '0') {
+    return code.substring(1);
+  }
+  return code;
+}
+
 function onScanSuccess(code) {
-  if (!code || code === codigoAtual) return;
+  if (!code) return;
+
+  // Normalizar EAN-13 → UPC-A (cortar zero na frente)
+  code = normalizarCodigo(code);
+
+  if (code === codigoAtual) return;
 
   pararScanner();
 
@@ -1020,6 +1038,8 @@ function confirmarManual() {
     mostrarToast('Código muito curto — mínimo 7 dígitos', 'err');
     return;
   }
+  // Normalizar EAN-13 → UPC-A (cortar zero na frente)
+  v = normalizarCodigo(v);
   exibirCodigo(v);
   buscarDescricao(v);
   fecharManual();
@@ -1042,25 +1062,41 @@ async function buscarDescricao(ean) {
     return;
   }
 
+  // Tentar buscar com o código original
+  var resultado = await tentarBusca(cfg.url, ean);
+  
+  // Se não encontrou e é UPC-A (12 dígitos), tentar com zero na frente (EAN-13)
+  if (!resultado.encontrado && ean.length === 12) {
+    resultado = await tentarBusca(cfg.url, '0' + ean);
+  }
+  // Se não encontrou e é EAN-13 com zero, tentar sem o zero (já normalizado, mas por segurança)
+  else if (!resultado.encontrado && ean.length === 13 && ean.charAt(0) === '0') {
+    resultado = await tentarBusca(cfg.url, ean.substring(1));
+  }
+
+  if (resultado.encontrado) {
+    el.textContent = resultado.descricao;
+    el.className = 'desc-val found';
+  } else {
+    el.textContent = 'Produto não encontrado no banco de dados';
+    el.className = 'desc-val notfound';
+  }
+}
+
+async function tentarBusca(url, ean) {
   try {
     var resp = await fetch(
-      cfg.url + '?action=buscarEAN&ean=' + encodeURIComponent(ean),
+      url + '?action=buscarEAN&ean=' + encodeURIComponent(ean),
       { method: 'GET' }
     );
-    if (!resp.ok) throw new Error('http-' + resp.status);
+    if (!resp.ok) return { encontrado: false };
     var data = await resp.json();
     if (data.ok && data.descricao) {
-      el.textContent = data.descricao;
-      el.className = 'desc-val found';
-    } else {
-      el.textContent = 'Produto não encontrado no banco de dados';
-      el.className = 'desc-val notfound';
+      return { encontrado: true, descricao: data.descricao };
     }
+    return { encontrado: false };
   } catch(e) {
-    el.textContent = navigator.onLine
-      ? 'Erro ao buscar — verifique o Apps Script'
-      : 'Sem conexão para buscar';
-    el.className = 'desc-val notfound';
+    return { encontrado: false };
   }
 }
 
