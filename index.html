@@ -599,7 +599,7 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/@zxing/browser@0.1.4/umd/index.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -643,81 +643,61 @@ var scannerAtivo = false;
 var codigoAtual  = '';
 var manualAberto = false;
 
-// motor ativo: 'native' | 'zxing' | null
+// motor ativo: 'native' | 'h5q' | null
 var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
-var _zxingReader  = null;
 var _nativeLoop   = null;
 
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
-//  1º tenta BarcodeDetector nativo (Android Chrome, rápido)
-//  2º fallback ZXing WASM (iOS Safari, Firefox, etc.)
+//  1º BarcodeDetector nativo (Android Chrome, rápido)
+//  2º html5-qrcode (iOS Safari, Firefox, etc.)
 // ═══════════════════════════════════════════════════════════
+var _html5QrScanner = null;
+
 async function iniciarScanner() {
   document.getElementById('stateIdle').style.display = 'none';
   document.getElementById('stateErro').style.display = 'none';
 
-  // Se já existe stream ativo, apenas mostra laser
   if (scannerAtivo) {
     document.getElementById('laser').style.display = 'block';
     return;
   }
 
-  var constraints = {
-    video: {
-      facingMode: { ideal: 'environment' },
-      width:  { ideal: 1280 },
-      height: { ideal: 720 }
-    }
-  };
-
-  var stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-  } catch(err) {
-    var msg = 'Câmera não disponível';
-    if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
-      msg = 'Permissão de câmera negada — verifique as configurações do navegador';
-    else if (/[Nn]ot[Ff]ound|[Dd]evices/.test(String(err)))
-      msg = 'Câmera não encontrada neste dispositivo';
-    mostrarErroScanner(msg);
-    return;
-  }
-
-  _videoStream = stream;
-
-  // Monta elemento <video> dentro de #scannerView
-  var wrap = document.getElementById('scannerView');
-  wrap.innerHTML = '';
-  var vid = document.createElement('video');
-  vid.setAttribute('playsinline', '');
-  vid.setAttribute('autoplay', '');
-  vid.setAttribute('muted', '');
-  vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
-  wrap.appendChild(vid);
-  _videoEl = vid;
-  vid.srcObject = stream;
-  await vid.play().catch(function(){});
-
-  scannerAtivo = true;
-  document.getElementById('laser').style.display = 'block';
-
-  // Tenta motor nativo primeiro
+  // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   if (typeof BarcodeDetector !== 'undefined') {
+    var constraints = {
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    };
     try {
+      var stream = await navigator.mediaDevices.getUserMedia(constraints);
+      _videoStream = stream;
+
+      var wrap = document.getElementById('scannerView');
+      wrap.innerHTML = '';
+      var vid = document.createElement('video');
+      vid.setAttribute('playsinline', '');
+      vid.setAttribute('autoplay', '');
+      vid.setAttribute('muted', '');
+      vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      wrap.appendChild(vid);
+      _videoEl = vid;
+      vid.srcObject = stream;
+      await vid.play().catch(function(){});
+
       var formatos = ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'];
       var supported = await BarcodeDetector.getSupportedFormats().catch(function(){ return formatos; });
       var usarFmts = formatos.filter(function(f){ return supported.includes(f); });
       if (!usarFmts.length) usarFmts = formatos;
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
+      scannerAtivo = true;
+      document.getElementById('laser').style.display = 'block';
 
       var canvas = document.createElement('canvas');
-      var ctx    = canvas.getContext('2d');
-
+      var ctx = canvas.getContext('2d');
       var loop = async function() {
         if (!scannerAtivo || _motorAtivo !== 'native') return;
         if (vid.readyState >= 2) {
@@ -726,10 +706,7 @@ async function iniciarScanner() {
           ctx.drawImage(vid, 0, 0);
           try {
             var results = await detector.detect(canvas);
-            if (results && results.length > 0) {
-              onScanSuccess(results[0].rawValue);
-              return;
-            }
+            if (results && results.length > 0) { onScanSuccess(results[0].rawValue); return; }
           } catch(e) {}
         }
         _nativeLoop = requestAnimationFrame(loop);
@@ -737,35 +714,40 @@ async function iniciarScanner() {
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
-      // BarcodeDetector falhou, cai para ZXing
+      // BarcodeDetector falhou — tenta html5-qrcode
+      if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
 
-  // Fallback: ZXing WASM
-  if (typeof ZXingBrowser !== 'undefined') {
+  // ── Motor 2: html5-qrcode (iOS Safari, Firefox) ──
+  if (typeof Html5Qrcode !== 'undefined') {
     try {
-      _motorAtivo = 'zxing';
-      var hints = new Map();
-      // formatos suportados pelo ZXing
-      var fmtZx = [
-        ZXingBrowser.BarcodeFormat.EAN_13,
-        ZXingBrowser.BarcodeFormat.EAN_8,
-        ZXingBrowser.BarcodeFormat.CODE_128,
-        ZXingBrowser.BarcodeFormat.CODE_39,
-        ZXingBrowser.BarcodeFormat.UPC_A,
-        ZXingBrowser.BarcodeFormat.UPC_E,
-        ZXingBrowser.BarcodeFormat.ITF
-      ].filter(Boolean);
-      if (fmtZx.length) hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, fmtZx);
+      // Garante container limpo com id fixo
+      var wrap2 = document.getElementById('scannerView');
+      wrap2.innerHTML = '<div id="h5q-region" style="width:100%;height:100%;"></div>';
 
-      var reader = new ZXingBrowser.BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
-      _zxingReader = reader;
+      var h5q = new Html5Qrcode('h5q-region', { verbose: false });
+      _html5QrScanner = h5q;
+      _motorAtivo = 'h5q';
+      scannerAtivo = true;
+      document.getElementById('laser').style.display = 'block';
 
-      reader.decodeFromStream(stream, vid, function(result, err) {
-        if (result) onScanSuccess(result.getText());
-      });
+      await h5q.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 260, height: 120 }, aspectRatio: 1.7 },
+        function(decodedText) { onScanSuccess(decodedText); },
+        function() {} // erros de frame são normais
+      );
       return;
-    } catch(e) {}
+    } catch(err) {
+      var msg = 'Câmera não disponível';
+      if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
+        msg = 'Permissão de câmera negada — verifique as configurações do Safari';
+      else if (/[Nn]ot[Ff]ound|[Dd]evices/.test(String(err)))
+        msg = 'Câmera não encontrada neste dispositivo';
+      mostrarErroScanner(msg);
+      return;
+    }
   }
 
   // Nenhum motor disponível
@@ -778,9 +760,9 @@ function pararScanner() {
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
-  if (_zxingReader) {
-    try { _zxingReader.reset(); } catch(e) {}
-    _zxingReader = null;
+  if (_html5QrScanner) {
+    try { _html5QrScanner.stop().catch(function(){}); } catch(e) {}
+    _html5QrScanner = null;
   }
 
   if (_videoStream) {
@@ -795,7 +777,6 @@ function pararScanner() {
 
   _motorAtivo = null;
 
-  // Limpa apenas o video do scannerView, overlays são irmãos
   var wrap = document.getElementById('scannerView');
   wrap.innerHTML = '';
   document.getElementById('stateIdle').style.display = 'flex';
