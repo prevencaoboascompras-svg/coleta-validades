@@ -741,8 +741,8 @@ async function iniciarScanner() {
       document.getElementById('laser').style.display = 'block';
 
       await h5q.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 260, height: 120 }, aspectRatio: 1.7 },
+        { facingMode: 'environment', focusMode: 'continuous' },
+        { fps: 20, qrbox: { width: 200, height: 80 }, aspectRatio: 1.7 },
         function(decodedText) { onScanSuccess(decodedText); },
         function() {} // erros de frame são normais
       );
