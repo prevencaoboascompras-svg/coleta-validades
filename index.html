@@ -657,6 +657,74 @@ var _nativeLoop   = null;
 // ═══════════════════════════════════════════════════════════
 var _quaggaAtivo = false;
 
+// ── FOCUS HELPER ──────────────────────────────────────────
+// Aplica autofocus continuo e tenta ajustar foco de perto
+// Funciona em ambos os motores (native e Quagga2)
+function applyFocusConstraints(stream) {
+  if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
+  var track = stream.getVideoTracks()[0];
+  var caps = {};
+  try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch(e) {}
+
+  var advanced = [];
+
+  // 1) Autofocus continuo
+  if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) {
+    advanced.push({ focusMode: 'continuous' });
+  }
+
+  // 2) Distancia de foco minima (para codigos pequenos de perto)
+  if (caps.focusDistance !== undefined) {
+    var minFocus = caps.focusDistance.min || 0;
+    advanced.push({ focusDistance: minFocus });
+  }
+
+  // 3) Zoom digital — ajuda quando o foco fisico nao chega
+  if (caps.zoom) {
+    var idealZoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 1.5));
+    advanced.push({ zoom: idealZoom });
+  }
+
+  if (advanced.length) {
+    track.applyConstraints({ advanced: advanced }).catch(function() {
+      // Se falhar, tenta so o autofocus continuo
+      if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) {
+        track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
+      }
+    });
+  }
+
+  // Re-aplicar foco periodicamente (alguns dispositivos resetam)
+  if (window._focusInterval) clearInterval(window._focusInterval);
+  window._focusInterval = setInterval(function() {
+    if (!scannerAtivo) { clearInterval(window._focusInterval); return; }
+    try {
+      var t = stream.getVideoTracks()[0];
+      if (!t || t.readyState !== 'live') return;
+      var c = {};
+      try { c = t.getCapabilities ? t.getCapabilities() : {}; } catch(e) {}
+      var adv = [];
+      if (c.focusMode && c.focusMode.indexOf && c.focusMode.indexOf('continuous') >= 0) {
+        adv.push({ focusMode: 'continuous' });
+      }
+      if (c.focusDistance !== undefined) {
+        adv.push({ focusDistance: c.focusDistance.min || 0 });
+      }
+      if (adv.length) t.applyConstraints({ advanced: adv }).catch(function(){});
+    } catch(e) {}
+  }, 3000);
+}
+
+// ── Patch video para iOS Safari ───────────────────────────
+function patchVideoForIOS(videoEl) {
+  if (!videoEl) return;
+  videoEl.setAttribute('playsinline', '');
+  videoEl.setAttribute('webkit-playsinline', '');
+  videoEl.setAttribute('muted', '');
+  videoEl.muted = true;
+  videoEl.playsInline = true;
+}
+
 async function iniciarScanner() {
   document.getElementById('stateIdle').style.display = 'none';
   document.getElementById('stateErro').style.display = 'none';
@@ -669,11 +737,14 @@ async function iniciarScanner() {
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   if (typeof BarcodeDetector !== 'undefined') {
     var constraints = {
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } }
     };
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
+
+      // Aplicar foco continuo e zoom para codigos pequenos de perto
+      applyFocusConstraints(stream);
 
       var wrap = document.getElementById('scannerView');
       wrap.innerHTML = '';
@@ -724,6 +795,21 @@ async function iniciarScanner() {
     var wrap2 = document.getElementById('scannerView');
     wrap2.innerHTML = '<div id="quagga-region" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>';
 
+    // MutationObserver para pegar o video do Quagga o mais cedo possivel
+    // iOS Safari exige playsinline ANTES do play()
+    var qRegion = document.getElementById('quagga-region');
+    var _qObserver = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        m.addedNodes.forEach(function(node) {
+          if (node.tagName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+            var v = node.tagName === 'VIDEO' ? node : node.querySelector('video');
+            patchVideoForIOS(v);
+          }
+        });
+      });
+    });
+    _qObserver.observe(qRegion, { childList: true, subtree: true });
+
     await new Promise(function(resolve, reject) {
       Quagga.init({
         inputStream: {
@@ -731,9 +817,9 @@ async function iniciarScanner() {
           type: 'LiveStream',
           target: document.getElementById('quagga-region'),
           constraints: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 }
           }
         },
         decoder: {
@@ -758,13 +844,25 @@ async function iniciarScanner() {
 
     if (document.getElementById('stateErro').style.display === 'flex') return;
 
+    // Desconectar observer (nao precisa mais)
+    _qObserver.disconnect();
+
     // Remove canvas de debug que o Quagga adiciona
     var dbgCanvas = document.querySelector('#quagga-region canvas.drawingBuffer');
     if (dbgCanvas) dbgCanvas.style.display = 'none';
 
     // Ajusta o vídeo interno para preencher o container
     var qVid = document.querySelector('#quagga-region video');
-    if (qVid) qVid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    if (qVid) {
+      // Patch para iOS Safari — playsinline é obrigatório
+      patchVideoForIOS(qVid);
+      qVid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+
+      // Aplicar foco continuo e zoom para codigos pequenos de perto
+      if (qVid.srcObject) {
+        applyFocusConstraints(qVid.srcObject);
+      }
+    }
 
     _quaggaAtivo = true;
     _motorAtivo = 'quagga';
@@ -788,6 +886,9 @@ async function iniciarScanner() {
 function pararScanner() {
   scannerAtivo = false;
   document.getElementById('laser').style.display = 'none';
+
+  // Limpar intervalo de foco
+  if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval = null; }
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
@@ -1450,5 +1551,6 @@ function fecharWelcome() {
   setTimeout(verificarPrimeiroUso, 400);
 })();
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
