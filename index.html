@@ -644,6 +644,7 @@ var scannerAtivo = false;
 var codigoAtual  = '';
 var descricaoAtual = ''; // Descrição do produto atual
 var manualAberto = false;
+var audioContext = null; // Contexto de áudio para o bip
 
 // motor ativo: 'native' | 'zxing' | null
 var _motorAtivo  = null;
@@ -730,7 +731,25 @@ function patchVideoForIOS(videoEl) {
   videoEl.playsInline = true;
 }
 
+// ── Inicializar AudioContext no toque do usuário ──────────
+// iOS Safari só permite criar AudioContext dentro de uma interação direta
+function initAudioContext() {
+  if (!audioContext) {
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        audioContext = new AudioContext();
+      }
+    } catch(e) {
+      // Se falhar, o bip não vai funcionar, mas o scanner continua
+    }
+  }
+}
+
 async function iniciarScanner() {
+  // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
+  initAudioContext();
+  
   document.getElementById('stateIdle').style.display = 'none';
   document.getElementById('stateErro').style.display = 'none';
 
@@ -940,33 +959,52 @@ function normalizarCodigo(code) {
 
 // ── SOM DE BIP ────────────────────────────────────────────
 // Gera som de bip usando Web Audio API (igual coletor físico)
+// Reutiliza o AudioContext global para funcionar no iOS Safari e Android
 function tocarBip() {
   try {
-    var AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
+    // Se não tem AudioContext ainda, tenta criar
+    if (!audioContext) {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      audioContext = new AudioContext();
+    }
     
-    var ctx = new AudioContext();
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
+    // Garantir que o contexto está ativo (Android pode suspender)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().then(function() {
+        tocarBipAgora();
+      });
+    } else {
+      tocarBipAgora();
+    }
+  } catch(e) {
+    console.warn('Erro ao tocar bip:', e);
+  }
+}
+
+function tocarBipAgora() {
+  try {
+    var osc = audioContext.createOscillator();
+    var gain = audioContext.createGain();
     
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(audioContext.destination);
     
     // Configurar som de bip (tom agudo, curto)
     osc.type = 'sine';
     osc.frequency.value = 1800; // Frequência em Hz (tom agudo)
-    gain.gain.value = 0.3; // Volume (0 a 1)
+    
+    // Envelope de volume para evitar clicks (fade in/out)
+    var now = audioContext.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.01); // Fade in rápido
+    gain.gain.linearRampToValueAtTime(0, now + 0.1); // Fade out
     
     // Tocar por 100ms
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
-    
-    // Fechar contexto após tocar
-    setTimeout(function() {
-      ctx.close();
-    }, 150);
+    osc.start(now);
+    osc.stop(now + 0.1);
   } catch(e) {
-    // Se falhar, não faz nada (som é opcional)
+    console.warn('Erro ao tocar bip agora:', e);
   }
 }
 
