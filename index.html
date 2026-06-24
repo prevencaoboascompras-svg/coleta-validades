@@ -224,6 +224,7 @@ body{
   margin-bottom:8px;
 }
 .hist-code{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+.hist-desc{font-size:12px;color:var(--tx);margin-top:2px;font-weight:500;line-height:1.3;opacity:.85}
 .hist-meta{font-size:12px;color:var(--tx2);margin-top:2px}
 .hist-status{margin-left:auto;font-size:20px;flex-shrink:0}
 .hist-empty{text-align:center;color:var(--tx2);font-size:13px;padding:24px}
@@ -641,6 +642,7 @@ function savePend(a){ _set(K_PEND, JSON.stringify(a)); }
 // ═══════════════════════════════════════════════════════════
 var scannerAtivo = false;
 var codigoAtual  = '';
+var descricaoAtual = ''; // Descrição do produto atual
 var manualAberto = false;
 
 // motor ativo: 'native' | 'zxing' | null
@@ -1143,9 +1145,11 @@ async function buscarDescricao(ean) {
   if (resultado.encontrado) {
     el.textContent = resultado.descricao;
     el.className = 'desc-val found';
+    descricaoAtual = resultado.descricao; // Salvar descrição atual
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'desc-val notfound';
+    descricaoAtual = ''; // Limpar descrição se não encontrado
   }
 }
 
@@ -1200,6 +1204,7 @@ function registrar() {
   var dados = {
     ts: new Date().toISOString(),
     codigo: codigo,
+    descricao: descricaoAtual || '', // Incluir descrição do produto
     validade: validade,
     setor: setor,
     quantidade: qty,
@@ -1260,7 +1265,15 @@ async function enviar(dados) {
 
 function resetAposEnvio() {
   resetCodigo();
+  descricaoAtual = ''; // Limpar descrição
+  
+  // Limpar todas as informações de escaneamento para nova bipagem
   document.getElementById('fQty').value = '1';
+  document.getElementById('fSetor').value = ''; // Limpar setor
+  document.getElementById('fValidade').value = ''; // Limpar data de validade
+  document.getElementById('drumDisplay').textContent = 'Toque para selecionar…';
+  document.getElementById('drumDisplay').classList.add('empty');
+  
   renderHistorico();
   atualizarPendUI();
   setTimeout(iniciarScanner, 700);
@@ -1334,9 +1347,11 @@ function renderHistorico() {
     var status = item.status === 'ok' ? '<i class="ti ti-circle-check"></i>' : item.status === 'pend' ? '<i class="ti ti-loader-2"></i>' : '<i class="ti ti-circle-x"></i>';
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
+    var desc   = item.descricao ? '<div class="hist-desc">' + item.descricao + '</div>' : '';
     return '<div class="hist-item">'
       + '<div style="flex:1;min-width:0">'
       +   '<div class="hist-code">' + item.codigo + '</div>'
+      +   desc
       +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;x' + item.quantidade + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
       + '</div>'
       + '<div class="hist-status">' + status + '</div>'
