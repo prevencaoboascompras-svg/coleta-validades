@@ -599,7 +599,7 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -643,7 +643,7 @@ var scannerAtivo = false;
 var codigoAtual  = '';
 var manualAberto = false;
 
-// motor ativo: 'native' | 'html5qr' | null
+// motor ativo: 'native' | 'zxing' | null
 var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
@@ -653,14 +653,16 @@ var _nativeLoop   = null;
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
 //  1º BarcodeDetector nativo (Android Chrome, rápido)
-//  2º html5-qrcode (iOS Safari, Firefox, etc.)
+//  2º ZXing (iOS Safari, Firefox, etc.)
 // ═══════════════════════════════════════════════════════════
-var _html5qrAtivo = false;
-var _html5qrScanner = null;
+var _zxingAtivo = false;
+var _zxingReader = null;
+var _timerAviso = null; // Timer para vibrar quando não detecta código
+var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
 
 // ── FOCUS HELPER ──────────────────────────────────────────
 // Aplica autofocus continuo e tenta ajustar foco de perto
-// Funciona em ambos os motores (native e html5-qrcode)
+// Funciona em ambos os motores (native e ZXing)
 function applyFocusConstraints(stream) {
   if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
   var track = stream.getVideoTracks()[0];
@@ -786,63 +788,70 @@ async function iniciarScanner() {
       _nativeLoop = requestAnimationFrame(loop);
       return;
     } catch(e) {
-      // BarcodeDetector falhou — tenta html5-qrcode
+      // BarcodeDetector falhou — tenta ZXing
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
 
-  // ── Motor 2: html5-qrcode (iOS Safari, Firefox, qualquer browser) ──
-  if (typeof Html5Qrcode !== 'undefined') {
+  // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
+  if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
     var wrap2 = document.getElementById('scannerView');
-    wrap2.innerHTML = '<div id="html5qr-region" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>';
+    wrap2.innerHTML = '<video id="zxing-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;"></video>';
 
-    _html5qrScanner = new Html5Qrcode("html5qr-region", {
-      formatsToSupport: ['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_128', 'CODE_39'],
-      useBarCodeDetectorIfAvailable: false
-    });
+    var videoEl = document.getElementById('zxing-video');
+    patchVideoForIOS(videoEl);
 
-    var config = {
-      fps: 15,
-      qrbox: function(viewfinderWidth, viewfinderHeight) {
-        // Área de scan menor para focar no centro
-        var minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-        return { width: Math.floor(minEdge * 0.7), height: Math.floor(minEdge * 0.4) };
-      },
-      aspectRatio: 16/9,
-      experimentalFeatures: {
-        useBarCodeDetectorIfAvailable: false
-      }
-    };
+    // Criar reader do ZXing
+    var hints = new Map();
+    var formats = [
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A,
+      ZXing.BarcodeFormat.UPC_E,
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+    _zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+    _zxingReader.timeBetweenScansMillis = 500; // 2 scans por segundo (mais suave)
 
     try {
-      await _html5qrScanner.start(
-        { facingMode: "environment" },
-        config,
-        function(decodedText) {
-          // Sucesso na leitura
-          if (!scannerAtivo) return;
-          onScanSuccess(decodedText);
-        },
-        function(errorMessage) {
-          // Frame sem leitura — ignorar
+      // Iniciar scan contínuo
+      await _zxingReader.decodeFromInputVideoDevice(
+        undefined, // deviceId (undefined = câmera traseira)
+        'zxing-video', // ID do elemento video
+        function(result, error) {
+          if (result) {
+            // Sucesso na leitura - resetar timer de aviso
+            limparTimerAviso();
+            _ultimoScan = Date.now();
+            
+            if (!scannerAtivo) return;
+            
+            // Pequeno delay para dar feedback visual antes de parar
+            setTimeout(function() {
+              onScanSuccess(result.getText());
+            }, 300);
+          }
+          // error é normal quando nenhum código é detectado no frame
         }
       );
 
       // Aplicar foco continuo e zoom após iniciar
-      var h5Video = document.querySelector('#html5qr-region video');
-      if (h5Video) {
-        patchVideoForIOS(h5Video);
-        h5Video.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;';
-        
-        if (h5Video.srcObject) {
-          applyFocusConstraints(h5Video.srcObject);
-        }
+      var zxVideo = document.getElementById('zxing-video');
+      if (zxVideo && zxVideo.srcObject) {
+        applyFocusConstraints(zxVideo.srcObject);
       }
 
-      _html5qrAtivo = true;
-      _motorAtivo = 'html5qr';
+      _zxingAtivo = true;
+      _motorAtivo = 'zxing';
       scannerAtivo = true;
       document.getElementById('laser').style.display = 'block';
+      
+      // Iniciar timer de aviso (vibra após 3s sem leitura)
+      iniciarTimerAviso();
 
     } catch(err) {
       var msg = 'Câmera não disponível';
@@ -865,19 +874,28 @@ function pararScanner() {
   scannerAtivo = false;
   document.getElementById('laser').style.display = 'none';
 
+  // Limpar timer de aviso
+  limparTimerAviso();
+
   // Limpar intervalo de foco
   if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval = null; }
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
-  if (_html5qrAtivo && _html5qrScanner) {
-    _html5qrScanner.stop().then(function() {
-      _html5qrScanner.clear();
-    }).catch(function(err) {
-      console.warn('Erro ao parar html5-qrcode:', err);
-    });
-    _html5qrAtivo = false;
-    _html5qrScanner = null;
+  if (_zxingAtivo && _zxingReader) {
+    try { 
+      _zxingReader.reset();
+      // Para o stream de vídeo
+      var zxVideo = document.getElementById('zxing-video');
+      if (zxVideo && zxVideo.srcObject) {
+        zxVideo.srcObject.getTracks().forEach(function(t) { t.stop(); });
+        zxVideo.srcObject = null;
+      }
+    } catch(e) {
+      console.warn('Erro ao parar ZXing:', e);
+    }
+    _zxingAtivo = false;
+    _zxingReader = null;
   }
 
   if (_videoStream) {
@@ -918,6 +936,68 @@ function normalizarCodigo(code) {
   return code;
 }
 
+// ── SOM DE BIP ────────────────────────────────────────────
+// Gera som de bip usando Web Audio API (igual coletor físico)
+function tocarBip() {
+  try {
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    
+    var ctx = new AudioContext();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Configurar som de bip (tom agudo, curto)
+    osc.type = 'sine';
+    osc.frequency.value = 1800; // Frequência em Hz (tom agudo)
+    gain.gain.value = 0.3; // Volume (0 a 1)
+    
+    // Tocar por 100ms
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+    
+    // Fechar contexto após tocar
+    setTimeout(function() {
+      ctx.close();
+    }, 150);
+  } catch(e) {
+    // Se falhar, não faz nada (som é opcional)
+  }
+}
+
+// ── VIBRAÇÃO DE AVISO ─────────────────────────────────────
+// Vibra para avisar que não está conseguindo ler o código
+function vibrarAviso() {
+  if (navigator.vibrate) {
+    // Padrão: vibração curta, pausa, vibração curta (alerta)
+    navigator.vibrate([100, 50, 100]);
+  }
+}
+
+// ── TIMER DE AVISO ────────────────────────────────────────
+// Inicia timer que vibra após 3 segundos sem leitura
+function iniciarTimerAviso() {
+  limparTimerAviso();
+  _timerAviso = setTimeout(function() {
+    if (scannerAtivo) {
+      vibrarAviso();
+      // Reinicia o timer para vibrar novamente após mais 3 segundos
+      iniciarTimerAviso();
+    }
+  }, 3000); // 3 segundos sem leitura
+}
+
+// Limpa o timer de aviso
+function limparTimerAviso() {
+  if (_timerAviso) {
+    clearTimeout(_timerAviso);
+    _timerAviso = null;
+  }
+}
+
 function onScanSuccess(code) {
   if (!code) return;
 
@@ -935,6 +1015,9 @@ function onScanSuccess(code) {
 
   // Vibrar
   if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+
+  // Som de bip (igual coletor físico)
+  tocarBip();
 
   // Fechar manual se aberto
   if (manualAberto) fecharManual();
