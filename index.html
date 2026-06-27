@@ -510,6 +510,48 @@ body{
 }
 .tarefas-modal-dismiss:active{background:var(--card)}
 
+/* ── TABLET: SELETOR DE USUÁRIO ── */
+.tablet-modal{
+  position:fixed;inset:0;background:var(--bg3);z-index:700;
+  display:none;flex-direction:column;align-items:center;
+  overflow-y:auto;padding:32px 20px 48px;
+}
+.tablet-modal.open{display:flex}
+.tablet-logo{font-size:40px;margin-bottom:6px;text-align:center}
+.tablet-title{
+  font-size:22px;font-weight:800;text-align:center;margin-bottom:4px;
+  letter-spacing:-.02em;
+}
+.tablet-title span{color:var(--accent)}
+.tablet-sub{font-size:13px;color:var(--tx2);text-align:center;margin-bottom:28px;line-height:1.5}
+.tablet-search{
+  width:100%;max-width:440px;height:50px;
+  background:var(--surf);border:1.5px solid var(--bd);
+  border-radius:12px;padding:0 16px;font-size:15px;color:var(--tx);
+  outline:none;-webkit-appearance:none;margin-bottom:16px;
+  transition:border-color .15s;
+}
+.tablet-search:focus{border-color:var(--accent)}
+.tablet-search::placeholder{color:var(--tx2)}
+.tablet-grid{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tablet-user-btn{
+  background:var(--surf);border:1.5px solid var(--bd);border-radius:14px;
+  padding:16px 12px;cursor:pointer;text-align:center;
+  transition:border-color .15s,background .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.tablet-user-btn:active{background:rgba(226,75,74,.08);border-color:var(--accent)}
+.tablet-user-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--accent);color:#fff;
+  font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 8px;
+}
+.tablet-user-name{font-size:13px;font-weight:700;color:var(--tx);line-height:1.3}
+.tablet-user-email{font-size:10px;color:var(--tx2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tablet-no-email{font-size:10px;color:var(--warn);margin-top:2px;font-style:italic}
+
 /* ── POPUP PARABÉNS ── */
 .parabens-modal{
   position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;
@@ -562,6 +604,16 @@ body{
   </div>
 </div>
 
+<!-- TABLET: SELETOR DE USUÁRIO -->
+<div class="tablet-modal" id="tabletModal">
+  <div class="tablet-logo"><i class="ti ti-shopping-cart"></i></div>
+  <div class="tablet-title">Coleta de <span>Validades</span></div>
+  <div class="tablet-sub">Quem está coletando agora?<br>Toque no seu nome para começar.</div>
+  <input type="search" class="tablet-search" id="tabletSearch"
+    placeholder="🔍 Buscar nome…" oninput="filtrarUsuariosTablet(this.value)">
+  <div class="tablet-grid" id="tabletGrid"></div>
+</div>
+
 <!-- MODAL BLOQUEANTE DE TAREFAS -->
 <div class="tarefas-modal" id="tarefasModal">
   <div class="tarefas-modal-box">
@@ -594,11 +646,16 @@ body{
     <div class="hdr-title">Coleta de <span>Validades</span></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
-  <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
-    <i class="ti ti-settings"></i>
-    <span class="pend-dot" id="pendDot"></span>
-    <span class="tarefa-badge" id="tarefaBadge">0</span>
-  </button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
+      <i class="ti ti-user-circle"></i>
+    </button>
+    <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
+      <i class="ti ti-settings"></i>
+      <span class="pend-dot" id="pendDot"></span>
+      <span class="tarefa-badge" id="tarefaBadge">0</span>
+    </button>
+  </div>
 </header>
 
 <!-- SCANNER -->
@@ -2240,6 +2297,68 @@ function pararConfete() {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  MODO TABLET — seletor de usuário
+// ═══════════════════════════════════════════════════════════
+var _modoTablet = window.location.search.indexOf('tablet') >= 0;
+
+function iniciarModoTablet() {
+  var grid = document.getElementById('tabletGrid');
+  var usuarios = COLABORADORES.filter(function(c) {
+    // inclui todos, mas marca quem não tem email
+    return true;
+  });
+  renderGridTablet(usuarios);
+  document.getElementById('tabletModal').classList.add('open');
+}
+
+function renderGridTablet(lista) {
+  var grid = document.getElementById('tabletGrid');
+  // Cores para avatares
+  var cores = ['#E24B4A','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+  grid.innerHTML = lista.map(function(c, i) {
+    var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
+    var cor = cores[i % cores.length];
+    var emailInfo = c.email
+      ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
+      : '<div class="tablet-no-email">sem email cadastrado</div>';
+    var disabled = !c.email ? 'style="opacity:.5;pointer-events:none"' : '';
+    return '<button class="tablet-user-btn" onclick="selecionarUsuarioTablet(' + JSON.stringify(c.nome) + ',' + JSON.stringify(c.email || '') + ')" ' + disabled + '>'
+      + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
+      + '<div class="tablet-user-name">' + primeiroNome(c.nome) + '</div>'
+      + emailInfo
+      + '</button>';
+  }).join('');
+}
+
+function filtrarUsuariosTablet(texto) {
+  var lower = texto.toLowerCase();
+  var filtrados = COLABORADORES.filter(function(c) {
+    return c.nome.toLowerCase().indexOf(lower) >= 0;
+  });
+  renderGridTablet(filtrados);
+}
+
+function selecionarUsuarioTablet(nome, email) {
+  if (!email) return;
+  // Salva na cfg apenas para esta sessão (não sobrescreve cfg permanente do tablet)
+  var cfg = loadCfg();
+  cfg.email = email.toLowerCase();
+  saveCfg(cfg);
+
+  // Atualiza header
+  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
+
+  // Mostra botão de trocar usuário no header
+  var btn = document.getElementById('trocaUsuarioBtn');
+  if (btn) btn.style.display = 'flex';
+  document.getElementById('tabletSearch').value = '';
+
+  // Verifica aniversário e busca tarefas
+  setTimeout(function() { verificarAniversario(email, nome); }, 400);
+  setTimeout(function() { buscarTarefas(); }, 700);
+}
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 (function init() {
@@ -2255,16 +2374,17 @@ function pararConfete() {
   renderHistorico();
   atualizarPendUI();
 
-  // Buscar tarefas pendentes
-  setTimeout(buscarTarefas, 600);
-
-  // Verificar aniversário do colaborador
-  if (cfg.email) {
-    setTimeout(function() { verificarAniversario(cfg.email, null); }, 1200);
+  if (_modoTablet) {
+    // Modo tablet: sempre mostra o seletor de usuário
+    setTimeout(iniciarModoTablet, 300);
+  } else {
+    // Modo pessoal: fluxo normal
+    setTimeout(buscarTarefas, 600);
+    if (cfg.email) {
+      setTimeout(function() { verificarAniversario(cfg.email, null); }, 1200);
+    }
+    setTimeout(verificarPrimeiroUso, 400);
   }
-
-  // Popup de primeiro uso
-  setTimeout(verificarPrimeiroUso, 400);
 })();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
