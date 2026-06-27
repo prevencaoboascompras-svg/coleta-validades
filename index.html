@@ -474,6 +474,42 @@ body{
 .aniv-banner-title{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:1px}
 .aniv-banner-sub{font-size:12px;color:var(--tx2);line-height:1.4}
 
+/* ── MODAL BLOQUEANTE DE TAREFAS ── */
+.tarefas-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.tarefas-modal.open{display:flex}
+.tarefas-modal-box{
+  background:var(--surf);border-radius:24px 24px 0 0;
+  width:100%;max-width:480px;
+  max-height:88vh;overflow-y:auto;
+  padding:0 0 env(safe-area-inset-bottom,20px);
+}
+.tarefas-modal-hdr{
+  position:sticky;top:0;background:var(--surf);
+  padding:20px 20px 14px;
+  border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:10px;
+  z-index:1;
+}
+.tarefas-modal-hdr-icon{font-size:22px;color:var(--warn)}
+.tarefas-modal-hdr-title{font-size:16px;font-weight:700;color:var(--warn);flex:1}
+.tarefas-modal-hdr-count{
+  font-size:11px;font-weight:800;
+  background:var(--warn);color:#000;padding:3px 10px;border-radius:99px;
+}
+.tarefas-modal-sub{
+  font-size:12px;color:var(--tx2);padding:10px 20px 0;
+}
+.tarefas-modal-body{padding:12px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.tarefas-modal-dismiss{
+  margin:0 16px 16px;width:calc(100% - 32px);height:46px;
+  background:none;border:1px solid var(--bd);border-radius:10px;
+  color:var(--tx2);font-size:14px;cursor:pointer;
+}
+.tarefas-modal-dismiss:active{background:var(--card)}
+
 /* ── POPUP PARABÉNS ── */
 .parabens-modal{
   position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;
@@ -523,6 +559,20 @@ body{
   <div class="aniv-banner-txt">
     <div class="aniv-banner-title" id="anivBannerTitle">Aniversário se aproximando!</div>
     <div class="aniv-banner-sub" id="anivBannerSub"></div>
+  </div>
+</div>
+
+<!-- MODAL BLOQUEANTE DE TAREFAS -->
+<div class="tarefas-modal" id="tarefasModal">
+  <div class="tarefas-modal-box">
+    <div class="tarefas-modal-hdr">
+      <span class="tarefas-modal-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
+      <span class="tarefas-modal-hdr-title">Tarefas pendentes</span>
+      <span class="tarefas-modal-hdr-count" id="tarefasModalCount">0</span>
+    </div>
+    <div class="tarefas-modal-sub">Confirme as tarefas abaixo antes de iniciar a coleta.</div>
+    <div class="tarefas-modal-body" id="tarefasModalBody"></div>
+    <button class="tarefas-modal-dismiss" onclick="fecharTarefasModal()">Resolver depois <i class="ti ti-chevron-down"></i></button>
   </div>
 </div>
 
@@ -1569,42 +1619,22 @@ async function buscarTarefas() {
   renderTarefas();
 }
 
-function renderTarefas() {
-  var section = document.getElementById('tarefasSection');
-  var list = document.getElementById('tarefasList');
-  var countEl = document.getElementById('tarefasCount');
-  var badge = document.getElementById('tarefaBadge');
-  
-  if (!_tarefasPendentes.length) {
-    section.classList.remove('show');
-    if (badge) badge.classList.remove('show');
-    return;
-  }
-  
-  section.classList.add('show');
-  countEl.textContent = _tarefasPendentes.length;
-  
-  if (badge) {
-    badge.textContent = _tarefasPendentes.length;
-    badge.classList.add('show');
-  }
-  
-  list.innerHTML = _tarefasPendentes.map(function(t, i) {
+function _buildTarefaCards(prefixo) {
+  return _tarefasPendentes.map(function(t, i) {
     var jaConfirmada = t._localConfirmada || false;
-    
+    var id = prefixo + i;
     var bodyHtml = '';
     if (jaConfirmada) {
       bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — quantidade: ' + (t._qtdeLocal || '?') + ' un.</div>';
     } else {
       bodyHtml = '<div class="tarefa-qty-row">'
-        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',-1)">−</button>'
-        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + i + '" value="1">'
-        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',+1)">+</button>'
+        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(\'' + id + '\',-1)">−</button>'
+        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + id + '" value="1">'
+        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(\'' + id + '\',+1)">+</button>'
         + '</div>'
         + '<button class="tarefa-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar estoque</button>';
     }
-    
-    return '<div class="tarefa-card" id="tarefa_' + i + '">'
+    return '<div class="tarefa-card" id="tarefa_' + id + '">'
       + '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
       + (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
       + (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
@@ -1613,8 +1643,54 @@ function renderTarefas() {
   }).join('');
 }
 
-function alterarTarefaQty(idx, delta) {
-  var el = document.getElementById('tarefaQty_' + idx);
+function renderTarefas() {
+  var section   = document.getElementById('tarefasSection');
+  var list      = document.getElementById('tarefasList');
+  var countEl   = document.getElementById('tarefasCount');
+  var badge     = document.getElementById('tarefaBadge');
+  var modal     = document.getElementById('tarefasModal');
+  var modalBody = document.getElementById('tarefasModalBody');
+  var modalCount= document.getElementById('tarefasModalCount');
+
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
+
+  if (!_tarefasPendentes.length) {
+    section.classList.remove('show');
+    if (badge) badge.classList.remove('show');
+    if (modal) modal.classList.remove('open');
+    return;
+  }
+
+  // Seção inline (abaixo do scanner)
+  section.classList.add('show');
+  countEl.textContent = _tarefasPendentes.length;
+  list.innerHTML = _buildTarefaCards('s');
+
+  // Badge no header
+  if (badge) {
+    badge.textContent = _tarefasPendentes.length;
+    badge.classList.add('show');
+  }
+
+  // Modal bloqueante — abre se ainda há pendentes não confirmadas
+  if (modal && modalBody) {
+    if (pendentes.length > 0) {
+      modalCount.textContent = pendentes.length;
+      modalBody.innerHTML = _buildTarefaCards('m');
+      modal.classList.add('open');
+    } else {
+      modal.classList.remove('open');
+    }
+  }
+}
+
+function fecharTarefasModal() {
+  var modal = document.getElementById('tarefasModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function alterarTarefaQty(id, delta) {
+  var el = document.getElementById('tarefaQty_' + id);
   if (!el) return;
   var v = parseInt(el.value) || 0;
   el.value = Math.max(0, Math.min(999, v + delta));
@@ -1623,8 +1699,11 @@ function alterarTarefaQty(idx, delta) {
 function confirmarTarefa(idx) {
   var t = _tarefasPendentes[idx];
   if (!t) return;
-  
-  var qty = parseInt(document.getElementById('tarefaQty_' + idx).value) || 0;
+
+  // Tenta ler qty do modal primeiro, depois do card inline
+  var elModal  = document.getElementById('tarefaQty_m' + idx);
+  var elInline = document.getElementById('tarefaQty_s' + idx);
+  var qty = parseInt((elModal || elInline || {}).value) || 0;
   
   t._localConfirmada = true;
   t._qtdeLocal = qty;
@@ -1961,38 +2040,39 @@ function fecharWelcome() {
 //  ANIVERSÁRIOS
 // ═══════════════════════════════════════════════════════════
 var COLABORADORES = [
-  { nome: 'Leonardo de Souza Ribeiro',       aniv: '12/01' },
-  { nome: 'Claudionir Oliveira Silveira',     aniv: '22/01' },
-  { nome: 'Stefani Lima',                     aniv: '23/01' },
-  { nome: 'Juliana',                          aniv: '24/01' },
-  { nome: 'Michael de Matos Leal',            aniv: '05/02' },
-  { nome: 'Clovis Iuri Nunes Fonseca',        aniv: '07/02' },
-  { nome: 'Leila Schonhofen da Rocha',        aniv: '10/03' },
-  { nome: 'Cristiano da Rosa Ramos',          aniv: '11/03' },
-  { nome: 'Eduardo',                          aniv: '20/03' },
-  { nome: 'Rafael da Costa Pereira',          aniv: '26/03' },
-  { nome: 'Natanieli Gama Gulart',            aniv: '30/03' },
-  { nome: 'Elizandra Barcelos da Silva',      aniv: '22/04' },
-  { nome: 'Wagner',                           aniv: '29/04' },
-  { nome: 'Carlos Henrique Gonçalves',        aniv: '03/05' },
-  { nome: 'Jose Kael da Conceição',           aniv: '05/05' },
-  { nome: 'Taiti Gabriela Witter Loch',       aniv: '13/06' },
-  { nome: 'Indiara Lima da Silva',            aniv: '18/06' },
-  { nome: 'Janaina da Silva Costa',           aniv: '06/08' },
-  { nome: 'Carolina Carvalho de Oliveira',    aniv: '09/08' },
-  { nome: 'Cesar Augusto Porto Pacheco',      aniv: '13/08' },
-  { nome: 'Karen Machado Fortuna',            aniv: '28/08' },
-  { nome: 'Angela Maria Duarte de Oliveira',  aniv: '01/09' },
-  { nome: 'Guilherme Amaral Silveira Forte',  aniv: '03/09' },
-  { nome: 'Claudia Sibeli Silva Garcia',      aniv: '04/09' },
-  { nome: 'Cleiton Barbosa Alencastro',       aniv: '04/09' },
-  { nome: 'Pedro',                            aniv: '12/09' },
-  { nome: 'Vinicius',                         aniv: '20/09' },
-  { nome: 'Weslyn Pinheiro Duarte',           aniv: '17/10' },
-  { nome: 'Leticia',                          aniv: '31/10' },
-  { nome: 'Katia Brasil Vieira',              aniv: '11/11' },
-  { nome: 'Mari Estela da Silveira Neumann',  aniv: '07/12' },
-  { nome: 'Jose Flavio Soares da Silva',      aniv: '30/12' }
+  { nome: 'Leonardo de Souza Ribeiro',       email: 'prevencaoboascompras@gmail.com', aniv: '12/01' },
+  { nome: 'Claudionir Oliveira Silveira',     email: '',                               aniv: '22/01' },
+  { nome: 'Stefani Lima',                     email: 'lima23stefani@gmail.com',        aniv: '23/01' },
+  { nome: 'Stefani Lima',                     email: 'stefanilima000@gmail.com',       aniv: '23/01' },
+  { nome: 'Juliana',                          email: '',                               aniv: '24/01' },
+  { nome: 'Michael de Matos Leal',            email: 'gamagulartn@gmail.com',          aniv: '05/02' },
+  { nome: 'Clovis Iuri Nunes Fonseca',        email: '',                               aniv: '07/02' },
+  { nome: 'Leila Schonhofen da Rocha',        email: 'leila.darocha.5@gmail.com',      aniv: '10/03' },
+  { nome: 'Cristiano da Rosa Ramos',          email: '',                               aniv: '11/03' },
+  { nome: 'Eduardo',                          email: '',                               aniv: '20/03' },
+  { nome: 'Rafael da Costa Pereira',          email: 'sinuelo6@gmail.com',             aniv: '26/03' },
+  { nome: 'Natanieli Gama Gulart',            email: 'gamagulartn@gmail.com',          aniv: '30/03' },
+  { nome: 'Elizandra Barcelos da Silva',      email: '',                               aniv: '22/04' },
+  { nome: 'Wagner',                           email: '',                               aniv: '29/04' },
+  { nome: 'Carlos Henrique Gonçalves',        email: '',                               aniv: '03/05' },
+  { nome: 'Jose Kael da Conceição',           email: '',                               aniv: '05/05' },
+  { nome: 'Taiti Gabriela Witter Loch',       email: '',                               aniv: '13/06' },
+  { nome: 'Indiara Lima da Silva',            email: '',                               aniv: '18/06' },
+  { nome: 'Janaina da Silva Costa',           email: 'janacosta1989@hotmail.com',      aniv: '06/08' },
+  { nome: 'Carolina Carvalho de Oliveira',    email: '',                               aniv: '09/08' },
+  { nome: 'Cesar Augusto Porto Pacheco',      email: '',                               aniv: '13/08' },
+  { nome: 'Karen Machado Fortuna',            email: 'katulula28251723@gmail.com',     aniv: '28/08' },
+  { nome: 'Angela Maria Duarte de Oliveira',  email: 'angelamaria.ao727@gmail.com',    aniv: '01/09' },
+  { nome: 'Guilherme Amaral Silveira Forte',  email: '',                               aniv: '03/09' },
+  { nome: 'Claudia Sibeli Silva Garcia',      email: '',                               aniv: '04/09' },
+  { nome: 'Cleiton Barbosa Alencastro',       email: 'cleitonbarbosaalencastro@gmail.com', aniv: '04/09' },
+  { nome: 'Pedro',                            email: '',                               aniv: '12/09' },
+  { nome: 'Vinicius',                         email: 'viniciusaraujomotorola@gmail.com', aniv: '20/09' },
+  { nome: 'Weslyn Pinheiro Duarte',           email: 'pinheiroduarteweslyn@gmail.com', aniv: '17/10' },
+  { nome: 'Leticia',                          email: '',                               aniv: '31/10' },
+  { nome: 'Katia Brasil Vieira',              email: '',                               aniv: '11/11' },
+  { nome: 'Mari Estela da Silveira Neumann',  email: 'marineumann@gmail.com',          aniv: '07/12' },
+  { nome: 'Jose Flavio Soares da Silva',      email: '',                               aniv: '30/12' }
 ];
 
 // Retorna o primeiro nome (ex: "Leonardo de Souza Ribeiro" → "Leonardo")
@@ -2005,11 +2085,19 @@ function primeiroNome(nome) {
 function encontrarColaborador(email) {
   if (!email) return null;
   var emailLower = email.toLowerCase();
-  // Tenta casar pelo nome: ex. "leonardo.ribeiro@..." → "Leonardo"
+
+  // 1. Busca direta por email (mais confiável)
+  for (var i = 0; i < COLABORADORES.length; i++) {
+    var c = COLABORADORES[i];
+    if (c.email && c.email.toLowerCase() === emailLower) {
+      return c;
+    }
+  }
+
+  // 2. Fallback: partes do nome no email
   for (var i = 0; i < COLABORADORES.length; i++) {
     var c = COLABORADORES[i];
     var parts = c.nome.toLowerCase().split(' ');
-    // Verifica se alguma parte do nome aparece no email
     for (var j = 0; j < parts.length; j++) {
       if (parts[j].length >= 4 && emailLower.indexOf(parts[j]) >= 0) {
         return c;
