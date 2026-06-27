@@ -458,6 +458,96 @@ body{
   border:2px solid var(--bg3);display:none;
 }
 .tarefa-badge.show{display:flex}
+
+/* ── MODAL BLOQUEANTE DE TAREFAS ── */
+.tarefas-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;
+  display:none;align-items:center;justify-content:center;
+  padding:16px;overflow-y:auto;
+}
+.tarefas-modal.open{display:flex}
+.tarefas-modal-box{
+  background:var(--surf);border-radius:20px;
+  width:100%;max-width:460px;
+  border:1px solid var(--bd);
+  box-shadow:0 24px 64px rgba(0,0,0,.35);
+  overflow:hidden;
+  max-height:calc(100vh - 32px);
+  display:flex;flex-direction:column;
+}
+.tarefas-modal-header{
+  background:rgba(186,117,23,.15);
+  border-bottom:2px solid var(--warn);
+  padding:18px 20px 16px;
+  flex-shrink:0;
+}
+.tarefas-modal-header-top{
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+}
+.tarefas-modal-icon{font-size:24px;color:var(--warn)}
+.tarefas-modal-title{font-size:17px;font-weight:800;color:var(--warn)}
+.tarefas-modal-badge{
+  margin-left:auto;font-size:12px;font-weight:800;
+  background:var(--warn);color:#000;padding:3px 10px;border-radius:99px;
+}
+.tarefas-modal-sub{font-size:13px;color:var(--tx2);line-height:1.4}
+.tarefas-modal-body{
+  overflow-y:auto;padding:16px;flex:1;display:flex;flex-direction:column;gap:12px;
+}
+.tarefas-modal-footer{
+  padding:14px 16px;border-top:1px solid var(--bd);flex-shrink:0;
+}
+.tarefas-modal-concluir-btn{
+  width:100%;height:52px;background:var(--accent);color:#fff;
+  font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
+  letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .12s,transform .08s;
+}
+.tarefas-modal-concluir-btn:active{background:var(--accent2);transform:scale(.97)}
+.tarefas-modal-concluir-btn:disabled{opacity:.5;pointer-events:none}
+.tarefas-modal-skip{
+  display:block;text-align:center;margin-top:12px;
+  font-size:12px;color:var(--tx2);cursor:pointer;padding:4px;
+}
+.tarefas-modal-skip:hover{color:var(--tx)}
+
+/* cards dentro do modal */
+.tm-tarefa-card{
+  background:var(--card);border:1px solid var(--bd);border-radius:14px;
+  padding:16px;
+}
+.tm-tarefa-produto{font-size:15px;font-weight:800;color:var(--tx);margin-bottom:3px;line-height:1.3}
+.tm-tarefa-cod{font-family:var(--mono);font-size:11px;color:var(--tx2);margin-bottom:5px}
+.tm-tarefa-desc{font-size:12px;color:var(--tx2);line-height:1.5;margin-bottom:12px}
+.tm-tarefa-action{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--warn);
+  text-transform:uppercase;margin-bottom:8px;}
+.tm-qty-row{
+  display:flex;align-items:center;background:var(--surf);
+  border:1.5px solid var(--accent);border-radius:10px;overflow:hidden;height:50px;margin-bottom:10px;
+}
+.tm-qty-btn{
+  width:56px;height:100%;background:none;border:none;color:var(--tx);
+  font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.tm-qty-btn:active{background:rgba(226,75,74,.15)}
+.tm-qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
+.tm-qty-input{
+  flex:1;text-align:center;font-size:24px;font-weight:800;
+  font-family:var(--mono);color:var(--tx);border:none;background:none;outline:none;
+  -webkit-appearance:none;
+}
+.tm-confirm-btn{
+  width:100%;height:46px;background:rgba(226,75,74,.1);color:var(--accent);
+  font-size:14px;font-weight:700;border:2px solid var(--accent);border-radius:10px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .12s;
+}
+.tm-confirm-btn:active{background:rgba(226,75,74,.25)}
+.tm-done-row{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;
+  color:#16a34a;font-size:13px;font-weight:700;
+}
 </style>
 </head>
 <body>
@@ -528,13 +618,31 @@ body{
   <span class="desc-val loading" id="descVal">Buscando produto…</span>
 </div>
 
-<!-- TAREFAS PENDENTES -->
-<div class="tarefas-section" id="tarefasSection">
-  <div class="tarefas-hdr">
-    <span class="tarefas-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
-    <span class="tarefas-hdr-title">Tarefas pendentes</span>
-    <span class="tarefas-hdr-count" id="tarefasCount">0</span>
+<!-- MODAL BLOQUEANTE DE TAREFAS -->
+<div class="tarefas-modal" id="tarefasModal">
+  <div class="tarefas-modal-box">
+    <div class="tarefas-modal-header">
+      <div class="tarefas-modal-header-top">
+        <span class="tarefas-modal-icon"><i class="ti ti-clipboard-list"></i></span>
+        <span class="tarefas-modal-title">Tarefas Pendentes</span>
+        <span class="tarefas-modal-badge" id="tarefasModalCount">0</span>
+      </div>
+      <div class="tarefas-modal-sub">Resolva as tarefas abaixo antes de continuar a coleta de validades.</div>
+    </div>
+    <div class="tarefas-modal-body" id="tarefasModalList"></div>
+    <div class="tarefas-modal-footer">
+      <button class="tarefas-modal-concluir-btn" id="tarefasModalConcluirBtn" onclick="fecharTarefasModal()" disabled>
+        <i class="ti ti-check"></i> Continuar Coleta
+      </button>
+      <span class="tarefas-modal-skip" onclick="fecharTarefasModalForcar()">
+        Pular por agora
+      </span>
+    </div>
   </div>
+</div>
+
+<!-- TAREFAS PENDENTES inline (oculto - apenas para compatibilidade) -->
+<div id="tarefasSection" style="display:none">
   <div id="tarefasList"></div>
 </div>
 
@@ -1493,50 +1601,102 @@ async function buscarTarefas() {
   }
   
   renderTarefas();
+
+  // Abrir modal bloqueante se houver tarefas pendentes
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
+  if (pendentes.length > 0) {
+    abrirTarefasModal();
+  }
 }
 
 function renderTarefas() {
-  var section = document.getElementById('tarefasSection');
-  var list = document.getElementById('tarefasList');
-  var countEl = document.getElementById('tarefasCount');
+  // Mantido para compatibilidade — lógica migrada para renderTarefasModal
+  renderTarefasModal();
+}
+
+// ── MODAL BLOQUEANTE ──────────────────────────────────────────
+var _tarefasModalAberto = false;
+
+function abrirTarefasModal() {
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
+  if (!pendentes.length) return;
+  _tarefasModalAberto = true;
+  renderTarefasModal();
+  document.getElementById('tarefasModal').classList.add('open');
+  // bloqueia scroll do body
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharTarefasModal() {
+  document.getElementById('tarefasModal').classList.remove('open');
+  document.body.style.overflow = '';
+  _tarefasModalAberto = false;
+  atualizarBadgeTarefas();
+}
+
+function fecharTarefasModalForcar() {
+  fecharTarefasModal();
+}
+
+function atualizarBadgeTarefas() {
   var badge = document.getElementById('tarefaBadge');
-  
-  if (!_tarefasPendentes.length) {
-    section.classList.remove('show');
-    if (badge) badge.classList.remove('show');
-    return;
-  }
-  
-  section.classList.add('show');
-  countEl.textContent = _tarefasPendentes.length;
-  
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
   if (badge) {
-    badge.textContent = _tarefasPendentes.length;
-    badge.classList.add('show');
+    badge.textContent = pendentes.length;
+    badge.classList.toggle('show', pendentes.length > 0);
   }
-  
-  list.innerHTML = _tarefasPendentes.map(function(t, i) {
+}
+
+function verificarTodasConfirmadas() {
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
+  var btn = document.getElementById('tarefasModalConcluirBtn');
+  if (btn) btn.disabled = pendentes.length > 0;
+}
+
+function renderTarefasModal() {
+  var badge = document.getElementById('tarefaBadge');
+  var countEl = document.getElementById('tarefasModalCount');
+  var listEl = document.getElementById('tarefasModalList');
+
+  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
+  var total = _tarefasPendentes.length;
+
+  if (badge) {
+    badge.textContent = pendentes.length;
+    badge.classList.toggle('show', pendentes.length > 0);
+  }
+
+  if (countEl) countEl.textContent = total;
+
+  if (!listEl) return;
+
+  listEl.innerHTML = _tarefasPendentes.map(function(t, i) {
     var jaConfirmada = t._localConfirmada || false;
-    
+
     var bodyHtml = '';
     if (jaConfirmada) {
-      bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — quantidade: ' + (t._qtdeLocal || '?') + ' un.</div>';
+      bodyHtml = '<div class="tm-done-row"><i class="ti ti-circle-check"></i> Confirmado — ' + (t._qtdeLocal || '?') + ' un.</div>';
     } else {
-      bodyHtml = '<div class="tarefa-qty-row">'
-        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',-1)">−</button>'
-        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + i + '" value="1">'
-        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',+1)">+</button>'
+      bodyHtml = '<div class="tm-tarefa-action"><i class="ti ti-package"></i> Informe a quantidade em estoque</div>'
+        + '<div class="tm-qty-row">'
+        + '<button class="tm-qty-btn" onclick="alterarTarefaQty(' + i + ',-1)">−</button>'
+        + '<div class="tm-qty-divider"></div>'
+        + '<input type="tel" inputmode="numeric" class="tm-qty-input" id="tarefaQty_' + i + '" value="1">'
+        + '<div class="tm-qty-divider"></div>'
+        + '<button class="tm-qty-btn" onclick="alterarTarefaQty(' + i + ',+1)">+</button>'
         + '</div>'
-        + '<button class="tarefa-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar estoque</button>';
+        + '<button class="tm-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar</button>';
     }
-    
-    return '<div class="tarefa-card" id="tarefa_' + i + '">'
-      + '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
-      + (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
-      + (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
+
+    return '<div class="tm-tarefa-card" id="tarefa_' + i + '">'
+      + '<div class="tm-tarefa-produto">' + (t.produto || 'Produto') + '</div>'
+      + (t.cod ? '<div class="tm-tarefa-cod">' + t.cod + '</div>' : '')
+      + (t.descricao ? '<div class="tm-tarefa-desc">' + t.descricao + '</div>' : '')
       + bodyHtml
       + '</div>';
   }).join('');
+
+  verificarTodasConfirmadas();
 }
 
 function alterarTarefaQty(idx, delta) {
@@ -1549,12 +1709,12 @@ function alterarTarefaQty(idx, delta) {
 function confirmarTarefa(idx) {
   var t = _tarefasPendentes[idx];
   if (!t) return;
-  
+
   var qty = parseInt(document.getElementById('tarefaQty_' + idx).value) || 0;
-  
+
   t._localConfirmada = true;
   t._qtdeLocal = qty;
-  
+
   var locais = [];
   try { locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]'); } catch(e) {}
   var existente = locais.find(function(lt) { return lt.id === t.id; });
@@ -1572,7 +1732,7 @@ function confirmarTarefa(idx) {
     }));
   }
   localStorage.setItem('coleta_tarefas', JSON.stringify(locais));
-  
+
   var cfg = loadCfg();
   if (cfg.url) {
     fetch(cfg.url, {
@@ -1586,14 +1746,19 @@ function confirmarTarefa(idx) {
       })
     }).catch(function() {});
   }
-  
-  renderTarefas();
+
+  renderTarefasModal();
   mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
-  
+
+  // Remove da lista após 2s e fecha o modal se todas resolvidas
   setTimeout(function() {
     _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
-    renderTarefas();
-  }, 3000);
+    renderTarefasModal();
+    var restantes = _tarefasPendentes.filter(function(x) { return !x._localConfirmada; });
+    if (!restantes.length) {
+      setTimeout(fecharTarefasModal, 600);
+    }
+  }, 2000);
 }
 
 // ═══════════════════════════════════════════════════════════
