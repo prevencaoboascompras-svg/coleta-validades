@@ -459,100 +459,84 @@ body{
 }
 .tarefa-badge.show{display:flex}
 
-/* ── MODAL BLOQUEANTE DE TAREFAS ── */
-.tarefas-modal{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;
-  display:none;align-items:center;justify-content:center;
-  padding:16px;overflow-y:auto;
+/* ── BANNER ANIVERSÁRIO ── */
+.aniv-banner{
+  margin:12px 16px 0;padding:14px 16px;border-radius:var(--r);
+  display:none;align-items:center;gap:12px;
+  background:linear-gradient(135deg,rgba(226,75,74,.12),rgba(255,215,0,.12));
+  border:1px solid rgba(226,75,74,.3);
+  animation:anivPulse 2.5s ease-in-out infinite;
 }
-.tarefas-modal.open{display:flex}
-.tarefas-modal-box{
-  background:var(--surf);border-radius:20px;
-  width:100%;max-width:460px;
-  border:1px solid var(--bd);
-  box-shadow:0 24px 64px rgba(0,0,0,.35);
-  overflow:hidden;
-  max-height:calc(100vh - 32px);
-  display:flex;flex-direction:column;
+.aniv-banner.show{display:flex}
+@keyframes anivPulse{0%,100%{border-color:rgba(226,75,74,.3)}50%{border-color:rgba(226,75,74,.7)}}
+.aniv-banner-icon{font-size:26px;flex-shrink:0}
+.aniv-banner-txt{flex:1}
+.aniv-banner-title{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:1px}
+.aniv-banner-sub{font-size:12px;color:var(--tx2);line-height:1.4}
+
+/* ── POPUP PARABÉNS ── */
+.parabens-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;
+  display:none;align-items:center;justify-content:center;padding:24px;
 }
-.tarefas-modal-header{
-  background:rgba(186,117,23,.15);
-  border-bottom:2px solid var(--warn);
-  padding:18px 20px 16px;
-  flex-shrink:0;
+.parabens-modal.open{display:flex}
+.parabens-box{
+  background:var(--surf);border-radius:24px;
+  width:100%;max-width:400px;padding:32px 24px 28px;
+  border:2px solid var(--accent);
+  box-shadow:0 32px 80px rgba(0,0,0,.4);
+  text-align:center;position:relative;overflow:hidden;
 }
-.tarefas-modal-header-top{
-  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+.parabens-confete{
+  position:absolute;inset:0;pointer-events:none;overflow:hidden;
 }
-.tarefas-modal-icon{font-size:24px;color:var(--warn)}
-.tarefas-modal-title{font-size:17px;font-weight:800;color:var(--warn)}
-.tarefas-modal-badge{
-  margin-left:auto;font-size:12px;font-weight:800;
-  background:var(--warn);color:#000;padding:3px 10px;border-radius:99px;
+.parabens-emoji{font-size:56px;margin-bottom:12px;display:block;
+  animation:anivBounce .6s ease infinite alternate;}
+@keyframes anivBounce{from{transform:scale(1)}to{transform:scale(1.12)}}
+.parabens-titulo{
+  font-size:22px;font-weight:900;color:var(--accent);
+  margin-bottom:6px;line-height:1.2;
 }
-.tarefas-modal-sub{font-size:13px;color:var(--tx2);line-height:1.4}
-.tarefas-modal-body{
-  overflow-y:auto;padding:16px;flex:1;display:flex;flex-direction:column;gap:12px;
+.parabens-nome{
+  font-size:17px;font-weight:700;color:var(--tx);margin-bottom:8px;
 }
-.tarefas-modal-footer{
-  padding:14px 16px;border-top:1px solid var(--bd);flex-shrink:0;
+.parabens-msg{
+  font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:24px;
 }
-.tarefas-modal-concluir-btn{
+.parabens-btn{
   width:100%;height:52px;background:var(--accent);color:#fff;
   font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
-  letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:background .12s,transform .08s;
+  letter-spacing:.03em;
 }
-.tarefas-modal-concluir-btn:active{background:var(--accent2);transform:scale(.97)}
-.tarefas-modal-concluir-btn:disabled{opacity:.5;pointer-events:none}
-.tarefas-modal-skip{
-  display:block;text-align:center;margin-top:12px;
-  font-size:12px;color:var(--tx2);cursor:pointer;padding:4px;
-}
-.tarefas-modal-skip:hover{color:var(--tx)}
+.parabens-btn:active{background:var(--accent2)}
 
-/* cards dentro do modal */
-.tm-tarefa-card{
-  background:var(--card);border:1px solid var(--bd);border-radius:14px;
-  padding:16px;
-}
-.tm-tarefa-produto{font-size:15px;font-weight:800;color:var(--tx);margin-bottom:3px;line-height:1.3}
-.tm-tarefa-cod{font-family:var(--mono);font-size:11px;color:var(--tx2);margin-bottom:5px}
-.tm-tarefa-desc{font-size:12px;color:var(--tx2);line-height:1.5;margin-bottom:12px}
-.tm-tarefa-action{font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--warn);
-  text-transform:uppercase;margin-bottom:8px;}
-.tm-qty-row{
-  display:flex;align-items:center;background:var(--surf);
-  border:1.5px solid var(--accent);border-radius:10px;overflow:hidden;height:50px;margin-bottom:10px;
-}
-.tm-qty-btn{
-  width:56px;height:100%;background:none;border:none;color:var(--tx);
-  font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.tm-qty-btn:active{background:rgba(226,75,74,.15)}
-.tm-qty-divider{width:1px;height:28px;background:var(--bd);flex-shrink:0}
-.tm-qty-input{
-  flex:1;text-align:center;font-size:24px;font-weight:800;
-  font-family:var(--mono);color:var(--tx);border:none;background:none;outline:none;
-  -webkit-appearance:none;
-}
-.tm-confirm-btn{
-  width:100%;height:46px;background:rgba(226,75,74,.1);color:var(--accent);
-  font-size:14px;font-weight:700;border:2px solid var(--accent);border-radius:10px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
-  transition:background .12s;
-}
-.tm-confirm-btn:active{background:rgba(226,75,74,.25)}
-.tm-done-row{
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
-  background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;
-  color:#16a34a;font-size:13px;font-weight:700;
-}
 </style>
 </head>
 <body>
 
 <div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> Sem conexão — os registros serão salvos localmente</div>
+
+
+<!-- BANNER ANIVERSÁRIO -->
+<div class="aniv-banner" id="anivBanner">
+  <span class="aniv-banner-icon">🎂</span>
+  <div class="aniv-banner-txt">
+    <div class="aniv-banner-title" id="anivBannerTitle">Aniversário se aproximando!</div>
+    <div class="aniv-banner-sub" id="anivBannerSub"></div>
+  </div>
+</div>
+
+<!-- POPUP PARABÉNS -->
+<div class="parabens-modal" id="parabensMdl">
+  <div class="parabens-box">
+    <canvas class="parabens-confete" id="confeteCanvas"></canvas>
+    <span class="parabens-emoji">🎉</span>
+    <div class="parabens-titulo">Feliz Aniversário!</div>
+    <div class="parabens-nome" id="parabenNome"></div>
+    <div class="parabens-msg" id="parabenMsg"></div>
+    <button class="parabens-btn" onclick="fecharParabens()">Obrigado! 🎈</button>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header class="hdr">
@@ -618,31 +602,13 @@ body{
   <span class="desc-val loading" id="descVal">Buscando produto…</span>
 </div>
 
-<!-- MODAL BLOQUEANTE DE TAREFAS -->
-<div class="tarefas-modal" id="tarefasModal">
-  <div class="tarefas-modal-box">
-    <div class="tarefas-modal-header">
-      <div class="tarefas-modal-header-top">
-        <span class="tarefas-modal-icon"><i class="ti ti-clipboard-list"></i></span>
-        <span class="tarefas-modal-title">Tarefas Pendentes</span>
-        <span class="tarefas-modal-badge" id="tarefasModalCount">0</span>
-      </div>
-      <div class="tarefas-modal-sub">Resolva as tarefas abaixo antes de continuar a coleta de validades.</div>
-    </div>
-    <div class="tarefas-modal-body" id="tarefasModalList"></div>
-    <div class="tarefas-modal-footer">
-      <button class="tarefas-modal-concluir-btn" id="tarefasModalConcluirBtn" onclick="fecharTarefasModal()" disabled>
-        <i class="ti ti-check"></i> Continuar Coleta
-      </button>
-      <span class="tarefas-modal-skip" onclick="fecharTarefasModalForcar()">
-        Pular por agora
-      </span>
-    </div>
+<!-- TAREFAS PENDENTES -->
+<div class="tarefas-section" id="tarefasSection">
+  <div class="tarefas-hdr">
+    <span class="tarefas-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
+    <span class="tarefas-hdr-title">Tarefas pendentes</span>
+    <span class="tarefas-hdr-count" id="tarefasCount">0</span>
   </div>
-</div>
-
-<!-- TAREFAS PENDENTES inline (oculto - apenas para compatibilidade) -->
-<div id="tarefasSection" style="display:none">
   <div id="tarefasList"></div>
 </div>
 
@@ -1601,102 +1567,50 @@ async function buscarTarefas() {
   }
   
   renderTarefas();
-
-  // Abrir modal bloqueante se houver tarefas pendentes
-  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
-  if (pendentes.length > 0) {
-    abrirTarefasModal();
-  }
 }
 
 function renderTarefas() {
-  // Mantido para compatibilidade — lógica migrada para renderTarefasModal
-  renderTarefasModal();
-}
-
-// ── MODAL BLOQUEANTE ──────────────────────────────────────────
-var _tarefasModalAberto = false;
-
-function abrirTarefasModal() {
-  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
-  if (!pendentes.length) return;
-  _tarefasModalAberto = true;
-  renderTarefasModal();
-  document.getElementById('tarefasModal').classList.add('open');
-  // bloqueia scroll do body
-  document.body.style.overflow = 'hidden';
-}
-
-function fecharTarefasModal() {
-  document.getElementById('tarefasModal').classList.remove('open');
-  document.body.style.overflow = '';
-  _tarefasModalAberto = false;
-  atualizarBadgeTarefas();
-}
-
-function fecharTarefasModalForcar() {
-  fecharTarefasModal();
-}
-
-function atualizarBadgeTarefas() {
+  var section = document.getElementById('tarefasSection');
+  var list = document.getElementById('tarefasList');
+  var countEl = document.getElementById('tarefasCount');
   var badge = document.getElementById('tarefaBadge');
-  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
-  if (badge) {
-    badge.textContent = pendentes.length;
-    badge.classList.toggle('show', pendentes.length > 0);
+  
+  if (!_tarefasPendentes.length) {
+    section.classList.remove('show');
+    if (badge) badge.classList.remove('show');
+    return;
   }
-}
-
-function verificarTodasConfirmadas() {
-  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
-  var btn = document.getElementById('tarefasModalConcluirBtn');
-  if (btn) btn.disabled = pendentes.length > 0;
-}
-
-function renderTarefasModal() {
-  var badge = document.getElementById('tarefaBadge');
-  var countEl = document.getElementById('tarefasModalCount');
-  var listEl = document.getElementById('tarefasModalList');
-
-  var pendentes = _tarefasPendentes.filter(function(t) { return !t._localConfirmada; });
-  var total = _tarefasPendentes.length;
-
+  
+  section.classList.add('show');
+  countEl.textContent = _tarefasPendentes.length;
+  
   if (badge) {
-    badge.textContent = pendentes.length;
-    badge.classList.toggle('show', pendentes.length > 0);
+    badge.textContent = _tarefasPendentes.length;
+    badge.classList.add('show');
   }
-
-  if (countEl) countEl.textContent = total;
-
-  if (!listEl) return;
-
-  listEl.innerHTML = _tarefasPendentes.map(function(t, i) {
+  
+  list.innerHTML = _tarefasPendentes.map(function(t, i) {
     var jaConfirmada = t._localConfirmada || false;
-
+    
     var bodyHtml = '';
     if (jaConfirmada) {
-      bodyHtml = '<div class="tm-done-row"><i class="ti ti-circle-check"></i> Confirmado — ' + (t._qtdeLocal || '?') + ' un.</div>';
+      bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — quantidade: ' + (t._qtdeLocal || '?') + ' un.</div>';
     } else {
-      bodyHtml = '<div class="tm-tarefa-action"><i class="ti ti-package"></i> Informe a quantidade em estoque</div>'
-        + '<div class="tm-qty-row">'
-        + '<button class="tm-qty-btn" onclick="alterarTarefaQty(' + i + ',-1)">−</button>'
-        + '<div class="tm-qty-divider"></div>'
-        + '<input type="tel" inputmode="numeric" class="tm-qty-input" id="tarefaQty_' + i + '" value="1">'
-        + '<div class="tm-qty-divider"></div>'
-        + '<button class="tm-qty-btn" onclick="alterarTarefaQty(' + i + ',+1)">+</button>'
+      bodyHtml = '<div class="tarefa-qty-row">'
+        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',-1)">−</button>'
+        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + i + '" value="1">'
+        + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(' + i + ',+1)">+</button>'
         + '</div>'
-        + '<button class="tm-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar</button>';
+        + '<button class="tarefa-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar estoque</button>';
     }
-
-    return '<div class="tm-tarefa-card" id="tarefa_' + i + '">'
-      + '<div class="tm-tarefa-produto">' + (t.produto || 'Produto') + '</div>'
-      + (t.cod ? '<div class="tm-tarefa-cod">' + t.cod + '</div>' : '')
-      + (t.descricao ? '<div class="tm-tarefa-desc">' + t.descricao + '</div>' : '')
+    
+    return '<div class="tarefa-card" id="tarefa_' + i + '">'
+      + '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
+      + (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
+      + (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
       + bodyHtml
       + '</div>';
   }).join('');
-
-  verificarTodasConfirmadas();
 }
 
 function alterarTarefaQty(idx, delta) {
@@ -1709,12 +1623,12 @@ function alterarTarefaQty(idx, delta) {
 function confirmarTarefa(idx) {
   var t = _tarefasPendentes[idx];
   if (!t) return;
-
+  
   var qty = parseInt(document.getElementById('tarefaQty_' + idx).value) || 0;
-
+  
   t._localConfirmada = true;
   t._qtdeLocal = qty;
-
+  
   var locais = [];
   try { locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]'); } catch(e) {}
   var existente = locais.find(function(lt) { return lt.id === t.id; });
@@ -1732,7 +1646,7 @@ function confirmarTarefa(idx) {
     }));
   }
   localStorage.setItem('coleta_tarefas', JSON.stringify(locais));
-
+  
   var cfg = loadCfg();
   if (cfg.url) {
     fetch(cfg.url, {
@@ -1746,19 +1660,14 @@ function confirmarTarefa(idx) {
       })
     }).catch(function() {});
   }
-
-  renderTarefasModal();
+  
+  renderTarefas();
   mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
-
-  // Remove da lista após 2s e fecha o modal se todas resolvidas
+  
   setTimeout(function() {
     _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
-    renderTarefasModal();
-    var restantes = _tarefasPendentes.filter(function(x) { return !x._localConfirmada; });
-    if (!restantes.length) {
-      setTimeout(fecharTarefasModal, 600);
-    }
-  }, 2000);
+    renderTarefas();
+  }, 3000);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2040,10 +1949,211 @@ function salvarWelcome() {
 
   fecharWelcome();
   mostrarToast('Configuração salva!', 'ok');
+  setTimeout(function() { verificarAniversario(email, null); }, 800);
 }
 
 function fecharWelcome() {
   document.getElementById('welcomeModal').classList.remove('open');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  ANIVERSÁRIOS
+// ═══════════════════════════════════════════════════════════
+var COLABORADORES = [
+  { nome: 'Leonardo de Souza Ribeiro',       aniv: '12/01' },
+  { nome: 'Claudionir Oliveira Silveira',     aniv: '22/01' },
+  { nome: 'Stefani Lima',                     aniv: '23/01' },
+  { nome: 'Juliana',                          aniv: '24/01' },
+  { nome: 'Michael de Matos Leal',            aniv: '05/02' },
+  { nome: 'Clovis Iuri Nunes Fonseca',        aniv: '07/02' },
+  { nome: 'Leila Schonhofen da Rocha',        aniv: '10/03' },
+  { nome: 'Cristiano da Rosa Ramos',          aniv: '11/03' },
+  { nome: 'Eduardo',                          aniv: '20/03' },
+  { nome: 'Rafael da Costa Pereira',          aniv: '26/03' },
+  { nome: 'Natanieli Gama Gulart',            aniv: '30/03' },
+  { nome: 'Elizandra Barcelos da Silva',      aniv: '22/04' },
+  { nome: 'Wagner',                           aniv: '29/04' },
+  { nome: 'Carlos Henrique Gonçalves',        aniv: '03/05' },
+  { nome: 'Jose Kael da Conceição',           aniv: '05/05' },
+  { nome: 'Taiti Gabriela Witter Loch',       aniv: '13/06' },
+  { nome: 'Indiara Lima da Silva',            aniv: '18/06' },
+  { nome: 'Janaina da Silva Costa',           aniv: '06/08' },
+  { nome: 'Carolina Carvalho de Oliveira',    aniv: '09/08' },
+  { nome: 'Cesar Augusto Porto Pacheco',      aniv: '13/08' },
+  { nome: 'Karen Machado Fortuna',            aniv: '28/08' },
+  { nome: 'Angela Maria Duarte de Oliveira',  aniv: '01/09' },
+  { nome: 'Guilherme Amaral Silveira Forte',  aniv: '03/09' },
+  { nome: 'Claudia Sibeli Silva Garcia',      aniv: '04/09' },
+  { nome: 'Cleiton Barbosa Alencastro',       aniv: '04/09' },
+  { nome: 'Pedro',                            aniv: '12/09' },
+  { nome: 'Vinicius',                         aniv: '20/09' },
+  { nome: 'Weslyn Pinheiro Duarte',           aniv: '17/10' },
+  { nome: 'Leticia',                          aniv: '31/10' },
+  { nome: 'Katia Brasil Vieira',              aniv: '11/11' },
+  { nome: 'Mari Estela da Silveira Neumann',  aniv: '07/12' },
+  { nome: 'Jose Flavio Soares da Silva',      aniv: '30/12' }
+];
+
+// Retorna o primeiro nome (ex: "Leonardo de Souza Ribeiro" → "Leonardo")
+function primeiroNome(nome) {
+  return nome.split(' ')[0];
+}
+
+// Busca colaborador pelo email no cadastro do GAS
+// Fallback: tenta casar pelo nome contido no email
+function encontrarColaborador(email) {
+  if (!email) return null;
+  var emailLower = email.toLowerCase();
+  // Tenta casar pelo nome: ex. "leonardo.ribeiro@..." → "Leonardo"
+  for (var i = 0; i < COLABORADORES.length; i++) {
+    var c = COLABORADORES[i];
+    var parts = c.nome.toLowerCase().split(' ');
+    // Verifica se alguma parte do nome aparece no email
+    for (var j = 0; j < parts.length; j++) {
+      if (parts[j].length >= 4 && emailLower.indexOf(parts[j]) >= 0) {
+        return c;
+      }
+    }
+  }
+  return null;
+}
+
+// Dias para o próximo aniversário (ignora o ano)
+function diasParaAniversario(anivStr) {
+  var partes = anivStr.split('/');
+  var dia = parseInt(partes[0]);
+  var mes = parseInt(partes[1]) - 1; // 0-indexed
+  var hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  var anivEsteAno = new Date(hoje.getFullYear(), mes, dia);
+  anivEsteAno.setHours(0, 0, 0, 0);
+
+  var diff = Math.round((anivEsteAno - hoje) / 86400000);
+  if (diff < 0) {
+    // Já passou — calcular para o próximo ano
+    var anivProxAno = new Date(hoje.getFullYear() + 1, mes, dia);
+    anivProxAno.setHours(0, 0, 0, 0);
+    diff = Math.round((anivProxAno - hoje) / 86400000);
+  }
+  return diff;
+}
+
+function verificarAniversario(email, nomeGAS) {
+  // Tenta usar o nome vindo do GAS (campo nomeColaborador), senão tenta pelo email
+  var colaborador = null;
+
+  if (nomeGAS) {
+    var nomeLower = nomeGAS.toLowerCase();
+    for (var i = 0; i < COLABORADORES.length; i++) {
+      var c = COLABORADORES[i];
+      if (c.nome.toLowerCase().indexOf(nomeLower.split(' ')[0]) >= 0) {
+        colaborador = c;
+        break;
+      }
+    }
+  }
+
+  if (!colaborador) {
+    colaborador = encontrarColaborador(email);
+  }
+
+  if (!colaborador) return;
+
+  var dias = diasParaAniversario(colaborador.aniv);
+  var nome = primeiroNome(colaborador.nome);
+
+  if (dias === 0) {
+    // HOJE — popup comemorativo
+    mostrarParabens(colaborador.nome);
+  } else if (dias <= 7) {
+    // Faltam até 7 dias — banner sutil
+    var banner = document.getElementById('anivBanner');
+    var title  = document.getElementById('anivBannerTitle');
+    var sub    = document.getElementById('anivBannerSub');
+    if (dias === 1) {
+      title.textContent = '🎂 ' + nome + ', amanhã é seu aniversário!';
+      sub.textContent   = 'O Boas Compras te deseja um dia incrível amanhã! 🎈';
+    } else {
+      title.textContent = '🎂 ' + nome + ', faltam ' + dias + ' dias para o seu aniversário!';
+      sub.textContent   = 'O Boas Compras vai comemorar com você! 🎉';
+    }
+    banner.classList.add('show');
+  }
+}
+
+// ── POPUP PARABÉNS ────────────────────────────────────────
+var _confeteRAF = null;
+
+function mostrarParabens(nomeCompleto) {
+  var nome = primeiroNome(nomeCompleto);
+  document.getElementById('parabenNome').textContent = nomeCompleto;
+  document.getElementById('parabenMsg').textContent =
+    'Hoje é um dia especial, ' + nome + '! ' +
+    'Toda a equipe do Supermercado Boas Compras deseja um feliz aniversário cheio de alegria e saúde. 🎁';
+
+  document.getElementById('parabensMdl').classList.add('open');
+  iniciarConfete();
+}
+
+function fecharParabens() {
+  document.getElementById('parabensMdl').classList.remove('open');
+  pararConfete();
+}
+
+// ── CONFETE ───────────────────────────────────────────────
+var _confeteParticulas = [];
+
+function iniciarConfete() {
+  var canvas = document.getElementById('confeteCanvas');
+  var box    = canvas.parentElement;
+  canvas.width  = box.offsetWidth  || 360;
+  canvas.height = box.offsetHeight || 420;
+  var ctx = canvas.getContext('2d');
+
+  var cores = ['#E24B4A','#FFD700','#4ade80','#60a5fa','#f472b6','#fb923c'];
+  _confeteParticulas = [];
+  for (var i = 0; i < 80; i++) {
+    _confeteParticulas.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 6 + 3,
+      cor: cores[Math.floor(Math.random() * cores.length)],
+      vx: (Math.random() - 0.5) * 2,
+      vy: Math.random() * 2 + 1,
+      rot: Math.random() * 360,
+      vrot: (Math.random() - 0.5) * 6
+    });
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var vivas = false;
+    _confeteParticulas.forEach(function(p) {
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rot += p.vrot;
+      if (p.y < canvas.height + 10) vivas = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.cor;
+      ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r * 0.5);
+      ctx.restore();
+    });
+    if (vivas) {
+      _confeteRAF = requestAnimationFrame(loop);
+    }
+  }
+  if (_confeteRAF) cancelAnimationFrame(_confeteRAF);
+  _confeteRAF = requestAnimationFrame(loop);
+}
+
+function pararConfete() {
+  if (_confeteRAF) { cancelAnimationFrame(_confeteRAF); _confeteRAF = null; }
+  var canvas = document.getElementById('confeteCanvas');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2064,6 +2174,11 @@ function fecharWelcome() {
 
   // Buscar tarefas pendentes
   setTimeout(buscarTarefas, 600);
+
+  // Verificar aniversário do colaborador
+  if (cfg.email) {
+    setTimeout(function() { verificarAniversario(cfg.email, null); }, 1200);
+  }
 
   // Popup de primeiro uso
   setTimeout(verificarPrimeiroUso, 400);
