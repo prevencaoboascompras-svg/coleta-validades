@@ -844,7 +844,27 @@ body{
   </div>
 </div>
 
-<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+<script>
+// Carrega ZXing com fallback entre CDNs
+(function() {
+  var cdns = [
+    'https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js',
+    'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js'
+  ];
+  var idx = 0;
+  function tryNext() {
+    if (idx >= cdns.length) {
+      console.warn('ZXing não carregou em nenhuma CDN — usando BarcodeDetector nativo apenas');
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = cdns[idx++];
+    s.onerror = function() { tryNext(); };
+    document.head.appendChild(s);
+  }
+  tryNext();
+})();
+</script>
 <script>
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
@@ -1059,6 +1079,21 @@ async function iniciarScanner() {
   }
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
+  // Se ZXing ainda não carregou, aguarda até 3s antes de desistir
+  if (typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader) {
+    var _zxWait = 0;
+    var _zxInterval = setInterval(function() {
+      _zxWait += 200;
+      if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
+        clearInterval(_zxInterval);
+        iniciarScanner();
+      } else if (_zxWait >= 3000) {
+        clearInterval(_zxInterval);
+        mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
+      }
+    }, 200);
+    return;
+  }
   if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
     var wrap2 = document.getElementById('scannerView');
     wrap2.innerHTML = '<video id="zxing-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;"></video>';
