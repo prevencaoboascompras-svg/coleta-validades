@@ -2346,9 +2346,12 @@ function iniciarModoTablet() {
   document.getElementById('tabletModal').classList.add('open');
 }
 
+// Lista filtrada atual (referenciada pelo índice no onclick)
+var _tabletListaAtual = [];
+
 function renderGridTablet(lista) {
+  _tabletListaAtual = lista;
   var grid = document.getElementById('tabletGrid');
-  // Cores para avatares
   var cores = ['#E24B4A','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
   grid.innerHTML = lista.map(function(c, i) {
     var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
@@ -2357,12 +2360,18 @@ function renderGridTablet(lista) {
       ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
       : '<div class="tablet-no-email">sem email cadastrado</div>';
     var disabled = !c.email ? 'style="opacity:.5;pointer-events:none"' : '';
-    return '<button class="tablet-user-btn" onclick="selecionarUsuarioTablet(' + JSON.stringify(c.nome) + ',' + JSON.stringify(c.email || '') + ')" ' + disabled + '>'
+    return '<button class="tablet-user-btn" onclick="selecionarUsuarioTabletIdx(' + i + ')" ' + disabled + '>'
       + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
       + '<div class="tablet-user-name">' + primeiroNome(c.nome) + '</div>'
       + emailInfo
       + '</button>';
   }).join('');
+}
+
+function selecionarUsuarioTabletIdx(i) {
+  var c = _tabletListaAtual[i];
+  if (!c || !c.email) return;
+  selecionarUsuarioTablet(c.nome, c.email);
 }
 
 function filtrarUsuariosTablet(texto) {
