@@ -737,17 +737,21 @@ body{
     <div class="field-lbl"><i class="ti ti-building-store"></i> Setor</div>
     <select class="field-select" id="fSetor">
       <option value="">Selecione o setor…</option>
-      <option value="Açougue">Açougue</option>
-      <option value="Bebidas">Bebidas</option>
-      <option value="Congelados">Congelados</option>
-      <option value="FLV">FLV</option>
-      <option value="Frios">Frios</option>
-      <option value="Laticínios">Laticínios</option>
-      <option value="Outros">Outros</option>
-      <option value="Perfumaria">Perfumaria</option>
-      <option value="Pet">Pet</option>
-      <option value="Seca">Seca</option>
-      <option value="Seca doce">Seca Doce</option>
+<option value="Açougue">Açougue</option>
+<option value="Bazar">Bazar</option>
+<option value="Bebidas">Bebidas</option>
+<option value="Congelados">Congelados</option>
+<option value="Frios">Frios</option>
+<option value="Horti">Horti</option>
+<option value="Laticínios">Laticínios</option>
+<option value="Limpeza">Limpeza</option>
+<option value="Outros">Outros</option>
+<option value="Padaria">Padaria</option>
+<option value="Perfumaria">Perfumaria</option>
+<option value="Pet">Pet</option>
+<option value="Pilhas/Baterias">Pilhas/Baterias</option>
+<option value="Seca">Seca</option>
+<option value="Seca doce">Seca doce</option>
     </select>
   </div>
 
@@ -1638,11 +1642,40 @@ function atualizarPendUI() {
 //  HISTORY
 // ═══════════════════════════════════════════════════════════
 var SETOR_EMOJI = {
-  'Açougue':'<i class="ti ti-meat"></i>', Acougue:'<i class="ti ti-meat"></i>',
-  Bebidas:'<i class="ti ti-beer"></i>', Congelados:'<i class="ti ti-snowflake"></i>', FLV:'<i class="ti ti-leaf"></i>',
-  Frios:'<i class="ti ti-cheese"></i>', 'Laticínios':'<i class="ti ti-milk"></i>', Laticinios:'<i class="ti ti-milk"></i>',
-  Outros:'<i class="ti ti-package"></i>', Perfumaria:'<i class="ti ti-spray"></i>', Pet:'<i class="ti ti-paw"></i>',
-  Seca:'<i class="ti ti-shopping-cart"></i>', 'Seca doce':'<i class="ti ti-candy"></i>'
+ 'Açougue':'<i class="ti ti-meat"></i>',
+Acougue:'<i class="ti ti-meat"></i>',
+
+Bazar:'<i class="ti ti-home"></i>',
+
+Bebidas:'<i class="ti ti-beer"></i>',
+
+Congelados:'<i class="ti ti-snowflake"></i>',
+
+Frios:'<i class="ti ti-cheese"></i>',
+
+Horti:'<i class="ti ti-leaf"></i>',
+FLV:'<i class="ti ti-leaf"></i>',
+
+'Laticínios':'<i class="ti ti-milk"></i>',
+Laticinios:'<i class="ti ti-milk"></i>',
+
+Limpeza:'<i class="ti ti-soap"></i>',
+
+Outros:'<i class="ti ti-package"></i>',
+
+Padaria:'<i class="ti ti-bread"></i>',
+
+Perfumaria:'<i class="ti ti-spray"></i>',
+
+Pet:'<i class="ti ti-paw"></i>',
+
+'Pilhas/Baterias':'<i class="ti ti-battery"></i>',
+Pilhas:'<i class="ti ti-battery"></i>',
+Baterias:'<i class="ti ti-battery"></i>',
+
+Seca:'<i class="ti ti-shopping-cart"></i>',
+
+'Seca doce':'<i class="ti ti-candy"></i>'
 };
 
 function registrarHistorico(dados, status) {
