@@ -2348,6 +2348,9 @@ function selecionarUsuarioTablet(nome, email) {
   // Atualiza header
   document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
 
+  // ✅ CORREÇÃO: fecha o modal do seletor de usuário
+  document.getElementById('tabletModal').classList.remove('open');
+
   // Mostra botão de trocar usuário no header
   var btn = document.getElementById('trocaUsuarioBtn');
   if (btn) btn.style.display = 'flex';
