@@ -1227,18 +1227,42 @@ async function iniciarScanner() {
     _zxingReader.timeBetweenScansMillis = 500; // 2 scans por segundo (mais suave)
 
     try {
-      // Iniciar scan contínuo
-      await _zxingReader.decodeFromInputVideoDevice(
-        undefined, // deviceId (undefined = câmera traseira)
-        'zxing-video', // ID do elemento video
+      // ── CORREÇÃO iOS: pedir a câmera DIRETO via getUserMedia,
+      // igual ao motor nativo. NÃO usar decodeFromInputVideoDevice(undefined,...)
+      // porque no Safari iOS ele tenta enumerar as câmeras ANTES da permissão
+      // ser concedida, recebe um device "fantasma" sem deviceId real, e a
+      // constraint falha silenciosamente sem nunca mostrar o popup de permissão
+      // (é por isso que "Permissão de câmera" ficava travada em "prompt").
+      var zxConstraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+
+      var zxStream = await navigator.mediaDevices.getUserMedia(zxConstraints);
+      _videoStream = zxStream;
+
+      videoEl.srcObject = zxStream;
+      await videoEl.play().catch(function(){});
+
+      // Aplicar foco continuo e zoom assim que o stream estiver pronto
+      applyFocusConstraints(zxStream);
+
+      // Agora entrega o stream já autorizado pro ZXing decodificar
+      await _zxingReader.decodeFromStream(
+        zxStream,
+        videoEl,
         function(result, error) {
           if (result) {
             // Sucesso na leitura - resetar timer de aviso
             limparTimerAviso();
             _ultimoScan = Date.now();
-            
+
             if (!scannerAtivo) return;
-            
+
             // Pequeno delay para dar feedback visual antes de parar
             setTimeout(function() {
               onScanSuccess(result.getText());
@@ -1248,27 +1272,27 @@ async function iniciarScanner() {
         }
       );
 
-      // Aplicar foco continuo e zoom após iniciar
-      var zxVideo = document.getElementById('zxing-video');
-      if (zxVideo && zxVideo.srcObject) {
-        applyFocusConstraints(zxVideo.srcObject);
-      }
-
       _zxingAtivo = true;
       _motorAtivo = 'zxing';
       scannerAtivo = true;
       document.getElementById('laser').style.display = 'block';
-      
+
       // Iniciar timer de aviso (vibra após 3s sem leitura)
       iniciarTimerAviso();
 
     } catch(err) {
+      console.error('Erro ao iniciar câmera (ZXing/iOS):', err);
       var msg = 'Câmera não disponível';
       if (/[Pp]ermission|[Nn]ot[Aa]llowed|[Dd]enied/.test(String(err)))
-        msg = 'Permissão de câmera negada — verifique as configurações do Safari';
+        msg = 'Permissão de câmera negada — vá em Ajustes do iPhone > Safari > Câmera e permita o acesso';
       else if (/[Nn]ot[Ff]ound|[Dd]evices/.test(String(err)))
         msg = 'Câmera não encontrada neste dispositivo';
+      else if (/[Oo]verconstrained/.test(String(err)))
+        msg = 'Câmera traseira não encontrada — tente novamente';
+      else if (/[Nn]ot[Rr]eadable|[Tt]rackStart/.test(String(err)))
+        msg = 'Câmera em uso por outro app — feche outros apps que usam a câmera';
       mostrarErroScanner(msg);
+      if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
       return;
     }
 
@@ -2572,7 +2596,6 @@ function selecionarUsuarioTablet(nome, email) {
   }
 })();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
