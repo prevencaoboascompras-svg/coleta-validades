@@ -1039,6 +1039,7 @@ async function _coletarInfoAmbiente() {
   var linhas = [];
   linhas.push('User-Agent: ' + navigator.userAgent);
   linhas.push('iOS detectado: ' + isIOS());
+  linhas.push('Navegador embutido (in-app): ' + isInAppBrowser() + (isInAppBrowser() ? '  ⚠️ ABRA NO SAFARI — a câmera é bloqueada por este navegador' : ''));
   linhas.push('HTTPS: ' + (location.protocol === 'https:'));
   linhas.push('BarcodeDetector nativo: ' + (typeof BarcodeDetector !== 'undefined'));
   linhas.push('ZXingBrowser carregado: ' + (typeof ZXingBrowser !== 'undefined'));
@@ -1100,6 +1101,16 @@ function isIOS() {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS moderno se identifica como Mac
 }
 
+// ── Detectar navegador embutido (in-app browser) ──────────
+// WhatsApp, Instagram, Facebook, TikTok, etc abrem os links num WebView
+// que no iOS não tem permissão de sistema para acessar a câmera.
+// Nesses casos o getUserMedia falha e a permissão fica travada em
+// "prompt" pra sempre (o popup nativo nunca aparece).
+function isInAppBrowser() {
+  var ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|TikTok/i.test(ua);
+}
+
 // ── Patch video para iOS Safari ───────────────────────────
 function patchVideoForIOS(videoEl) {
   if (!videoEl) return;
@@ -1131,6 +1142,15 @@ async function iniciarScanner() {
   
   document.getElementById('stateIdle').style.display = 'none';
   document.getElementById('stateErro').style.display = 'none';
+
+  // ── Bloqueio de navegador embutido (WhatsApp/Instagram/etc) ──
+  // Nesses WebViews o getUserMedia falha sem nunca mostrar o popup
+  // nativo de permissão do iOS. Não tem correção via JS — orientamos
+  // o usuário a abrir no Safari.
+  if (isInAppBrowser()) {
+    mostrarErroScanner('Câmera bloqueada pelo navegador do app (WhatsApp/Instagram/etc). Toque em "•••" ou no ícone de compartilhar e escolha "Abrir no Safari".');
+    return;
+  }
 
   if (scannerAtivo) {
     document.getElementById('laser').style.display = 'block';
