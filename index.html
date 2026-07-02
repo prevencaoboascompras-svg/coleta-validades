@@ -1239,12 +1239,25 @@ async function iniciarScanner() {
     patchVideoForIOS(videoEl);
 
     // Criar reader do ZXing
-    // OBS: @zxing/browser NÃO exporta DecodeHintType (só existe dentro do
-    // @zxing/library interno) — por isso não filtramos formatos via hints.
-    // O BrowserMultiFormatReader sem hints já detecta os formatos comuns
-    // (EAN-13, EAN-8, UPC-A, UPC-E, CODE-128, CODE-39, etc.) normalmente.
     _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
-    _zxingReader.timeBetweenScansMillis = 500; // 2 scans por segundo (mais suave)
+    _zxingReader.timeBetweenScansMillis = 150; // scans mais frequentes (era 500)
+
+    // ── Restringir formatos de leitura ──────────────────────
+    // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
+    // BrowserMultiFormatReader tem o setter `possibleFormats` que já
+    // configura os hints internamente. Restringir os formatos deixa o
+    // decode mais rápido (menos formatos testados por frame = mais frames
+    // analisados por segundo) e mais preciso — importante no iPhone, que
+    // tem menos poder de processamento por frame que o motor nativo do
+    // Android.
+    try {
+      if (ZXingBrowser.BarcodeFormat) {
+        var bf = ZXingBrowser.BarcodeFormat;
+        var fmtsDesejados = [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF]
+          .filter(function(f) { return f !== undefined; });
+        if (fmtsDesejados.length) _zxingReader.possibleFormats = fmtsDesejados;
+      }
+    } catch(e) { /* se falhar, segue sem restringir formatos */ }
 
     try {
       // ── CORREÇÃO iOS: pedir a câmera DIRETO via getUserMedia,
@@ -1256,8 +1269,8 @@ async function iniciarScanner() {
       var zxConstraints = {
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 }
         },
         audio: false
       };
