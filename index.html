@@ -592,6 +592,47 @@ body{
 </head>
 <body>
 
+<!-- ═══════════ vConsole DEBUG (remover antes de produção final) ═══════════ -->
+<script>
+(function(){
+  // Só carrega debug se a URL tiver ?debug=1 — assim não fica ligado pra todo mundo
+  var ativarDebug = location.search.indexOf('debug=1') !== -1;
+  if (!ativarDebug) return;
+
+  function iniciarVConsole(){
+    try {
+      window._vconsole = new window.VConsole();
+      console.log('%c[DEBUG] vConsole ativo — modo diagnóstico', 'color:#0a0;font-weight:bold');
+    } catch(e) {
+      alert('Falha ao iniciar vConsole: ' + e.message);
+    }
+  }
+
+  function carregarScript(src, onOk, onErro){
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = onOk;
+    s.onerror = onErro;
+    document.head.appendChild(s);
+  }
+
+  // CDN principal (jsDelivr) com fallback pra unpkg, mesmo padrão usado pro ZXing
+  carregarScript(
+    'https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js',
+    iniciarVConsole,
+    function(){
+      console.warn('vConsole não carregou via jsDelivr — tentando unpkg');
+      carregarScript(
+        'https://unpkg.com/vconsole@latest/dist/vconsole.min.js',
+        iniciarVConsole,
+        function(){ alert('Não foi possível carregar o vConsole (CDN indisponível)'); }
+      );
+    }
+  );
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
 <div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> Sem conexão — os registros serão salvos localmente</div>
 
 
