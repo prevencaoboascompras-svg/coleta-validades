@@ -848,12 +848,28 @@ body{
   </div>
 </div>
 
-<script src="zxing-browser.min.js"></script>
 <script>
-// Verificação simples — a lib agora é hospedada localmente (sem depender de CDN externa)
-if (typeof ZXingBrowser === 'undefined') {
-  console.warn('zxing-browser.min.js não carregou — verifique se o arquivo está no mesmo diretório do index.html');
-}
+// Carrega ZXing: primeiro tenta o arquivo local (mesmo repositório do GitHub),
+// e só usa CDN externa como último recurso caso o arquivo local não exista.
+(function() {
+  var fontes = [
+    'zxing-browser.min.js', // arquivo local — precisa estar na mesma pasta do index.html no repositório
+    'https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js',
+    'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js'
+  ];
+  var idx = 0;
+  function tryNext() {
+    if (idx >= fontes.length) {
+      console.warn('ZXing não carregou (nem local, nem CDN) — usando BarcodeDetector nativo apenas');
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = fontes[idx++];
+    s.onerror = function() { tryNext(); };
+    document.head.appendChild(s);
+  }
+  tryNext();
+})();
 </script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -975,6 +991,15 @@ function applyFocusConstraints(stream) {
   }, 3000);
 }
 
+// ── Detecta iOS (Safari/Chrome/Firefox no iPhone/iPad usam sempre o motor WebKit) ──
+// O BarcodeDetector nativo do WebKit tem um bug conhecido (WebKit #281848):
+// a API existe e reporta formatos suportados, mas .detect() nunca retorna
+// resultado real. Por isso pulamos direto pro ZXing em iOS.
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS moderno se identifica como Mac
+}
+
 // ── Patch video para iOS Safari ───────────────────────────
 function patchVideoForIOS(videoEl) {
   if (!videoEl) return;
@@ -1000,18 +1025,6 @@ function initAudioContext() {
   }
 }
 
-// iOS/iPadOS (qualquer navegador, pois todos usam WebKit) tem o BarcodeDetector
-// quebrado desde o iOS 18 — a API existe e reporta formatos, mas o .detect()
-// nunca retorna leituras reais (bug WebKit #281848). Nesses aparelhos pulamos
-// direto pro ZXing, que funciona de verdade.
-function isIOS() {
-  var ua = navigator.userAgent || '';
-  var iOSDevice = /iPad|iPhone|iPod/.test(ua);
-  // iPadOS 13+ finge ser Mac — detecta por touch
-  var iPadOSDisfarcado = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-  return iOSDevice || iPadOSDisfarcado;
-}
-
 async function iniciarScanner() {
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
@@ -1024,7 +1037,9 @@ async function iniciarScanner() {
     return;
   }
 
-  // ── Motor 1: BarcodeDetector nativo (Android Chrome apenas — no iOS é quebrado) ──
+  // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
+  // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
+  // .detect() nunca retorna resultado real (bug WebKit #281848).
   if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
     var constraints = {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } }
@@ -1080,22 +1095,20 @@ async function iniciarScanner() {
     }
   }
 
-  // ── Motor 2: ZXing (iOS Safari e demais navegadores WebKit, Firefox, etc) ──
-  // Biblioteca agora é local (zxing-browser.min.js), carregada via <script> no
-  // topo do documento — já deve estar pronta. Aguardamos só um instante de
-  // segurança caso o script ainda esteja parseando.
+  // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
+  // Se ZXing ainda não carregou, aguarda até 3s antes de desistir
   if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
     var _zxWait = 0;
     var _zxInterval = setInterval(function() {
-      _zxWait += 100;
+      _zxWait += 200;
       if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
         clearInterval(_zxInterval);
         iniciarScanner();
-      } else if (_zxWait >= 2000) {
+      } else if (_zxWait >= 3000) {
         clearInterval(_zxInterval);
-        mostrarErroScanner('Biblioteca de leitura não carregou. Verifique se o arquivo zxing-browser.min.js está no mesmo diretório do index.html, e tente novamente.');
+        mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
       }
-    }, 100);
+    }, 200);
     return;
   }
   if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
