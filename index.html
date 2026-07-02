@@ -1119,19 +1119,11 @@ async function iniciarScanner() {
     patchVideoForIOS(videoEl);
 
     // Criar reader do ZXing
-    var hints = new Map();
-    var formats = [
-      ZXingBrowser.BarcodeFormat.EAN_13,
-      ZXingBrowser.BarcodeFormat.EAN_8,
-      ZXingBrowser.BarcodeFormat.UPC_A,
-      ZXingBrowser.BarcodeFormat.UPC_E,
-      ZXingBrowser.BarcodeFormat.CODE_128,
-      ZXingBrowser.BarcodeFormat.CODE_39
-    ];
-    hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(ZXingBrowser.DecodeHintType.TRY_HARDER, true);
-
-    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader(hints);
+    // OBS: @zxing/browser NÃO exporta DecodeHintType (só existe dentro do
+    // @zxing/library interno) — por isso não filtramos formatos via hints.
+    // O BrowserMultiFormatReader sem hints já detecta os formatos comuns
+    // (EAN-13, EAN-8, UPC-A, UPC-E, CODE-128, CODE-39, etc.) normalmente.
+    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
     _zxingReader.timeBetweenScansMillis = 500; // 2 scans por segundo (mais suave)
 
     try {
