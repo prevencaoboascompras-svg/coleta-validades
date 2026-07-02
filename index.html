@@ -681,9 +681,23 @@ body{
     <div class="scan-state-icon"><i class="ti ti-ban"></i></div>
     <div class="scan-state-txt" id="erroMsg">Câmera indisponível</div>
     <button class="scan-start-btn" onclick="iniciarScanner()">Tentar novamente</button>
+    <button class="scan-start-btn" style="background:#333;margin-top:8px;" onclick="toggleDebugPanel()">🔍 Ver diagnóstico</button>
   </div>
 
   <div class="scan-flash" id="scanFlash"></div>
+</div>
+
+<!-- PAINEL DE DIAGNÓSTICO (debug on-page, sem precisar de Mac/DevTools) -->
+<div id="debugPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;color:#0f0;font-family:monospace;font-size:12px;padding:12px;overflow-y:auto;box-sizing:border-box;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <strong style="color:#fff;">Diagnóstico</strong>
+    <div>
+      <button onclick="copiarDebugLog()" style="background:#333;color:#fff;border:none;padding:6px 10px;border-radius:6px;margin-right:6px;">Copiar log</button>
+      <button onclick="toggleDebugPanel()" style="background:#c33;color:#fff;border:none;padding:6px 10px;border-radius:6px;">Fechar</button>
+    </div>
+  </div>
+  <div id="debugInfo" style="color:#9cf;margin-bottom:10px;white-space:pre-wrap;"></div>
+  <div id="debugLog" style="white-space:pre-wrap;word-break:break-word;"></div>
 </div>
 
 <!-- CODE DISPLAY -->
@@ -989,6 +1003,92 @@ function applyFocusConstraints(stream) {
       if (adv.length) t.applyConstraints({ advanced: adv }).catch(function(){});
     } catch(e) {}
   }, 3000);
+}
+
+// ── Painel de diagnóstico on-page (debug sem precisar de Mac/DevTools) ──
+var _debugLines = [];
+function _debugPush(tipo, args) {
+  var txt = Array.prototype.slice.call(args).map(function(a) {
+    if (a instanceof Error) return a.message + (a.stack ? '\n' + a.stack : '');
+    if (typeof a === 'object') { try { return JSON.stringify(a); } catch(e) { return String(a); } }
+    return String(a);
+  }).join(' ');
+  var hora = new Date().toLocaleTimeString();
+  _debugLines.push('[' + hora + '] [' + tipo + '] ' + txt);
+  if (_debugLines.length > 300) _debugLines.shift();
+  var el = document.getElementById('debugLog');
+  if (el) {
+    el.textContent = _debugLines.join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+(function() {
+  var origLog = console.log, origWarn = console.warn, origErr = console.error;
+  console.log = function() { _debugPush('log', arguments); origLog.apply(console, arguments); };
+  console.warn = function() { _debugPush('warn', arguments); origWarn.apply(console, arguments); };
+  console.error = function() { _debugPush('error', arguments); origErr.apply(console, arguments); };
+  window.addEventListener('error', function(e) {
+    _debugPush('erro global', [e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || '')]);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    _debugPush('promise rejeitada', [e.reason]);
+  });
+})();
+
+async function _coletarInfoAmbiente() {
+  var linhas = [];
+  linhas.push('User-Agent: ' + navigator.userAgent);
+  linhas.push('iOS detectado: ' + isIOS());
+  linhas.push('HTTPS: ' + (location.protocol === 'https:'));
+  linhas.push('BarcodeDetector nativo: ' + (typeof BarcodeDetector !== 'undefined'));
+  linhas.push('ZXingBrowser carregado: ' + (typeof ZXingBrowser !== 'undefined'));
+  if (typeof ZXingBrowser !== 'undefined') {
+    linhas.push('ZXingBrowser.BrowserMultiFormatReader: ' + (!!ZXingBrowser.BrowserMultiFormatReader));
+  }
+  linhas.push('getUserMedia disponível: ' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      var p = await navigator.permissions.query({ name: 'camera' }).catch(function(){ return null; });
+      linhas.push('Permissão de câmera: ' + (p ? p.state : 'não foi possível checar'));
+    }
+  } catch(e) { linhas.push('Permissão de câmera: erro ao checar (' + e.message + ')'); }
+
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      var devices = await navigator.mediaDevices.enumerateDevices();
+      var cams = devices.filter(function(d){ return d.kind === 'videoinput'; });
+      linhas.push('Câmeras encontradas: ' + cams.length);
+      cams.forEach(function(c, i) { linhas.push('  Câmera ' + i + ': ' + (c.label || '(sem label — permissão ainda não concedida)')); });
+    }
+  } catch(e) { linhas.push('Erro ao listar câmeras: ' + e.message); }
+
+  document.getElementById('debugInfo').textContent = linhas.join('\n');
+}
+
+function toggleDebugPanel() {
+  var panel = document.getElementById('debugPanel');
+  var abrir = panel.style.display === 'none';
+  panel.style.display = abrir ? 'block' : 'none';
+  if (abrir) {
+    _coletarInfoAmbiente();
+    var el = document.getElementById('debugLog');
+    el.textContent = _debugLines.join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function copiarDebugLog() {
+  var texto = document.getElementById('debugInfo').textContent + '\n\n--- LOG ---\n' + _debugLines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(function() {
+      alert('Diagnóstico copiado! Cole aqui no chat.');
+    }).catch(function() {
+      window.prompt('Copie manualmente (Ctrl+C / segure e copie):', texto);
+    });
+  } else {
+    window.prompt('Copie manualmente (Ctrl+C / segure e copie):', texto);
+  }
 }
 
 // ── Detecta iOS (Safari/Chrome/Firefox no iPhone/iPad usam sempre o motor WebKit) ──
