@@ -592,168 +592,6 @@ body{
 </head>
 <body>
 
-<!-- ═══════════ vConsole DEBUG (remover antes de produção final) ═══════════ -->
-<script>
-(function(){
-  // Só carrega debug se a URL tiver ?debug=1 — assim não fica ligado pra todo mundo
-  var ativarDebug = location.search.indexOf('debug=1') !== -1;
-  if (!ativarDebug) return;
-
-  function iniciarVConsole(){
-    try {
-      window._vconsole = new window.VConsole();
-      console.log('%c[DEBUG] vConsole ativo — modo diagnóstico', 'color:#0a0;font-weight:bold');
-    } catch(e) {
-      alert('Falha ao iniciar vConsole: ' + e.message);
-    }
-  }
-
-  function carregarScript(src, onOk, onErro){
-    var s = document.createElement('script');
-    s.src = src;
-    s.onload = onOk;
-    s.onerror = onErro;
-    document.head.appendChild(s);
-  }
-
-  // CDN principal (jsDelivr) com fallback pra unpkg, mesmo padrão usado pro ZXing
-  carregarScript(
-    'https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js',
-    function(){ iniciarVConsole(); adicionarBotaoAutoteste(); },
-    function(){
-      console.warn('vConsole não carregou via jsDelivr — tentando unpkg');
-      carregarScript(
-        'https://unpkg.com/vconsole@latest/dist/vconsole.min.js',
-        function(){ iniciarVConsole(); adicionarBotaoAutoteste(); },
-        function(){ alert('Não foi possível carregar o vConsole (CDN indisponível)'); }
-      );
-    }
-  );
-
-  // ── Botão flutuante de Autoteste ──
-  function adicionarBotaoAutoteste(){
-    var btn = document.createElement('button');
-    btn.textContent = '🧪 Autoteste';
-    btn.style.cssText = 'position:fixed;bottom:70px;right:10px;z-index:99999;'
-      + 'background:#D4001A;color:#fff;border:none;border-radius:8px;'
-      + 'padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.4);';
-    btn.onclick = rodarAutoteste;
-    document.body.appendChild(btn);
-  }
-
-  // ── Suíte de autoteste: testa as funções/recursos principais e loga tudo ──
-  async function rodarAutoteste(){
-    var resultados = [];
-    function ok(nome, extra){ resultados.push({nome:nome, status:'OK', extra:extra||''}); }
-    function falha(nome, err){ resultados.push({nome:nome, status:'FALHA', extra: (err && err.message) ? err.message : String(err)}); }
-
-    console.log('%c🧪 INICIANDO AUTOTESTE — ' + new Date().toLocaleTimeString(), 'color:#FFD700;font-weight:bold;font-size:14px');
-
-    // 1. Ambiente básico
-    try {
-      var https = location.protocol === 'https:';
-      https ? ok('HTTPS ativo') : falha('HTTPS ativo', 'protocolo é ' + location.protocol + ' — câmera exige HTTPS');
-    } catch(e){ falha('HTTPS ativo', e); }
-
-    // 2. localStorage
-    try {
-      var k = '__autoteste'; localStorage.setItem(k,'1'); localStorage.removeItem(k);
-      ok('localStorage funcional');
-    } catch(e){ falha('localStorage funcional', e); }
-
-    // 3. Quota do localStorage (aura_prod e afins)
-    try {
-      var total = 0;
-      for (var key in localStorage) { if (localStorage.hasOwnProperty(key)) total += (localStorage[key]||'').length; }
-      ok('Uso localStorage', (total/1024).toFixed(1) + ' KB');
-    } catch(e){ falha('Uso localStorage', e); }
-
-    // 4. APIs de câmera disponíveis
-    try {
-      var temGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-      temGetUserMedia ? ok('navigator.mediaDevices.getUserMedia existe') : falha('navigator.mediaDevices.getUserMedia existe', 'API ausente neste navegador');
-    } catch(e){ falha('navigator.mediaDevices.getUserMedia existe', e); }
-
-    // 5. BarcodeDetector nativo
-    try {
-      var temBD = typeof BarcodeDetector !== 'undefined';
-      if (temBD) {
-        var formatos = await BarcodeDetector.getSupportedFormats().catch(function(){ return []; });
-        ok('BarcodeDetector nativo disponível', formatos.join(', '));
-      } else {
-        falha('BarcodeDetector nativo disponível', 'ausente (normal no Safari/iOS) — deve cair no fallback ZXing/Quagga');
-      }
-    } catch(e){ falha('BarcodeDetector nativo disponível', e); }
-
-    // 6. Biblioteca ZXing carregada
-    try {
-      var temZXing = typeof ZXing !== 'undefined' || typeof window.ZXing !== 'undefined';
-      temZXing ? ok('Biblioteca ZXing carregada') : falha('Biblioteca ZXing carregada', 'ZXing não está no escopo global — CDN pode ter falhado');
-    } catch(e){ falha('Biblioteca ZXing carregada', e); }
-
-    // 7. Permissão de câmera (sem travar o teste se o usuário negar)
-    try {
-      if (navigator.permissions && navigator.permissions.query) {
-        var perm = await navigator.permissions.query({name:'camera'}).catch(function(){ return null; });
-        perm ? ok('Status de permissão da câmera', perm.state) : falha('Status de permissão da câmera', 'API Permissions não suporta consulta de câmera neste navegador');
-      } else {
-        falha('Status de permissão da câmera', 'navigator.permissions indisponível (comum no Safari)');
-      }
-    } catch(e){ falha('Status de permissão da câmera', e); }
-
-    // 8. Teste real de abertura de câmera (pede permissão se necessário)
-    try {
-      var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      var faixa = stream.getVideoTracks()[0];
-      var config = faixa.getSettings ? faixa.getSettings() : {};
-      ok('Abertura real da câmera', JSON.stringify({largura:config.width, altura:config.height, facingMode:config.facingMode}));
-      stream.getTracks().forEach(function(t){ t.stop(); });
-    } catch(e){ falha('Abertura real da câmera', e); }
-
-    // 9. Configuração / URL da API do GAS
-    try {
-      var cfg = (typeof loadCfg === 'function') ? loadCfg() : null;
-      cfg && cfg.url ? ok('Config carregada (URL da API)', cfg.url) : falha('Config carregada (URL da API)', 'loadCfg() não retornou URL');
-    } catch(e){ falha('Config carregada (URL da API)', e); }
-
-    // 10. Conectividade com o backend GAS (usa action=buscarTarefas, que já existe no fluxo real)
-    try {
-      var cfg2 = (typeof loadCfg === 'function') ? loadCfg() : { url: (typeof DEFAULT_URL !== 'undefined' ? DEFAULT_URL : null) };
-      var emailTeste = (cfg2 && cfg2.email) ? cfg2.email : 'teste@autoteste.local';
-      if (cfg2 && cfg2.url) {
-        var resp = await fetch(cfg2.url + '?action=buscarTarefas&email=' + encodeURIComponent(emailTeste), { method: 'GET' });
-        var corpo = await resp.text().catch(function(){ return ''; });
-        ok('Backend GAS responde (GET buscarTarefas)', 'status ' + resp.status + ', ' + corpo.length + ' bytes');
-      } else {
-        falha('Backend GAS responde (GET buscarTarefas)', 'nenhuma URL configurada');
-      }
-    } catch(e){ falha('Backend GAS responde (GET buscarTarefas)', e); }
-
-    // 11. navigator.onLine
-    try {
-      ok('Status de conexão do navegador', navigator.onLine ? 'online' : 'offline');
-    } catch(e){ falha('Status de conexão do navegador', e); }
-
-    // 12. Elementos de DOM essenciais do scanner
-    try {
-      var ids = ['scannerView','rescanBtn','manualWrap','manualInput'];
-      var faltando = ids.filter(function(id){ return !document.getElementById(id); });
-      faltando.length === 0 ? ok('Elementos DOM do scanner presentes') : falha('Elementos DOM do scanner presentes', 'faltando: ' + faltando.join(', '));
-    } catch(e){ falha('Elementos DOM do scanner presentes', e); }
-
-    // ── Resumo final ──
-    console.log('%c📋 RESULTADO DO AUTOTESTE', 'color:#FFD700;font-weight:bold;font-size:14px');
-    resultados.forEach(function(r){
-      var cor = r.status === 'OK' ? 'color:#2ecc71;font-weight:bold' : 'color:#e74c3c;font-weight:bold';
-      console.log('%c[' + r.status + ']%c ' + r.nome + (r.extra ? ' — ' + r.extra : ''), cor, 'color:inherit;font-weight:normal');
-    });
-    var totalFalhas = resultados.filter(function(r){ return r.status === 'FALHA'; }).length;
-    console.log('%c✅ ' + (resultados.length - totalFalhas) + ' OK   ❌ ' + totalFalhas + ' falha(s)', 'font-weight:bold;font-size:13px');
-  }
-})();
-</script>
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-
 <div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> Sem conexão — os registros serão salvos localmente</div>
 
 
@@ -1010,26 +848,12 @@ body{
   </div>
 </div>
 
+<script src="zxing-browser.min.js"></script>
 <script>
-// Carrega ZXing com fallback entre CDNs
-(function() {
-  var cdns = [
-    'https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js',
-    'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js'
-  ];
-  var idx = 0;
-  function tryNext() {
-    if (idx >= cdns.length) {
-      console.warn('ZXing não carregou em nenhuma CDN — usando BarcodeDetector nativo apenas');
-      return;
-    }
-    var s = document.createElement('script');
-    s.src = cdns[idx++];
-    s.onerror = function() { tryNext(); };
-    document.head.appendChild(s);
-  }
-  tryNext();
-})();
+// Verificação simples — a lib agora é hospedada localmente (sem depender de CDN externa)
+if (typeof ZXingBrowser === 'undefined') {
+  console.warn('zxing-browser.min.js não carregou — verifique se o arquivo está no mesmo diretório do index.html');
+}
 </script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -1176,6 +1000,18 @@ function initAudioContext() {
   }
 }
 
+// iOS/iPadOS (qualquer navegador, pois todos usam WebKit) tem o BarcodeDetector
+// quebrado desde o iOS 18 — a API existe e reporta formatos, mas o .detect()
+// nunca retorna leituras reais (bug WebKit #281848). Nesses aparelhos pulamos
+// direto pro ZXing, que funciona de verdade.
+function isIOS() {
+  var ua = navigator.userAgent || '';
+  var iOSDevice = /iPad|iPhone|iPod/.test(ua);
+  // iPadOS 13+ finge ser Mac — detecta por touch
+  var iPadOSDisfarcado = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  return iOSDevice || iPadOSDisfarcado;
+}
+
 async function iniciarScanner() {
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
@@ -1188,8 +1024,8 @@ async function iniciarScanner() {
     return;
   }
 
-  // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
-  if (typeof BarcodeDetector !== 'undefined') {
+  // ── Motor 1: BarcodeDetector nativo (Android Chrome apenas — no iOS é quebrado) ──
+  if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
     var constraints = {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } }
     };
@@ -1244,23 +1080,25 @@ async function iniciarScanner() {
     }
   }
 
-  // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
-  // Se ZXing ainda não carregou, aguarda até 3s antes de desistir
-  if (typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader) {
+  // ── Motor 2: ZXing (iOS Safari e demais navegadores WebKit, Firefox, etc) ──
+  // Biblioteca agora é local (zxing-browser.min.js), carregada via <script> no
+  // topo do documento — já deve estar pronta. Aguardamos só um instante de
+  // segurança caso o script ainda esteja parseando.
+  if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
     var _zxWait = 0;
     var _zxInterval = setInterval(function() {
-      _zxWait += 200;
-      if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
+      _zxWait += 100;
+      if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
         clearInterval(_zxInterval);
         iniciarScanner();
-      } else if (_zxWait >= 3000) {
+      } else if (_zxWait >= 2000) {
         clearInterval(_zxInterval);
-        mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
+        mostrarErroScanner('Biblioteca de leitura não carregou. Verifique se o arquivo zxing-browser.min.js está no mesmo diretório do index.html, e tente novamente.');
       }
-    }, 200);
+    }, 100);
     return;
   }
-  if (typeof ZXing !== 'undefined' && ZXing.BrowserMultiFormatReader) {
+  if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
     var wrap2 = document.getElementById('scannerView');
     wrap2.innerHTML = '<video id="zxing-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;"></video>';
 
@@ -1270,17 +1108,17 @@ async function iniciarScanner() {
     // Criar reader do ZXing
     var hints = new Map();
     var formats = [
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.UPC_A,
-      ZXing.BarcodeFormat.UPC_E,
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39
+      ZXingBrowser.BarcodeFormat.EAN_13,
+      ZXingBrowser.BarcodeFormat.EAN_8,
+      ZXingBrowser.BarcodeFormat.UPC_A,
+      ZXingBrowser.BarcodeFormat.UPC_E,
+      ZXingBrowser.BarcodeFormat.CODE_128,
+      ZXingBrowser.BarcodeFormat.CODE_39
     ];
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    hints.set(ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXingBrowser.DecodeHintType.TRY_HARDER, true);
 
-    _zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader(hints);
     _zxingReader.timeBetweenScansMillis = 500; // 2 scans por segundo (mais suave)
 
     try {
