@@ -1908,9 +1908,27 @@ async function buscarTarefas() {
 
 function _fmtValidadeTarefa(v) {
   if (!v) return null;
-  var p = String(v).split('-');
-  if (p.length !== 3) return null;
-  var d = new Date(+p[0], +p[1]-1, +p[2]);
+  var d = null;
+  var s = String(v).trim();
+
+  // Formato ISO com timestamp: "2026-08-15T00:00:00.000Z" ou "2026-08-15"
+  var mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  // Formato BR: "15/08/2026"
+  var mBr  = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+
+  if (mIso) {
+    d = new Date(+mIso[1], +mIso[2]-1, +mIso[3]);
+  } else if (mBr) {
+    d = new Date(+mBr[3], +mBr[2]-1, +mBr[1]);
+  } else {
+    // Fallback: deixa o Date nativo tentar (cobre objetos Date serializados,
+    // outros formatos ISO, etc.)
+    var tentativa = new Date(s);
+    if (!isNaN(tentativa.getTime())) d = tentativa;
+  }
+
+  if (!d || isNaN(d.getTime())) return null;
+
   var hoje = new Date(); hoje.setHours(0,0,0,0);
   var dias = Math.floor((d - hoje) / 86400000);
   var cor = dias <= 3 ? '#e24b4a' : (dias <= 7 ? '#f5a524' : 'var(--tx2)');
