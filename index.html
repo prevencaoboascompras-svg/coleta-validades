@@ -1906,6 +1906,19 @@ async function buscarTarefas() {
   renderTarefas();
 }
 
+function _fmtValidadeTarefa(v) {
+  if (!v) return null;
+  var p = String(v).split('-');
+  if (p.length !== 3) return null;
+  var d = new Date(+p[0], +p[1]-1, +p[2]);
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var dias = Math.floor((d - hoje) / 86400000);
+  var cor = dias <= 3 ? '#e24b4a' : (dias <= 7 ? '#f5a524' : 'var(--tx2)');
+  var meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var txt = ('0'+d.getDate()).slice(-2) + ' ' + meses[d.getMonth()] + '/' + d.getFullYear();
+  return '<div style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(226,75,74,.1);color:' + cor + ';margin-bottom:6px"><i class="ti ti-calendar-exclamation"></i> Validade: ' + txt + '</div>';
+}
+
 function _buildTarefaCards(prefixo) {
   return _tarefasPendentes.map(function(t, i) {
     var jaConfirmada = t._localConfirmada || false;
@@ -1924,6 +1937,7 @@ function _buildTarefaCards(prefixo) {
     return '<div class="tarefa-card" id="tarefa_' + id + '">'
       + '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
       + (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
+      + (_fmtValidadeTarefa(t.validade) || '')
       + (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
       + bodyHtml
       + '</div>';
