@@ -1825,6 +1825,7 @@ async function enviar(dados) {
       validade:   dados.validade,
       setor:      dados.setor,
       quantidade: dados.quantidade,
+      unidade:    dados.unidade  || 'un',
       email:      dados.email     || '',
       ts:         dados.ts
     })
