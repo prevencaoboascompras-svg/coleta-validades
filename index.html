@@ -200,6 +200,37 @@ body{
   outline:none;min-width:0;-webkit-appearance:none;appearance:none;
 }
 
+/* peso toggle + input */
+.qty-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.peso-toggle{
+  display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  letter-spacing:.03em;color:var(--tx2);cursor:pointer;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.peso-switch{
+  width:34px;height:20px;border-radius:20px;background:var(--bd);
+  position:relative;transition:background .15s;flex-shrink:0;
+}
+.peso-switch::after{
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);
+  transition:transform .15s;
+}
+.peso-toggle.on .peso-switch{background:var(--accent)}
+.peso-toggle.on .peso-switch::after{transform:translateX(14px)}
+.peso-row{display:none}
+.peso-row.open{display:flex}
+.peso-input-wrap{
+  flex:1;display:flex;align-items:center;background:var(--surf);
+  border:1.5px solid var(--accent);border-radius:10px;height:54px;padding:0 16px;gap:8px;
+}
+.peso-input{
+  flex:1;text-align:center;font-size:22px;font-weight:700;
+  font-family:var(--mono);color:var(--tx);border:none;background:none;
+  outline:none;min-width:0;-webkit-appearance:none;appearance:none;letter-spacing:.03em;
+}
+.peso-unit{font-size:14px;font-weight:700;color:var(--tx2);flex-shrink:0}
+
 /* submit */
 .submit-btn{
   width:100%;height:58px;background:var(--accent);color:#fff;
@@ -711,7 +742,7 @@ body{
 <div class="manual-wrap" id="manualWrap">
   <div class="manual-row">
     <input type="tel" inputmode="numeric" class="manual-input" id="manualInput"
-      placeholder="Digite o EAN e pressione OK" maxlength="22"
+      placeholder="Digite o EAN ou código interno" maxlength="22"
       onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarManual();}">
     <button class="manual-ok-btn" onclick="confirmarManual()"><i class="ti ti-check"></i> OK</button>
   </div>
@@ -770,13 +801,27 @@ body{
   </div>
 
   <div>
-    <div class="field-lbl"><i class="ti ti-package"></i> Quantidade</div>
-    <div class="qty-row">
+    <div class="qty-lbl-row">
+      <div class="field-lbl" style="margin-bottom:0"><i class="ti ti-package"></i> Quantidade</div>
+      <div class="peso-toggle" id="pesoToggle" onclick="togglePeso()">
+        <span>PRODUTO POR PESO</span>
+        <div class="peso-switch"></div>
+      </div>
+    </div>
+    <div class="qty-row" id="qtyRow">
       <button class="qty-btn" onclick="alterarQty(-1)">−</button>
       <div class="qty-divider"></div>
       <input type="tel" inputmode="numeric" class="qty-input" id="fQty" value="1">
       <div class="qty-divider"></div>
       <button class="qty-btn" onclick="alterarQty(+1)">+</button>
+    </div>
+    <div class="qty-row peso-row" id="pesoRow">
+      <div class="peso-input-wrap">
+        <input type="tel" inputmode="decimal" class="peso-input" id="fPeso"
+          placeholder="0,000" value=""
+          oninput="onPesoInput(this)">
+        <span class="peso-unit">kg</span>
+      </div>
     </div>
   </div>
 
@@ -1585,8 +1630,8 @@ function onManualInput(v) {
 
 function confirmarManual() {
   var v = document.getElementById('manualInput').value.trim();
-  if (v.length < 7) {
-    mostrarToast('Código muito curto — mínimo 7 dígitos', 'err');
+  if (v.length < 3) {
+    mostrarToast('Código muito curto — mínimo 3 dígitos', 'err');
     return;
   }
   // Normalizar EAN-13 → UPC-A (cortar zero na frente)
@@ -1666,13 +1711,53 @@ function alterarQty(delta) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  PESO (produtos vendidos por peso — kg com vírgula decimal)
+// ═══════════════════════════════════════════════════════════
+var pesoAtivo = false;
+
+function togglePeso() {
+  pesoAtivo = !pesoAtivo;
+  document.getElementById('pesoToggle').classList.toggle('on', pesoAtivo);
+  document.getElementById('qtyRow').style.display  = pesoAtivo ? 'none' : 'flex';
+  document.getElementById('pesoRow').classList.toggle('open', pesoAtivo);
+  if (pesoAtivo) {
+    setTimeout(function(){ document.getElementById('fPeso').focus(); }, 80);
+  }
+}
+
+// Máscara tipo "calculadora de preço": digita só números,
+// as 3 últimas casas viram a parte decimal (gramas), com vírgula.
+// Ex: digitando 1235  → exibe 1,235 (kg)
+function formatarPeso(valorDigitado) {
+  var digitos = valorDigitado.replace(/\D/g, '');
+  if (!digitos) return '';
+  digitos = digitos.replace(/^0+(?=\d)/, ''); // remove zeros à esquerda
+  while (digitos.length < 4) digitos = '0' + digitos; // garante ao menos "0,XXX"
+  var parteInt = digitos.slice(0, -3).replace(/^0+(?=\d)/, '') || '0';
+  var parteDec = digitos.slice(-3);
+  return parteInt + ',' + parteDec;
+}
+
+function onPesoInput(el) {
+  var cursorNoFim = true; // teclado numérico — cursor sempre no fim é suficiente aqui
+  el.value = formatarPeso(el.value);
+}
+
+// Converte "1,235" (string exibida) em Number 1.235 para envio
+function pesoParaNumero() {
+  var v = document.getElementById('fPeso').value.trim();
+  if (!v) return 0;
+  return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+// ═══════════════════════════════════════════════════════════
 //  REGISTER
 // ═══════════════════════════════════════════════════════════
 function registrar() {
   var codigo  = codigoAtual || document.getElementById('manualInput').value.trim();
   var valRaw  = document.getElementById('fValidade').value;   // YYYY-MM-DD
   var setor   = document.getElementById('fSetor').value;
-  var qty     = parseInt(document.getElementById('fQty').value) || 1;
+  var qty     = pesoAtivo ? pesoParaNumero() : (parseInt(document.getElementById('fQty').value) || 1);
   var cfg     = loadCfg();
   var email   = cfg.email || '';
 
@@ -1680,6 +1765,7 @@ function registrar() {
   if (!valRaw)  { mostrarToast('Informe a data de validade', 'err'); return; }
   if (!setor)   { mostrarToast('Selecione o setor', 'err'); return; }
   if (!email)   { mostrarToast('Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
+  if (pesoAtivo && qty <= 0) { mostrarToast('Informe o peso do produto', 'err'); return; }
 
   // Já está em DD/MM/YYYY (vem do drum picker)
   var validade = valRaw;
@@ -1691,6 +1777,7 @@ function registrar() {
     validade: validade,
     setor: setor,
     quantidade: qty,
+    unidade: pesoAtivo ? 'kg' : 'un',
     email: email
   };
 
@@ -1752,6 +1839,8 @@ function resetAposEnvio() {
   
   // Limpar todas as informações de escaneamento para nova bipagem
   document.getElementById('fQty').value = '1';
+  document.getElementById('fPeso').value = '';
+  if (pesoAtivo) togglePeso(); // volta pro modo quantidade
   document.getElementById('fSetor').value = ''; // Limpar setor
   document.getElementById('fValidade').value = ''; // Limpar data de validade
   document.getElementById('drumDisplay').textContent = 'Toque para selecionar…';
@@ -1860,11 +1949,14 @@ function renderHistorico() {
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
     var desc   = item.descricao ? '<div class="hist-desc">' + item.descricao + '</div>' : '';
+    var qtdTxt = item.unidade === 'kg'
+      ? (String(item.quantidade).replace('.', ',') + ' kg')
+      : ('x' + item.quantidade);
     return '<div class="hist-item">'
       + '<div style="flex:1;min-width:0">'
       +   '<div class="hist-code">' + item.codigo + '</div>'
       +   desc
-      +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;x' + item.quantidade + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
+      +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;' + qtdTxt + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
       + '</div>'
       + '<div class="hist-status">' + status + '</div>'
       + '</div>';
