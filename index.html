@@ -1630,8 +1630,8 @@ function onManualInput(v) {
 
 function confirmarManual() {
   var v = document.getElementById('manualInput').value.trim();
-  if (v.length < 3) {
-    mostrarToast('Código muito curto — mínimo 3 dígitos', 'err');
+  if (v.length < 1) {
+    mostrarToast('Digite um código', 'err');
     return;
   }
   // Normalizar EAN-13 → UPC-A (cortar zero na frente)
