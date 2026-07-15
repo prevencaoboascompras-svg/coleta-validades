@@ -681,6 +681,9 @@ body{
     <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
       <i class="ti ti-user-circle"></i>
     </button>
+    <button class="hdr-btn" onclick="toggleDebugPanel()" title="Diagnóstico (console)">
+      <i class="ti ti-bug"></i>
+    </button>
     <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
       <i class="ti ti-settings"></i>
       <span class="pend-dot" id="pendDot"></span>
@@ -992,6 +995,18 @@ var _zxingReader = null;
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
 
+// ── SESSÃO DE SCAN ────────────────────────────────────────
+// PROBLEMA: o ZXing (decodeFromStream) roda um loop assíncrono interno.
+// Quando chamamos pararScanner() e reader.reset(), o reset() nem sempre
+// cancela a tempo o loop já em andamento — por isso, às vezes, um frame
+// que já estava "no forno" de um scan ANTERIOR ainda dispara o callback
+// de sucesso depois que você já reiniciou a câmera pra ler outro produto.
+// Como o código antigo não bate mais com o codigoAtual (que foi limpo),
+// ele passa pela checagem e reexibe o produto anterior "do nada".
+// SOLUÇÃO: cada iniciarScanner() gera um número de sessão novo. Qualquer
+// callback de uma sessão anterior é descartado, mesmo que chegue atrasado.
+var _scanSessionId = 0;
+
 // ── FOCUS HELPER ──────────────────────────────────────────
 // Aplica autofocus continuo e tenta ajustar foco de perto
 // Funciona em ambos os motores (native e ZXing)
@@ -1202,6 +1217,10 @@ async function iniciarScanner() {
     return;
   }
 
+  // Nova sessão de scan — invalida qualquer callback "fantasma" de sessões anteriores
+  var meuSession = ++_scanSessionId;
+  console.log('Nova sessão de scan iniciada: #' + meuSession);
+
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
@@ -1240,14 +1259,18 @@ async function iniciarScanner() {
       var canvas = document.createElement('canvas');
       var ctx = canvas.getContext('2d');
       var loop = async function() {
-        if (!scannerAtivo || _motorAtivo !== 'native') return;
+        if (!scannerAtivo || _motorAtivo !== 'native' || meuSession !== _scanSessionId) return;
         if (vid.readyState >= 2) {
           canvas.width  = vid.videoWidth  || 640;
           canvas.height = vid.videoHeight || 480;
           ctx.drawImage(vid, 0, 0);
           try {
             var results = await detector.detect(canvas);
-            if (results && results.length > 0) { onScanSuccess(results[0].rawValue); return; }
+            if (results && results.length > 0) {
+              if (meuSession !== _scanSessionId) { console.warn('Descartado: resultado nativo de sessão antiga #' + meuSession); return; }
+              onScanSuccess(results[0].rawValue);
+              return;
+            }
           } catch(e) {}
         }
         _nativeLoop = requestAnimationFrame(loop);
@@ -1335,14 +1358,29 @@ async function iniciarScanner() {
         videoEl,
         function(result, error) {
           if (result) {
+            // ── Descarta callback fantasma de sessão anterior ──
+            // (reader.reset() de uma sessão passada pode não ter cancelado
+            // este loop a tempo; sem essa checagem, o produto anterior
+            // reaparece sozinho quando você reabre a câmera)
+            if (meuSession !== _scanSessionId) {
+              console.warn('Descartado: resultado ZXing de sessão antiga #' + meuSession + ' (atual é #' + _scanSessionId + ')');
+              return;
+            }
+
             // Sucesso na leitura - resetar timer de aviso
             limparTimerAviso();
             _ultimoScan = Date.now();
+            console.log('ZXing detectou: ' + result.getText() + ' (sessão #' + meuSession + ')');
 
             if (!scannerAtivo) return;
 
             // Pequeno delay para dar feedback visual antes de parar
             setTimeout(function() {
+              // Recheca de novo: a sessão pode ter mudado durante esses 300ms
+              if (meuSession !== _scanSessionId) {
+                console.warn('Descartado após delay: sessão antiga #' + meuSession);
+                return;
+              }
               onScanSuccess(result.getText());
             }, 300);
           }
@@ -1383,6 +1421,7 @@ async function iniciarScanner() {
 
 function pararScanner() {
   scannerAtivo = false;
+  _scanSessionId++; // invalida qualquer callback pendente desta sessão
   document.getElementById('laser').style.display = 'none';
 
   // Limpar timer de aviso
@@ -1533,8 +1572,9 @@ function onScanSuccess(code) {
 
   // Normalizar EAN-13 → UPC-A (cortar zero na frente)
   code = normalizarCodigo(code);
+  console.log('onScanSuccess chamado com código: ' + code + ' (codigoAtual era: ' + (codigoAtual || '(vazio)') + ')');
 
-  if (code === codigoAtual) return;
+  if (code === codigoAtual) { console.warn('Ignorado: código igual ao atual'); return; }
 
   pararScanner();
 
