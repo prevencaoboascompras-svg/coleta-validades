@@ -992,6 +992,7 @@ var _nativeLoop   = null;
 // ═══════════════════════════════════════════════════════════
 var _zxingAtivo = false;
 var _zxingReader = null;
+var _zxingControls = null; // objeto retornado por decodeFromStream — .stop() cancela o loop de verdade
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
 
@@ -1353,7 +1354,15 @@ async function iniciarScanner() {
       applyFocusConstraints(zxStream);
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
-      await _zxingReader.decodeFromStream(
+      // decodeFromStream() retorna uma Promise que resolve num objeto de
+      // controle (IScannerControls) com o método .stop() — é ele que
+      // realmente cancela o loop de decodificação contínua.
+      // NOTA: nesta versão do bundle, _zxingReader.reset() NÃO EXISTE
+      // (chamar isso lançava "reset is not a function" e, como o erro
+      // acontecia dentro do try/catch de pararScanner, o loop de decode
+      // continuava rodando escondido — é essa a causa raiz do produto
+      // "fantasma" reaparecendo minutos depois).
+      _zxingControls = await _zxingReader.decodeFromStream(
         zxStream,
         videoEl,
         function(result, error) {
@@ -1433,8 +1442,17 @@ function pararScanner() {
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
   if (_zxingAtivo && _zxingReader) {
-    try { 
-      _zxingReader.reset();
+    try {
+      // .stop() no objeto de controle é o que realmente cancela o loop
+      // interno do decodeContinuously. reader.reset() não existe nesta
+      // versão do bundle e só disparava erro silencioso (ver nota acima).
+      if (_zxingControls && typeof _zxingControls.stop === 'function') {
+        _zxingControls.stop();
+      } else if (typeof _zxingReader.reset === 'function') {
+        _zxingReader.reset(); // fallback, caso outra versão do bundle use reset
+      } else {
+        console.warn('Nenhum método de parada disponível no ZXing (nem controls.stop, nem reader.reset)');
+      }
       // Para o stream de vídeo
       var zxVideo = document.getElementById('zxing-video');
       if (zxVideo && zxVideo.srcObject) {
@@ -1446,6 +1464,7 @@ function pararScanner() {
     }
     _zxingAtivo = false;
     _zxingReader = null;
+    _zxingControls = null;
   }
 
   if (_videoStream) {
