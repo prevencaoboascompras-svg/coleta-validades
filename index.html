@@ -942,8 +942,8 @@ body{
     <div class="lote-titulo">Você está com sorte, <b id="loteNome">!</b></div>
     <div class="lote-sub">Este produto já tem lote(s) cadastrado(s). Atualize a quantidade de um lote existente ou cadastre uma nova validade.</div>
     <div id="loteLista"></div>
-    <button class="lote-novo-btn" onclick="fecharLoteModal()">
-      <i class="ti ti-plus"></i>&nbsp; Cadastrar novo lote (validade)
+    <button class="lote-novo-btn" onclick="continuarEscaneandoLote()">
+      <i class="ti ti-scan"></i>&nbsp; Continuar escaneando
     </button>
   </div>
 </div>
@@ -2606,6 +2606,14 @@ function fecharLoteModal() {
   document.getElementById('loteModal').classList.remove('open');
   _loteEanAtual = null;
   _lotesEncontrados = [];
+}
+
+// Fecha o modal e já pula pro próximo produto, sem deixar o formulário
+// aberto — evita ter que preencher validade/setor/quantidade de novo
+function continuarEscaneandoLote() {
+  fecharLoteModal();
+  resetCodigo();
+  iniciarScanner();
 }
 
 async function confirmarAtualizarEstoqueLote(i) {
