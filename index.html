@@ -333,16 +333,36 @@ body{
 .lote-titulo b{color:var(--accent)}
 .lote-sub{font-size:13px;color:var(--tx2);text-align:center;margin-bottom:22px;line-height:1.5}
 .lote-sub b{color:var(--tx)}
-.lote-atualizar-btn{
-  width:100%;height:50px;background:var(--accent);color:#fff;
-  font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;margin-bottom:10px;
+.lote-card{
+  background:var(--card);border:1px solid var(--bd);border-radius:12px;
+  padding:14px;margin-bottom:10px;
 }
-.lote-atualizar-btn:active{background:var(--accent2)}
-.lote-continuar-btn{
+.lote-card-info{margin-bottom:12px}
+.lote-card-val{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.lote-card-qtd{font-size:13px;color:var(--tx2)}
+.lote-card-qtd b{color:var(--tx)}
+.lote-card-actions{display:flex;align-items:center;gap:10px}
+.lote-qty-stepper{
+  display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--bd);
+  border-radius:10px;padding:6px 10px;flex-shrink:0;
+}
+.lote-qty-stepper button{
+  width:26px;height:26px;border:none;border-radius:6px;background:var(--card);color:var(--tx);
+  font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.lote-qty-stepper button:active{background:var(--bd)}
+.lote-qty-stepper span{min-width:18px;text-align:center;font-weight:700;font-size:14px}
+.lote-atualizar-btn-sm{
+  flex:1;height:38px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;
+  border:none;border-radius:8px;cursor:pointer;
+}
+.lote-atualizar-btn-sm:active{background:var(--accent2)}
+.lote-novo-btn{
   width:100%;height:46px;background:var(--card);color:var(--tx2);
   font-weight:600;font-size:14px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;
 }
-.lote-continuar-btn:active{background:var(--bd)}
+.lote-novo-btn:active{background:var(--bd)}
 
 /* ── DRUM PICKER (seletor de data estilo iOS) ── */
 .drum-trigger{
@@ -920,12 +940,10 @@ body{
   <div class="modal-box">
     <div class="lote-icon">🍀</div>
     <div class="lote-titulo">Você está com sorte, <b id="loteNome">!</b></div>
-    <div class="lote-sub">Produto já cadastrado com este lote!<br>Quantidade atual: <b id="loteQtdAtual">–</b></div>
-    <button class="lote-atualizar-btn" onclick="confirmarAtualizarEstoqueLote()">
-      <i class="ti ti-refresh"></i>&nbsp; Atualizar estoque
-    </button>
-    <button class="lote-continuar-btn" onclick="fecharLoteModal(true)">
-      Continuar escaneando
+    <div class="lote-sub">Este produto já tem lote(s) cadastrado(s). Atualize a quantidade de um lote existente ou cadastre uma nova validade.</div>
+    <div id="loteLista"></div>
+    <button class="lote-novo-btn" onclick="fecharLoteModal()">
+      <i class="ti ti-plus"></i>&nbsp; Cadastrar novo lote (validade)
     </button>
   </div>
 </div>
