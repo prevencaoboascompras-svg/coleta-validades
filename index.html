@@ -140,6 +140,13 @@ body{
 .desc-val.loading{color:var(--tx2);font-style:italic;font-weight:400}
 .desc-val.found{color:var(--tx)}
 .desc-val.notfound{color:var(--warn);font-weight:400;font-size:13px}
+.desc-preco{
+  flex-shrink:0;font-family:var(--mono);font-size:15px;font-weight:800;
+  color:var(--accent);background:rgba(226,75,74,.1);
+  border:1px solid rgba(226,75,74,.25);border-radius:8px;
+  padding:5px 10px;white-space:nowrap;display:none;
+}
+.desc-preco.show{display:inline-block}
 
 /* ── MANUAL INPUT ── */
 .manual-wrap{margin:0 16px 10px;display:none}
@@ -804,6 +811,7 @@ body{
 <div class="desc-row" id="descRow">
   <span class="desc-icon"><i class="ti ti-tag"></i></span>
   <span class="desc-val loading" id="descVal">Buscando produto…</span>
+  <span class="desc-preco" id="descPreco"></span>
 </div>
 
 <!-- TAREFAS PENDENTES -->
@@ -1730,6 +1738,8 @@ function resetCodigo() {
   btn.onclick = toggleManual;
   // Esconde descrição
   document.getElementById('descRow').style.display = 'none';
+  document.getElementById('descPreco').classList.remove('show');
+  document.getElementById('descPreco').textContent = '';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1774,9 +1784,12 @@ async function buscarDescricao(ean) {
   var cfg = loadCfg();
   var row = document.getElementById('descRow');
   var el  = document.getElementById('descVal');
+  var elPreco = document.getElementById('descPreco');
   row.style.display = 'flex';
   el.textContent = 'Buscando produto…';
   el.className = 'desc-val loading';
+  elPreco.classList.remove('show');
+  elPreco.textContent = '';
 
   if (!cfg.url) {
     el.textContent = 'Configure a URL do Apps Script primeiro';
@@ -1810,6 +1823,15 @@ async function buscarDescricao(ean) {
     el.className = 'desc-val found';
     descricaoAtual = resultado.descricao; // Salvar descrição atual
 
+    // Preço de venda — pra conferir se está batendo com o preço na gôndola
+    if (resultado.preco !== undefined && resultado.preco !== null && resultado.preco !== '') {
+      var precoNum = Number(resultado.preco);
+      if (!isNaN(precoNum)) {
+        elPreco.textContent = 'R$ ' + precoNum.toFixed(2).replace('.', ',');
+        elPreco.classList.add('show');
+      }
+    }
+
     // Feedback de lotes já cadastrados — resultado já deve estar pronto (ou quase),
     // já que a chamada foi disparada em paralelo lá em cima
     var ean_lotes = variantes[idxAchado];
@@ -1839,7 +1861,7 @@ async function tentarBusca(url, ean) {
     if (!resp.ok) return { encontrado: false };
     var data = await resp.json();
     if (data.ok && data.descricao) {
-      return { encontrado: true, descricao: data.descricao };
+      return { encontrado: true, descricao: data.descricao, preco: data.preco };
     }
     return { encontrado: false };
   } catch(e) {
@@ -2362,8 +2384,9 @@ var SAMPLE_SCRIPT = [
   '',
   'var SS_ID = "1HDJvgbKqYRUh8YvKeNTJZ5PhjbqyqZTsYT3bUnjp0VQ";',
   '// Ajuste as colunas conforme sua aba BANCO DE DADOS:',
-  'var COL_EAN  = 1; // coluna A = EAN',
-  'var COL_DESC = 2; // coluna B = Descrição',
+  'var COL_EAN   = 1; // coluna A = EAN',
+  'var COL_DESC  = 2; // coluna B = Descrição',
+  'var COL_PRECO = 3; // coluna C = Preço de venda (ajuste se sua planilha usar outra coluna)',
   '',
   'function doGet(e) {',
   '  var params = e && e.parameter ? e.parameter : {};',
@@ -2380,7 +2403,8 @@ var SAMPLE_SCRIPT = [
   '          return ContentService',
   '            .createTextOutput(JSON.stringify({',
   '              ok: true,',
-  '              descricao: String(dados[i][COL_DESC-1])',
+  '              descricao: String(dados[i][COL_DESC-1]),',
+  '              preco: Number(dados[i][COL_PRECO-1]) || null',
   '            }))',
   '            .setMimeType(ContentService.MimeType.JSON);',
   '        }',
