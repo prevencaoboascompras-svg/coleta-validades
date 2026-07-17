@@ -323,6 +323,27 @@ body{
 .resend-btn:active{background:rgba(186,117,23,.25)}
 .modal-divider{height:1px;background:var(--bd);margin:18px 0}
 
+/* ── LOTE JÁ CADASTRADO ── */
+.lote-icon{
+  width:64px;height:64px;border-radius:50%;background:rgba(255,215,0,.15);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  font-size:30px;
+}
+.lote-titulo{font-size:17px;font-weight:700;text-align:center;margin-bottom:8px}
+.lote-titulo b{color:var(--accent)}
+.lote-sub{font-size:13px;color:var(--tx2);text-align:center;margin-bottom:22px;line-height:1.5}
+.lote-sub b{color:var(--tx)}
+.lote-atualizar-btn{
+  width:100%;height:50px;background:var(--accent);color:#fff;
+  font-weight:700;font-size:15px;border:none;border-radius:10px;cursor:pointer;margin-bottom:10px;
+}
+.lote-atualizar-btn:active{background:var(--accent2)}
+.lote-continuar-btn{
+  width:100%;height:46px;background:var(--card);color:var(--tx2);
+  font-weight:600;font-size:14px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;
+}
+.lote-continuar-btn:active{background:var(--bd)}
+
 /* ── DRUM PICKER (seletor de data estilo iOS) ── */
 .drum-trigger{
   width:100%;height:54px;background:var(--surf);border:1px solid var(--bd);
@@ -891,6 +912,21 @@ body{
       <div class="drum-col" id="drumMes"></div>
       <div class="drum-col" id="drumAno"></div>
     </div>
+  </div>
+</div>
+
+<!-- LOTE JÁ CADASTRADO -->
+<div class="modal-bg" id="loteModal" onclick="fecharLoteModalBg(event)">
+  <div class="modal-box">
+    <div class="lote-icon">🍀</div>
+    <div class="lote-titulo">Você está com sorte, <b id="loteNome">!</b></div>
+    <div class="lote-sub">Produto já cadastrado com este lote!<br>Quantidade atual: <b id="loteQtdAtual">–</b></div>
+    <button class="lote-atualizar-btn" onclick="confirmarAtualizarEstoqueLote()">
+      <i class="ti ti-refresh"></i>&nbsp; Atualizar estoque
+    </button>
+    <button class="lote-continuar-btn" onclick="fecharLoteModal(true)">
+      Continuar escaneando
+    </button>
   </div>
 </div>
 
@@ -1717,22 +1753,25 @@ async function buscarDescricao(ean) {
     return;
   }
 
-  // Tentar buscar com o código original
-  var resultado = await tentarBusca(cfg.url, ean);
-  
-  // Se não encontrou e é UPC-A (12 dígitos), tentar com zero na frente (EAN-13)
-  if (!resultado.encontrado && ean.length === 12) {
-    resultado = await tentarBusca(cfg.url, '0' + ean);
-  }
-  // Se não encontrou e é EAN-13 com zero, tentar sem o zero (já normalizado, mas por segurança)
-  else if (!resultado.encontrado && ean.length === 13 && ean.charAt(0) === '0') {
-    resultado = await tentarBusca(cfg.url, ean.substring(1));
-  }
+  // Monta as variantes possíveis do código e busca todas EM PARALELO
+  // (antes eram até 3 chamadas em sequência, agora é 1 espera só)
+  var variantes = [ean];
+  if (ean.length === 12) variantes.push('0' + ean);
+  else if (ean.length === 13 && ean.charAt(0) === '0') variantes.push(ean.substring(1));
+
+  var respostas = await Promise.all(
+    variantes.map(function(v) { return tentarBusca(cfg.url, v); })
+  );
+  var idxAchado = respostas.findIndex(function(r) { return r.encontrado; });
+  var resultado = idxAchado >= 0 ? respostas[idxAchado] : { encontrado: false };
 
   if (resultado.encontrado) {
     el.textContent = resultado.descricao;
     el.className = 'desc-val found';
     descricaoAtual = resultado.descricao; // Salvar descrição atual
+
+    // Feedback de lotes já cadastrados — não bloqueia a exibição da descrição
+    verificarLotesExistentes(variantes[idxAchado]);
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'desc-val notfound';
@@ -2467,6 +2506,120 @@ function confirmarDrum() {
   disp.classList.remove('empty');
 
   fecharDrum();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOTES JÁ CADASTRADOS PARA ESTE EAN (dispara logo ao bipar)
+// ═══════════════════════════════════════════════════════════
+var _loteEanAtual = null;   // EAN sendo checado no momento
+var _lotesEncontrados = []; // [{ validade, quantidade }]
+
+function nomeDoEmail(email) {
+  if (!email) return '';
+  var e = email.trim().toLowerCase();
+  var achado = COLABORADORES.find(function(c) { return c.email && c.email.toLowerCase() === e; });
+  if (achado && achado.nome) return achado.nome.split(' ')[0]; // primeiro nome
+  return email.split('@')[0];
+}
+
+// Chamado a partir de buscarDescricao(), assim que o EAN é identificado
+async function verificarLotesExistentes(ean) {
+  var cfg = loadCfg();
+  if (!cfg.url || !ean) return;
+
+  try {
+    var resp = await fetch(
+      cfg.url + '?action=verificarLotesEAN&ean=' + encodeURIComponent(ean),
+      { method: 'GET' }
+    );
+    if (!resp.ok) return;
+    var data = await resp.json();
+    // Se o código mudou enquanto a busca rodava (outro bipe), ignora resultado antigo
+    if ((codigoAtual || '') !== ean) return;
+
+    if (data.ok && data.lotes && data.lotes.length) {
+      _loteEanAtual = ean;
+      _lotesEncontrados = data.lotes;
+      abrirLoteModal();
+    }
+  } catch (e) {
+    // sem conexão — não bloqueia o fluxo normal, segue pro cadastro direto
+  }
+}
+
+function abrirLoteModal() {
+  var cfg = loadCfg();
+  document.getElementById('loteNome').textContent = nomeDoEmail(cfg.email) || '';
+
+  var lista = document.getElementById('loteLista');
+  lista.innerHTML = _lotesEncontrados.map(function(l, i) {
+    return ''
+      + '<div class="lote-card">'
+      +   '<div class="lote-card-info">'
+      +     '<div class="lote-card-val"><i class="ti ti-calendar"></i> ' + l.validade + '</div>'
+      +     '<div class="lote-card-qtd">Estoque atual: <b>' + l.quantidade + '</b></div>'
+      +   '</div>'
+      +   '<div class="lote-card-actions">'
+      +     '<div class="lote-qty-stepper">'
+      +       '<button onclick="alterarLoteQty(' + i + ',-1)">−</button>'
+      +       '<span id="loteQty_' + i + '">1</span>'
+      +       '<button onclick="alterarLoteQty(' + i + ',1)">+</button>'
+      +     '</div>'
+      +     '<button class="lote-atualizar-btn-sm" onclick="confirmarAtualizarEstoqueLote(' + i + ')">Atualizar estoque</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('loteModal').classList.add('open');
+}
+
+function alterarLoteQty(i, delta) {
+  var el = document.getElementById('loteQty_' + i);
+  var v = parseInt(el.textContent) || 1;
+  el.textContent = Math.max(1, v + delta);
+}
+
+function fecharLoteModalBg(e) {
+  if (e.target.id === 'loteModal') fecharLoteModal();
+}
+
+// Fecha o modal e segue o fluxo normal (cadastrar um novo lote/validade)
+function fecharLoteModal() {
+  document.getElementById('loteModal').classList.remove('open');
+  _loteEanAtual = null;
+  _lotesEncontrados = [];
+}
+
+async function confirmarAtualizarEstoqueLote(i) {
+  var lote = _lotesEncontrados[i];
+  if (!lote || !_loteEanAtual) return;
+  var cfg = loadCfg();
+  var qty = parseInt(document.getElementById('loteQty_' + i).textContent) || 1;
+
+  document.getElementById('loteModal').classList.remove('open');
+  mostrarToast('Atualizando estoque…', 'ok');
+
+  try {
+    var resp = await fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({
+        action: 'atualizarEstoqueLote',
+        ean: _loteEanAtual,
+        validade: lote.validade,
+        quantidade: qty,
+        email: cfg.email || ''
+      })
+    });
+    if (!resp.ok) throw new Error('http-' + resp.status);
+    mostrarToast('Estoque atualizado com sucesso!', 'ok');
+  } catch (e) {
+    mostrarToast('Sem conexão — tente novamente', 'warn');
+  } finally {
+    _loteEanAtual = null;
+    _lotesEncontrados = [];
+    resetAposEnvio();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
