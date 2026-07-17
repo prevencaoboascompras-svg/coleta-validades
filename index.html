@@ -352,11 +352,19 @@ body{
 }
 .lote-qty-stepper button:active{background:var(--bd)}
 .lote-qty-stepper span{min-width:18px;text-align:center;font-weight:700;font-size:14px}
+.lote-qty-peso input{
+  min-width:56px;max-width:64px;text-align:center;font-weight:700;font-size:14px;
+  background:transparent;border:none;color:var(--tx);font-family:inherit;padding:0;
+}
+.lote-qty-peso input:focus{outline:none}
 .lote-atualizar-btn-sm{
   flex:1;height:38px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;
   border:none;border-radius:8px;cursor:pointer;
 }
 .lote-atualizar-btn-sm:active{background:var(--accent2)}
+.lote-modal-actions{display:flex;gap:10px;margin-top:4px}
+.lote-modal-actions .lote-novo-btn{width:auto;flex:1;margin-top:0}
+.lote-btn-novo-lote{color:var(--accent);border-color:var(--accent)}
 .lote-novo-btn{
   width:100%;height:46px;background:var(--card);color:var(--tx2);
   font-weight:600;font-size:14px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;
@@ -942,9 +950,14 @@ body{
     <div class="lote-titulo">Você está com sorte, <b id="loteNome">!</b></div>
     <div class="lote-sub">Este produto já tem lote(s) cadastrado(s). Atualize a quantidade de um lote existente ou cadastre uma nova validade.</div>
     <div id="loteLista"></div>
-    <button class="lote-novo-btn" onclick="continuarEscaneandoLote()">
-      <i class="ti ti-scan"></i>&nbsp; Continuar escaneando
-    </button>
+    <div class="lote-modal-actions">
+      <button class="lote-novo-btn lote-btn-novo-lote" onclick="novoLoteClique()">
+        <i class="ti ti-plus"></i>&nbsp; Novo lote
+      </button>
+      <button class="lote-novo-btn" onclick="continuarEscaneandoLote()">
+        <i class="ti ti-scan"></i>&nbsp; Continuar escaneando
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1777,9 +1790,18 @@ async function buscarDescricao(ean) {
   if (ean.length === 12) variantes.push('0' + ean);
   else if (ean.length === 13 && ean.charAt(0) === '0') variantes.push(ean.substring(1));
 
-  var respostas = await Promise.all(
+  // Dispara a busca de descrição E a verificação de lotes NO MESMO INSTANTE,
+  // em vez de esperar a descrição voltar pra só então checar os lotes.
+  // Antes eram 2 round-trips ao Apps Script em sequência (~3s); agora os dois
+  // rodam em paralelo e o tempo total cai pro do mais lento dos dois (~1-1.5s).
+  var buscaPromise = Promise.all(
     variantes.map(function(v) { return tentarBusca(cfg.url, v); })
   );
+  var lotesPromise = Promise.all(
+    variantes.map(function(v) { return tentarVerificarLotes(cfg.url, v); })
+  );
+
+  var respostas = await buscaPromise;
   var idxAchado = respostas.findIndex(function(r) { return r.encontrado; });
   var resultado = idxAchado >= 0 ? respostas[idxAchado] : { encontrado: false };
 
@@ -1788,8 +1810,19 @@ async function buscarDescricao(ean) {
     el.className = 'desc-val found';
     descricaoAtual = resultado.descricao; // Salvar descrição atual
 
-    // Feedback de lotes já cadastrados — não bloqueia a exibição da descrição
-    verificarLotesExistentes(variantes[idxAchado]);
+    // Feedback de lotes já cadastrados — resultado já deve estar pronto (ou quase),
+    // já que a chamada foi disparada em paralelo lá em cima
+    var ean_lotes = variantes[idxAchado];
+    lotesPromise.then(function(lotesRespostas) {
+      // Se o código mudou enquanto a busca rodava (outro bipe), ignora resultado antigo
+      if ((codigoAtual || '') !== ean) return;
+      var loteAchado = lotesRespostas.find(function(r) { return r.ok && r.lotes && r.lotes.length; });
+      if (loteAchado) {
+        _loteEanAtual = ean_lotes;
+        _lotesEncontrados = loteAchado.lotes;
+        abrirLoteModal();
+      }
+    });
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'desc-val notfound';
@@ -1811,6 +1844,22 @@ async function tentarBusca(url, ean) {
     return { encontrado: false };
   } catch(e) {
     return { encontrado: false };
+  }
+}
+
+// Mesma ideia do tentarBusca, mas pro endpoint de lotes — disparada em paralelo
+// com a busca de descrição (ver buscarDescricao), não mais depois dela.
+async function tentarVerificarLotes(url, ean) {
+  try {
+    var resp = await fetch(
+      url + '?action=verificarLotesEAN&ean=' + encodeURIComponent(ean),
+      { method: 'GET' }
+    );
+    if (!resp.ok) return { ok: false };
+    var data = await resp.json();
+    return data; // { ok, lotes } ou { ok:false }
+  } catch (e) {
+    return { ok: false };
   }
 }
 
@@ -2578,49 +2627,37 @@ function nomeDoEmail(email) {
   return email.split('@')[0];
 }
 
-// Chamado a partir de buscarDescricao(), assim que o EAN é identificado
-async function verificarLotesExistentes(ean) {
-  var cfg = loadCfg();
-  if (!cfg.url || !ean) return;
-
-  try {
-    var resp = await fetch(
-      cfg.url + '?action=verificarLotesEAN&ean=' + encodeURIComponent(ean),
-      { method: 'GET' }
-    );
-    if (!resp.ok) return;
-    var data = await resp.json();
-    // Se o código mudou enquanto a busca rodava (outro bipe), ignora resultado antigo
-    if ((codigoAtual || '') !== ean) return;
-
-    if (data.ok && data.lotes && data.lotes.length) {
-      _loteEanAtual = ean;
-      _lotesEncontrados = data.lotes;
-      abrirLoteModal();
-    }
-  } catch (e) {
-    // sem conexão — não bloqueia o fluxo normal, segue pro cadastro direto
-  }
-}
-
 function abrirLoteModal() {
   var cfg = loadCfg();
   document.getElementById('loteNome').textContent = nomeDoEmail(cfg.email) || '';
 
   var lista = document.getElementById('loteLista');
   lista.innerHTML = _lotesEncontrados.map(function(l, i) {
+    var isKg = l.unidade === 'kg';
+    var qtdTxt = isKg
+      ? (String(l.quantidade).replace('.', ',') + ' kg')
+      : l.quantidade;
+
+    var stepperHtml = isKg
+      ? ('<div class="lote-qty-stepper lote-qty-peso">'
+          + '<button onclick="alterarLoteQty(' + i + ',-0.1)">−</button>'
+          + '<input type="tel" inputmode="decimal" id="loteQty_' + i + '" value="1,000" oninput="onLoteQtyPesoInput(this)">'
+          + '<button onclick="alterarLoteQty(' + i + ',0.1)">+</button>'
+          + '</div>')
+      : ('<div class="lote-qty-stepper">'
+          + '<button onclick="alterarLoteQty(' + i + ',-1)">−</button>'
+          + '<span id="loteQty_' + i + '">1</span>'
+          + '<button onclick="alterarLoteQty(' + i + ',1)">+</button>'
+          + '</div>');
+
     return ''
       + '<div class="lote-card">'
       +   '<div class="lote-card-info">'
       +     '<div class="lote-card-val"><i class="ti ti-calendar"></i> ' + l.validade + '</div>'
-      +     '<div class="lote-card-qtd">Estoque atual: <b>' + l.quantidade + '</b></div>'
+      +     '<div class="lote-card-qtd">Estoque atual: <b>' + qtdTxt + '</b></div>'
       +   '</div>'
       +   '<div class="lote-card-actions">'
-      +     '<div class="lote-qty-stepper">'
-      +       '<button onclick="alterarLoteQty(' + i + ',-1)">−</button>'
-      +       '<span id="loteQty_' + i + '">1</span>'
-      +       '<button onclick="alterarLoteQty(' + i + ',1)">+</button>'
-      +     '</div>'
+      +     stepperHtml
       +     '<button class="lote-atualizar-btn-sm" onclick="confirmarAtualizarEstoqueLote(' + i + ')">Atualizar estoque</button>'
       +   '</div>'
       + '</div>';
@@ -2629,10 +2666,23 @@ function abrirLoteModal() {
   document.getElementById('loteModal').classList.add('open');
 }
 
+// Aplica a mesma máscara "tipo calculadora" do campo de peso principal
+// (formatarPeso já existe mais acima, reaproveitada aqui)
+function onLoteQtyPesoInput(el) {
+  el.value = formatarPeso(el.value);
+}
+
 function alterarLoteQty(i, delta) {
+  var l  = _lotesEncontrados[i];
   var el = document.getElementById('loteQty_' + i);
-  var v = parseInt(el.textContent) || 1;
-  el.textContent = Math.max(1, v + delta);
+  if (l && l.unidade === 'kg') {
+    var atual = parseFloat((el.value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+    var novo  = Math.max(0.1, +(atual + delta).toFixed(3));
+    el.value  = novo.toFixed(3).replace('.', ',');
+  } else {
+    var v = parseInt(el.textContent) || 1;
+    el.textContent = Math.max(1, v + delta);
+  }
 }
 
 function fecharLoteModalBg(e) {
