@@ -1,0 +1,33 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EA5453"/>
+      <stop offset="1" stop-color="#C13332"/>
+    </linearGradient>
+  </defs>
+
+  <!-- squircle background -->
+  <rect x="0" y="0" width="512" height="512" rx="118" fill="url(#bg)"/>
+
+  <!-- barcode bars -->
+  <g fill="#ffffff">
+    <rect x="122" y="150" width="14" height="180" rx="4"/>
+    <rect x="150" y="150" width="7" height="180" rx="3"/>
+    <rect x="171" y="150" width="14" height="180" rx="4"/>
+    <rect x="199" y="150" width="7" height="180" rx="3"/>
+    <rect x="220" y="150" width="7" height="180" rx="3"/>
+    <rect x="241" y="150" width="14" height="180" rx="4"/>
+    <rect x="269" y="150" width="7" height="180" rx="3"/>
+    <rect x="290" y="150" width="14" height="180" rx="4"/>
+    <rect x="318" y="150" width="7" height="180" rx="3"/>
+    <rect x="339" y="150" width="14" height="180" rx="4"/>
+    <rect x="367" y="150" width="7" height="180" rx="3"/>
+  </g>
+
+  <!-- calendar-check badge -->
+  <g>
+    <circle cx="380" cy="356" r="86" fill="#1A1A18"/>
+    <circle cx="380" cy="356" r="86" fill="none" stroke="#ffffff" stroke-width="10"/>
+    <path d="M340 356 L368 384 L424 322" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

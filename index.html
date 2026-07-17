@@ -6,7 +6,15 @@
 <meta name="theme-color" content="#fcfbf8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Validades">
 <title>Coleta de Validades</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+<link rel="manifest" href="site.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap">
 <style>
@@ -1460,13 +1468,13 @@ async function iniciarScanner() {
 
             // Pequeno delay para dar feedback visual antes de parar
             setTimeout(function() {
-              // Recheca de novo: a sessão pode ter mudado durante esses 300ms
+              // Recheca de novo: a sessão pode ter mudado durante esse tempo
               if (meuSession !== _scanSessionId) {
                 console.warn('Descartado após delay: sessão antiga #' + meuSession);
                 return;
               }
               onScanSuccess(result.getText());
-            }, 300);
+            }, 120);
           }
           // error é normal quando nenhum código é detectado no frame
         }
@@ -1691,11 +1699,6 @@ function onScanSuccess(code) {
 
   // Buscar descrição na planilha
   buscarDescricao(code);
-
-  // Focar validade
-  setTimeout(function(){
-    document.getElementById('fValidade').focus();
-  }, code.length * 30 + 200);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1722,7 +1725,7 @@ function exibirCodigo(code) {
       btn.innerHTML = '<i class="ti ti-refresh"></i> outro';
       btn.onclick = function() { resetCodigo(); iniciarScanner(); };
     }
-  }, 30);
+  }, 12);
 }
 
 function resetCodigo() {
@@ -2036,7 +2039,7 @@ function resetAposEnvio() {
   
   renderHistorico();
   atualizarPendUI();
-  setTimeout(iniciarScanner, 700);
+  setTimeout(iniciarScanner, 350);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2750,7 +2753,7 @@ function novoLoteClique() {
   mostrarToast(setorAuto ? ('Setor "' + setorAuto + '" preenchido automaticamente — informe a validade e quantidade') : 'Informe a validade e a quantidade', 'ok');
 
   // Já abre o seletor de data pra agilizar o preenchimento
-  setTimeout(abrirDrum, 300);
+  setTimeout(abrirDrum, 150);
 }
 
 async function confirmarAtualizarEstoqueLote(i) {
@@ -3118,14 +3121,14 @@ function selecionarUsuarioTablet(nome, email) {
 
   if (_modoTablet) {
     // Modo tablet: sempre mostra o seletor de usuário
-    setTimeout(iniciarModoTablet, 300);
+    setTimeout(iniciarModoTablet, 100);
   } else {
     // Modo pessoal: fluxo normal
-    setTimeout(buscarTarefas, 600);
+    setTimeout(buscarTarefas, 200);
     if (cfg.email) {
-      setTimeout(function() { verificarAniversario(cfg.email, null); }, 1200);
+      setTimeout(function() { verificarAniversario(cfg.email, null); }, 500);
     }
-    setTimeout(verificarPrimeiroUso, 400);
+    setTimeout(verificarPrimeiroUso, 150);
   }
 })();
 </script>
