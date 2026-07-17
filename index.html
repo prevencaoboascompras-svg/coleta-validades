@@ -2410,9 +2410,10 @@ var SAMPLE_SCRIPT = [
   '        if (String(dados[i][2]).trim() !== ean) continue; // col C = ean',
   '        var d = dados[i][3]; // col D = validade',
   '        var chave = Utilities.formatDate(new Date(d), ss.getSpreadsheetTimeZone(), "dd/MM/yyyy");',
-  '        if (!mapa[chave]) mapa[chave] = { validade: chave, quantidade: 0, setor: dados[i][1] };',
+  '        if (!mapa[chave]) mapa[chave] = { validade: chave, quantidade: 0, setor: dados[i][1], unidade: dados[i][6] || "un" };',
   '        mapa[chave].quantidade += Number(dados[i][4]) || 0; // col E = quantidade',
   '        mapa[chave].setor = dados[i][1]; // guarda o setor mais recente',
+  '        mapa[chave].unidade = dados[i][6] || "un"; // col G = unidade (un/kg)',
   '      }',
   '      var lotes = Object.keys(mapa).map(function(k){ return mapa[k]; });',
   '      return ContentService',
@@ -2433,7 +2434,7 @@ var SAMPLE_SCRIPT = [
   '//   var partes = String(dados.validade).split("/");',
   '//   var dataVal = new Date(partes[2], partes[1]-1, partes[0]);',
   '//   var agora = new Date();',
-  '//   aba.appendRow([agora, dados.setor||"", dados.ean, dataVal, Number(dados.quantidade)||1, dados.email||""]);',
+  '//   aba.appendRow([agora, dados.setor||"", dados.ean, dataVal, Number(dados.quantidade)||1, dados.email||"", dados.unidade||"un"]);',
   '//   return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);',
   '// }',
   '',
@@ -2448,7 +2449,7 @@ var SAMPLE_SCRIPT = [
   '      ? new Date(partes[2], partes[1]-1, partes[0])',
   '      : new Date(dados.validade);',
   '    var agora = new Date();',
-  '    aba.appendRow([agora,dados.setor,dados.ean,dataVal,Number(dados.quantidade)||1,dados.email||""]);',
+  '    aba.appendRow([agora,dados.setor,dados.ean,dataVal,Number(dados.quantidade)||1,dados.email||"",dados.unidade||"un"]);',
   '    processarNovoEnvioFormulario({values:[agora,dados.setor,dados.ean,dataVal,Number(dados.quantidade)||1]});',
   '    return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);',
   '  } catch(err) {',
@@ -2702,6 +2703,30 @@ function continuarEscaneandoLote() {
   fecharLoteModal();
   resetCodigo();
   iniciarScanner();
+}
+
+// Fecha o modal de lote e prepara o formulário pra um NOVO lote do mesmo
+// produto (mesmo EAN) — a pessoa só precisa informar a validade nova e a
+// quantidade; o setor é preenchido automaticamente com base no lote que
+// já existia pra este EAN. Mantém codigoAtual/descricaoAtual (não reseta
+// o código já bipado) para não ter que escanear de novo.
+function novoLoteClique() {
+  var setorAuto = (_lotesEncontrados && _lotesEncontrados[0] && _lotesEncontrados[0].setor) || '';
+  if (setorAuto) {
+    document.getElementById('fSetor').value = setorAuto;
+  }
+
+  // Auto-detecta se o produto é vendido por peso, com base nos lotes já cadastrados
+  var algumKg = _lotesEncontrados && _lotesEncontrados.some(function(l) { return l.unidade === 'kg'; });
+  if (algumKg && !pesoAtivo) togglePeso();
+  else if (!algumKg && pesoAtivo) togglePeso();
+
+  fecharLoteModal();
+
+  mostrarToast(setorAuto ? ('Setor "' + setorAuto + '" preenchido automaticamente — informe a validade e quantidade') : 'Informe a validade e a quantidade', 'ok');
+
+  // Já abre o seletor de data pra agilizar o preenchimento
+  setTimeout(abrirDrum, 300);
 }
 
 async function confirmarAtualizarEstoqueLote(i) {
