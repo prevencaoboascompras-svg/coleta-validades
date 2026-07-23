@@ -37,6 +37,7 @@ body{
   background:var(--bg3);color:var(--tx);
   min-height:100vh;max-width:480px;margin:0 auto;
   overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+  padding-top:78px;
 }
 
 /* ── OFFLINE BANNER ── */
@@ -49,8 +50,9 @@ body{
 /* ── HEADER ── */
 .hdr{
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px 14px;position:sticky;top:0;
-  background:var(--bg3);z-index:20;border-bottom:1px solid var(--bd);
+  padding:16px 20px 14px;position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  background:var(--bg3);z-index:50;border-bottom:1px solid var(--bd);
 }
 .hdr-title{font-size:17px;font-weight:600;letter-spacing:-.01em}
 .hdr-title span{color:var(--accent)}
@@ -99,7 +101,7 @@ body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;text-align:center;padding:24px;
 }
-.scan-state-icon{font-size:38px;line-height:1}
+.scan-state-icon{font-size:22px;line-height:1}
 .scan-state-txt{font-size:13px;color:var(--tx2);line-height:1.5}
 .scan-start-btn{
   padding:12px 32px;background:var(--accent);color:#fff;font-weight:700;
@@ -115,68 +117,51 @@ body{
 }
 .scan-flash.show{opacity:.4}
 
-/* ── CODE DISPLAY ── */
-.code-row{
-  display:flex;align-items:center;gap:10px;
-  margin:0 16px 6px;padding:13px 15px;
+/* ── PRODUTO: FOTO + PREÇO + CÓDIGO (substitui badge de barras) ── */
+.prod-row{
+  display:flex;align-items:center;gap:12px;
+  margin:0 16px 10px;padding:12px 15px;
   background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+  min-height:73px;
 }
-.barcode-icon{font-size:22px;flex-shrink:0;letter-spacing:-2px;opacity:.6}
-.code-val{
-  font-family:var(--mono);font-size:17px;font-weight:700;
-  color:var(--accent);letter-spacing:.07em;flex:1;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  cursor:default;
-}
-.code-val.empty{color:var(--tx2);font-size:13px;font-weight:400;font-family:inherit;letter-spacing:normal}
-.rescan-btn{
-  font-size:11px;color:var(--tx2);cursor:pointer;padding:5px 9px;
-  border:1px solid var(--bd);border-radius:7px;background:none;flex-shrink:0;
-  white-space:nowrap;transition:color .12s,border-color .12s;
-}
-.rescan-btn:hover{color:var(--accent);border-color:var(--accent)}
-
-/* ── DESC ROW ── */
-.desc-row{
-  display:none;align-items:center;gap:10px;
-  margin:0 16px 10px;padding:11px 15px;
-  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
-  min-height:42px;
-}
-.desc-icon{font-size:18px;flex-shrink:0;opacity:.6}
-.desc-val{font-size:14px;font-weight:600;flex:1;line-height:1.3}
-.desc-val.loading{color:var(--tx2);font-style:italic;font-weight:400}
-.desc-val.found{color:var(--tx)}
-.desc-val.notfound{color:var(--warn);font-weight:400;font-size:13px}
-.desc-preco{
-  flex-shrink:0;font-family:var(--mono);font-size:15px;font-weight:800;
-  color:var(--accent);background:rgba(226,75,74,.1);
-  border:1px solid rgba(226,75,74,.25);border-radius:8px;
-  padding:5px 10px;white-space:nowrap;display:none;
-}
-.desc-preco.show{display:inline-block}
-
-/* ── FOTO DO PRODUTO ── */
-.foto-row{
-  display:none;align-items:center;gap:12px;
-  margin:0 16px 10px;padding:11px 15px;
-  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
-  min-height:42px;
-}
-.foto-preview{
-  position:relative;width:52px;height:52px;flex-shrink:0;
+.prod-foto{
+  position:relative;width:110px;height:110px;flex-shrink:0;
   border:1px dashed var(--bds);border-radius:10px;background:var(--bg);
   display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--tx2);
 }
-.foto-preview img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-.foto-preview .spin{
-  width:18px;height:18px;border:2px solid var(--bds);border-top-color:var(--accent);
+.prod-foto img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.prod-foto .spin{
+  width:20px;height:20px;border:2px solid var(--bds);border-top-color:var(--accent);
   border-radius:50%;animation:fotospin .7s linear infinite;
 }
 @keyframes fotospin{to{transform:rotate(360deg)}}
-.foto-status{font-size:13px;font-weight:600;flex:1;line-height:1.3;color:var(--tx2)}
+.prod-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.prod-desc-val{
+  font-size:13px;font-weight:600;color:var(--tx);line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.prod-desc-val.loading{color:var(--tx2);font-style:italic;font-weight:400}
+.prod-desc-val.notfound{color:var(--warn);font-weight:400;font-size:12px}
+.prod-preco{
+  font-family:var(--mono);font-size:16px;font-weight:800;color:var(--accent);
+  display:none;
+}
+.prod-preco.show{display:block}
+.prod-codigo{
+  font-family:var(--mono);font-size:12px;color:var(--tx2);letter-spacing:.04em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;
+}
+.prod-codigo.empty{font-style:italic}
+.foto-status{font-size:11px;color:var(--tx2);line-height:1.3}
 .foto-status.ok{color:var(--accent);font-weight:600}
 .foto-status.warn{color:var(--warn);font-weight:400}
+.rescan-btn{
+  font-size:11px;color:var(--tx2);cursor:pointer;padding:5px 9px;
+  border:1px solid var(--bd);border-radius:7px;background:none;flex-shrink:0;
+  white-space:nowrap;transition:color .12s,border-color .12s;align-self:flex-start;
+}
+.rescan-btn:hover{color:var(--accent);border-color:var(--accent)}
 
 /* ── MANUAL INPUT ── */
 .manual-wrap{margin:0 16px 10px;display:none}
@@ -826,10 +811,15 @@ body{
   <div id="debugLog" style="white-space:pre-wrap;word-break:break-word;"></div>
 </div>
 
-<!-- CODE DISPLAY -->
-<div class="code-row">
-  <span class="barcode-icon">▌▌▌▌▌▌</span>
-  <span class="code-val empty" id="codeDisplay">Aguardando leitura…</span>
+<!-- PRODUTO: FOTO + PREÇO + CÓDIGO (substitui badge de barras) -->
+<div class="prod-row" id="prodRow">
+  <div class="prod-foto" id="fotoPreview"><i class="ti ti-photo-search" style="font-size:34px"></i></div>
+  <div class="prod-info">
+    <span class="prod-desc-val" id="descVal">Aguardando leitura…</span>
+    <span class="prod-preco" id="descPreco"></span>
+    <span class="prod-codigo empty" id="codeDisplay">Aguardando leitura…</span>
+    <span class="foto-status" id="fotoStatus"></span>
+  </div>
   <button class="rescan-btn" id="rescanBtn" onclick="toggleManual()"><i class="ti ti-pencil"></i> manual</button>
 </div>
 
@@ -841,19 +831,6 @@ body{
       onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarManual();}">
     <button class="manual-ok-btn" onclick="confirmarManual()"><i class="ti ti-check"></i> OK</button>
   </div>
-</div>
-
-<!-- DESCRIÇÃO DO PRODUTO -->
-<div class="desc-row" id="descRow">
-  <span class="desc-icon"><i class="ti ti-tag"></i></span>
-  <span class="desc-val loading" id="descVal">Buscando produto…</span>
-  <span class="desc-preco" id="descPreco"></span>
-</div>
-
-<!-- FOTO DO PRODUTO -->
-<div class="foto-row" id="fotoRow">
-  <div class="foto-preview" id="fotoPreview"><i class="ti ti-photo-search" style="font-size:20px"></i></div>
-  <span class="foto-status" id="fotoStatus">Buscando foto do produto…</span>
 </div>
 
 <!-- TAREFAS PENDENTES -->
@@ -868,6 +845,31 @@ body{
 
 <!-- FORM -->
 <div class="form-body">
+
+  <div>
+    <div class="qty-lbl-row">
+      <div class="field-lbl" style="margin-bottom:0"><i class="ti ti-package"></i> Quantidade</div>
+      <div class="peso-toggle" id="pesoToggle" onclick="togglePeso()">
+        <span>PRODUTO POR PESO</span>
+        <div class="peso-switch"></div>
+      </div>
+    </div>
+    <div class="qty-row" id="qtyRow">
+      <button class="qty-btn" onclick="alterarQty(-1)">−</button>
+      <div class="qty-divider"></div>
+      <input type="tel" inputmode="numeric" class="qty-input" id="fQty" value="1">
+      <div class="qty-divider"></div>
+      <button class="qty-btn" onclick="alterarQty(+1)">+</button>
+    </div>
+    <div class="qty-row peso-row" id="pesoRow">
+      <div class="peso-input-wrap">
+        <input type="tel" inputmode="decimal" class="peso-input" id="fPeso"
+          placeholder="0,000" value=""
+          oninput="onPesoInput(this)">
+        <span class="peso-unit">kg</span>
+      </div>
+    </div>
+  </div>
 
   <div>
     <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
@@ -900,31 +902,6 @@ body{
 <option value="Seca">Seca</option>
 <option value="Seca doce">Seca doce</option>
     </select>
-  </div>
-
-  <div>
-    <div class="qty-lbl-row">
-      <div class="field-lbl" style="margin-bottom:0"><i class="ti ti-package"></i> Quantidade</div>
-      <div class="peso-toggle" id="pesoToggle" onclick="togglePeso()">
-        <span>PRODUTO POR PESO</span>
-        <div class="peso-switch"></div>
-      </div>
-    </div>
-    <div class="qty-row" id="qtyRow">
-      <button class="qty-btn" onclick="alterarQty(-1)">−</button>
-      <div class="qty-divider"></div>
-      <input type="tel" inputmode="numeric" class="qty-input" id="fQty" value="1">
-      <div class="qty-divider"></div>
-      <button class="qty-btn" onclick="alterarQty(+1)">+</button>
-    </div>
-    <div class="qty-row peso-row" id="pesoRow">
-      <div class="peso-input-wrap">
-        <input type="tel" inputmode="decimal" class="peso-input" id="fPeso"
-          placeholder="0,000" value=""
-          oninput="onPesoInput(this)">
-        <span class="peso-unit">kg</span>
-      </div>
-    </div>
   </div>
 
   <button class="submit-btn" id="submitBtn" onclick="registrar()">
@@ -1750,6 +1727,8 @@ function exibirCodigo(code) {
   var el = document.getElementById('codeDisplay');
   el.classList.remove('empty');
   el.textContent = '';
+  document.getElementById('descVal').textContent = 'Aguardando leitura…';
+  document.getElementById('descVal').className = 'prod-desc-val loading';
 
   var i = 0;
   var iv = setInterval(function() {
@@ -1780,13 +1759,14 @@ function resetCodigo() {
   var btn = document.getElementById('rescanBtn');
   btn.innerHTML = '<i class="ti ti-pencil"></i> manual';
   btn.onclick = toggleManual;
-  // Esconde descrição
-  document.getElementById('descRow').style.display = 'none';
+  // Reseta descrição
+  document.getElementById('descVal').textContent = 'Aguardando leitura…';
+  document.getElementById('descVal').className = 'prod-desc-val';
   document.getElementById('descPreco').classList.remove('show');
   document.getElementById('descPreco').textContent = '';
-  // Esconde foto
+  // Reseta foto
   fotoToken++;
-  document.getElementById('fotoRow').style.display = 'none';
+  limparFoto('');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1853,7 +1833,6 @@ function setFotoPreview(img) {
 }
 function limparFoto(msg) {
   fotoImg = null;
-  document.getElementById('fotoRow').style.display = 'none';
   setFotoPreview(null);
   setFotoStatus(msg || '');
 }
@@ -1996,7 +1975,6 @@ async function buscarFotoCompleta(ean, nomeProduto) {
   var token = ++fotoToken;
   var cod = normalizarCodigo(ean);
   var nome = String(nomeProduto || '').trim();
-  document.getElementById('fotoRow').style.display = 'flex';
   setFotoPreview(null);
   setFotoStatus('Buscando foto no Google Drive…');
 
@@ -2027,26 +2005,23 @@ async function buscarFotoCompleta(ean, nomeProduto) {
   if (token !== fotoToken) return false;
   if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Open Food Facts.', 'ok'); return true; }
 
-  limparFoto('Foto não encontrada automaticamente.');
-  document.getElementById('fotoRow').style.display = 'flex';
+  limparFoto('');
   setFotoStatus('Foto não encontrada automaticamente.', 'warn');
   return false;
 }
 
 async function buscarDescricao(ean) {
   var cfg = loadCfg();
-  var row = document.getElementById('descRow');
   var el  = document.getElementById('descVal');
   var elPreco = document.getElementById('descPreco');
-  row.style.display = 'flex';
   el.textContent = 'Buscando produto…';
-  el.className = 'desc-val loading';
+  el.className = 'prod-desc-val loading';
   elPreco.classList.remove('show');
   elPreco.textContent = '';
 
   if (!cfg.url) {
     el.textContent = 'Configure a URL do Apps Script primeiro';
-    el.className = 'desc-val notfound';
+    el.className = 'prod-desc-val notfound';
     return;
   }
 
@@ -2073,7 +2048,7 @@ async function buscarDescricao(ean) {
 
   if (resultado.encontrado) {
     el.textContent = resultado.descricao;
-    el.className = 'desc-val found';
+    el.className = 'prod-desc-val';
     descricaoAtual = resultado.descricao; // Salvar descrição atual
     buscarFotoCompleta(ean, resultado.descricao);
 
@@ -2101,7 +2076,7 @@ async function buscarDescricao(ean) {
     });
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
-    el.className = 'desc-val notfound';
+    el.className = 'prod-desc-val notfound';
     descricaoAtual = ''; // Limpar descrição se não encontrado
     buscarFotoCompleta(ean, '');
   }
@@ -3214,10 +3189,10 @@ function verificarAniversario(email, nomeGAS) {
     var title  = document.getElementById('anivBannerTitle');
     var sub    = document.getElementById('anivBannerSub');
     if (dias === 1) {
-      title.textContent = '🎂 ' + nome + ', amanhã é seu aniversário!';
+      title.textContent = nome + ', amanhã é seu aniversário!';
       sub.textContent   = 'O Boas Compras te deseja um dia incrível amanhã! 🎈';
     } else {
-      title.textContent = '🎂 ' + nome + ', faltam ' + dias + ' dias para o seu aniversário!';
+      title.textContent = nome + ', faltam ' + dias + ' dias para o seu aniversário!';
       sub.textContent   = 'O Boas Compras vai comemorar com você! 🎉';
     }
     banner.classList.add('show');
