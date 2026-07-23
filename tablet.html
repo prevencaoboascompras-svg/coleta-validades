@@ -138,7 +138,8 @@ body{
 .prod-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px;align-self:stretch}
 .prod-desc-val{
   font-size:14px;font-weight:600;color:var(--tx);line-height:1.3;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
 }
 .prod-desc-val.loading{color:var(--tx2);font-style:italic;font-weight:400}
 .prod-desc-val.notfound{color:var(--warn);font-weight:400;font-size:12px}
@@ -151,21 +152,19 @@ body{
 }
 .prod-preco.show{display:inline-block}
 .prod-codigo{
+  display:block;width:100%;
   font-family:var(--mono);font-size:17px;font-weight:700;
   color:var(--accent);letter-spacing:.07em;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;
+  overflow:hidden;white-space:nowrap;cursor:default;
 }
 .prod-codigo.empty{color:var(--tx2);font-size:13px;font-weight:400;font-family:inherit;letter-spacing:normal;font-style:italic}
-.prod-status-row{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.foto-status{font-size:11px;color:var(--tx2);line-height:1.3;flex:1;min-width:0}
-.foto-status.ok{color:var(--accent);font-weight:600}
-.foto-status.warn{color:var(--warn);font-weight:400}
+.prod-status-row{margin-top:auto;display:flex;align-items:center;justify-content:center}
 .rescan-btn{
-  font-size:11px;color:var(--tx2);cursor:pointer;padding:5px 9px;
-  border:1px solid var(--bd);border-radius:7px;background:none;flex-shrink:0;
-  white-space:nowrap;transition:color .12s,border-color .12s;
+  font-size:14px;color:var(--accent);font-weight:700;cursor:pointer;padding:8px 18px;
+  border:1px solid rgba(226,75,74,.35);border-radius:9px;background:none;flex-shrink:0;
+  white-space:nowrap;transition:opacity .12s;
 }
-.rescan-btn:hover{color:var(--accent);border-color:var(--accent)}
+.rescan-btn:active{opacity:.7}
 
 /* ── MANUAL INPUT ── */
 .manual-wrap{margin:0 16px 10px;display:none}
@@ -822,8 +821,9 @@ body{
     <span class="prod-desc-val" id="descVal">Aguardando leitura…</span>
     <span class="prod-preco" id="descPreco"></span>
     <span class="prod-codigo empty" id="codeDisplay">Aguardando leitura…</span>
+    <!-- status de onde a foto foi encontrada fica só no elemento (não exibido), mantido pra debug -->
+    <span class="foto-status" id="fotoStatus" style="display:none"></span>
     <div class="prod-status-row">
-      <span class="foto-status" id="fotoStatus"></span>
       <button class="rescan-btn" id="rescanBtn" onclick="toggleManual()"><i class="ti ti-pencil"></i> manual</button>
     </div>
   </div>
@@ -1739,6 +1739,7 @@ function exibirCodigo(code) {
   var i = 0;
   var iv = setInterval(function() {
     el.textContent = code.slice(0, i + 1) + '▌';
+    ajustarFonteCodigo();
     i++;
     if (i >= code.length) {
       clearInterval(iv);
@@ -1746,12 +1747,27 @@ function exibirCodigo(code) {
       el.title = 'Toque para escanear outro produto';
       el.style.cursor = 'pointer';
       el.onclick = function() { resetCodigo(); iniciarScanner(); };
+      ajustarFonteCodigo();
       // Troca botão manual por "reescanear"
       var btn = document.getElementById('rescanBtn');
-      btn.innerHTML = '<i class="ti ti-refresh"></i> outro';
+      btn.innerHTML = 'escanear outro';
       btn.onclick = function() { resetCodigo(); iniciarScanner(); };
     }
   }, 12);
+}
+
+// Reduz a fonte do código de barras até caber inteiro em uma linha
+function ajustarFonteCodigo() {
+  var el = document.getElementById('codeDisplay');
+  if (!el) return;
+  var max = 17, min = 9;
+  el.style.fontSize = max + 'px';
+  var tentativas = 0;
+  while (el.scrollWidth > el.clientWidth && max > min && tentativas < 20) {
+    max -= 1;
+    el.style.fontSize = max + 'px';
+    tentativas++;
+  }
 }
 
 function resetCodigo() {
@@ -1762,6 +1778,7 @@ function resetCodigo() {
   el.onclick = null;
   el.style.cursor = '';
   el.title = '';
+  el.style.fontSize = '';
   var btn = document.getElementById('rescanBtn');
   btn.innerHTML = '<i class="ti ti-pencil"></i> manual';
   btn.onclick = toggleManual;
