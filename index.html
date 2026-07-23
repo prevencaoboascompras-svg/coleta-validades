@@ -156,6 +156,28 @@ body{
 }
 .desc-preco.show{display:inline-block}
 
+/* ── FOTO DO PRODUTO ── */
+.foto-row{
+  display:none;align-items:center;gap:12px;
+  margin:0 16px 10px;padding:11px 15px;
+  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+  min-height:42px;
+}
+.foto-preview{
+  position:relative;width:52px;height:52px;flex-shrink:0;
+  border:1px dashed var(--bds);border-radius:10px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--tx2);
+}
+.foto-preview img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.foto-preview .spin{
+  width:18px;height:18px;border:2px solid var(--bds);border-top-color:var(--accent);
+  border-radius:50%;animation:fotospin .7s linear infinite;
+}
+@keyframes fotospin{to{transform:rotate(360deg)}}
+.foto-status{font-size:13px;font-weight:600;flex:1;line-height:1.3;color:var(--tx2)}
+.foto-status.ok{color:var(--accent);font-weight:600}
+.foto-status.warn{color:var(--warn);font-weight:400}
+
 /* ── MANUAL INPUT ── */
 .manual-wrap{margin:0 16px 10px;display:none}
 .manual-wrap.open{display:block}
@@ -822,6 +844,12 @@ body{
   <span class="desc-preco" id="descPreco"></span>
 </div>
 
+<!-- FOTO DO PRODUTO -->
+<div class="foto-row" id="fotoRow">
+  <div class="foto-preview" id="fotoPreview"><i class="ti ti-photo-search" style="font-size:20px"></i></div>
+  <span class="foto-status" id="fotoStatus">Buscando foto do produto…</span>
+</div>
+
 <!-- TAREFAS PENDENTES -->
 <div class="tarefas-section" id="tarefasSection">
   <div class="tarefas-hdr">
@@ -1026,6 +1054,13 @@ var K_PEND = 'coleta_pend';
 
 // URL padrão do Apps Script (já configurada para o usuário)
 var DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwjsogX93Xxfb5jyFy1IqknZ7lk2OOaOOG_oOhpGdKETgZgIkTrZOBY36_UzS35Ns8s/exec';
+
+// ── FOTO DO PRODUTO: mesma config do Arsenal Ofertas (mesmo backend/Drive) ──
+var DRIVE_FOLDER_ID = '1Qhsc63GHVcACTzYTp392O_S3iMd8vmpS';
+var GCSE_API_KEY = 'AIzaSyClxbl8yzMpHdahpB38Fc66NcqtDWxjdvw';
+var GCSE_CX = 'a74b49ecb1fd546fb';
+var fotoImg = null;
+var fotoToken = 0;
 
 // Fallback em memória caso localStorage não esteja disponível
 // (ex.: iframe sandbox, modo privado restrito). Sem isso, qualquer
@@ -1743,6 +1778,9 @@ function resetCodigo() {
   document.getElementById('descRow').style.display = 'none';
   document.getElementById('descPreco').classList.remove('show');
   document.getElementById('descPreco').textContent = '';
+  // Esconde foto
+  fotoToken++;
+  document.getElementById('fotoRow').style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1783,6 +1821,212 @@ function confirmarManual() {
 // ═══════════════════════════════════════════════════════════
 //  BUSCA DE DESCRIÇÃO — aba BANCO DE DADOS
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  FOTO DO PRODUTO: Drive -> Cosmos -> Google/Openverse -> Open Food Facts
+//  (mesma cascata de busca do Arsenal Ofertas)
+// ═══════════════════════════════════════════════════════════
+function setFotoStatus(msg, tipo) {
+  var el = document.getElementById('fotoStatus');
+  if (el) {
+    el.className = 'foto-status' + (tipo ? ' ' + tipo : '');
+    el.textContent = msg;
+  }
+}
+function setFotoPreview(img) {
+  var box = document.getElementById('fotoPreview');
+  if (!box) return;
+  if (img) {
+    box.innerHTML = '';
+    var el = document.createElement('img');
+    el.src = img.src;
+    el.alt = 'Foto do produto';
+    box.appendChild(el);
+  } else {
+    box.innerHTML = '<span class="spin"></span>';
+  }
+}
+function limparFoto(msg) {
+  fotoImg = null;
+  document.getElementById('fotoRow').style.display = 'none';
+  setFotoPreview(null);
+  setFotoStatus(msg || '');
+}
+function proxyImagemUrl(url) {
+  url = String(url || '').trim();
+  if (!/^https?:\/\//i.test(url)) return url;
+  if (/\/\/images\.weserv\.nl\//i.test(url)) return url;
+  return 'https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//i, '')) + '&output=png';
+}
+function carregarImagemUrl(url, semProxy) {
+  return new Promise(function(resolve) {
+    if (!url) { resolve(null); return; }
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = function() { resolve(img); };
+    img.onerror = function() {
+      if (!semProxy && /^https?:\/\//i.test(url)) {
+        carregarImagemUrl(proxyImagemUrl(url), true).then(resolve);
+      } else {
+        resolve(null);
+      }
+    };
+    img.src = url;
+  });
+}
+async function buscarFotoDrive(codigoBarras, tipo) {
+  var cfg = loadCfg();
+  var cod = normalizarCodigo(codigoBarras);
+  if (!cod || !cfg.url) return null;
+  try {
+    var url = cfg.url + '?action=buscarImagemProduto&codigoBarras=' + encodeURIComponent(cod) +
+      '&tipo=' + encodeURIComponent(tipo || 'produto') +
+      '&folderId=' + encodeURIComponent(DRIVE_FOLDER_ID);
+    var r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    var res = await r.json();
+    if (res && res.ok && res.encontrado) {
+      if (res.base64) return await carregarImagemUrl('data:' + (res.mimeType || 'image/png') + ';base64,' + res.base64);
+      if (res.url || res.imageUrl) return await carregarImagemUrl(res.url || res.imageUrl);
+    }
+  } catch (e) {}
+  return null;
+}
+async function buscarFotoCosmos(ean) {
+  var cod = normalizarCodigo(ean);
+  if (!cod || !/^\d{8,14}$/.test(cod)) return null;
+  try {
+    return await carregarImagemUrl('https://cdn-cosmos.bluesoft.com.br/products/' + cod);
+  } catch (e) { return null; }
+}
+async function buscarFotoGoogleCSE(query) {
+  query = String(query || '').trim();
+  if (!query || !GCSE_API_KEY || !GCSE_CX) return null;
+  var url = 'https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(GCSE_API_KEY) +
+    '&cx=' + encodeURIComponent(GCSE_CX) +
+    '&searchType=image&num=6&safe=active&imgSize=medium&q=' + encodeURIComponent(query);
+  try {
+    var r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    var j = await r.json();
+    var items = j.items || [];
+    for (var i = 0; i < items.length; i++) {
+      var links = [items[i].link, items[i].image && items[i].image.thumbnailLink].filter(Boolean);
+      for (var li = 0; li < links.length; li++) {
+        var img = await carregarImagemUrl(links[li]);
+        if (img) return img;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+async function buscarFotoOpenverse(query) {
+  query = String(query || '').trim();
+  if (!query) return null;
+  try {
+    var url = 'https://api.openverse.engineering/v1/images/?mature=false&page_size=12&q=' + encodeURIComponent(query);
+    var r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    var j = await r.json();
+    var items = j.results || [];
+    for (var i = 0; i < items.length; i++) {
+      var links = [items[i].thumbnail, items[i].thumbnail_url, items[i].url].filter(Boolean);
+      for (var li = 0; li < links.length; li++) {
+        var img = await carregarImagemUrl(links[li]);
+        if (img) return img;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+async function buscarFotoWeb(query, statusFn) {
+  query = String(query || '').trim();
+  if (!query) return null;
+  if (statusFn) statusFn('Buscando no Google Imagens: "' + query + '"…');
+  var img = await buscarFotoGoogleCSE(query);
+  if (img) return { img: img, fonte: 'Google Imagens' };
+  if (statusFn) statusFn('Tentando Openverse…');
+  img = await buscarFotoOpenverse(query);
+  if (img) return { img: img, fonte: 'Openverse' };
+  return null;
+}
+async function buscarFotoOpenFoodFacts(ean, nomeProduto) {
+  var cod = normalizarCodigo(ean);
+  if (cod) {
+    try {
+      var r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(cod) + '.json?fields=product_name,image_url,image_front_url,image_front_small_url', { cache: 'no-store' });
+      if (r.ok) {
+        var j = await r.json();
+        if (j && j.status === 1 && j.product) {
+          var urls = [j.product.image_front_url, j.product.image_url, j.product.image_front_small_url].filter(Boolean);
+          for (var i = 0; i < urls.length; i++) {
+            var img = await carregarImagemUrl(urls[i]);
+            if (img) return img;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+  var nome = String(nomeProduto || '').trim();
+  if (nome) {
+    try {
+      var sr = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(nome) + '&search_simple=1&action=process&json=1&page_size=5', { cache: 'no-store' });
+      if (sr.ok) {
+        var sj = await sr.json();
+        var prods = sj.products || [];
+        for (var pi = 0; pi < prods.length; pi++) {
+          var urls2 = [prods[pi].image_front_url, prods[pi].image_url, prods[pi].image_front_small_url].filter(Boolean);
+          for (var ui = 0; ui < urls2.length; ui++) {
+            var img2 = await carregarImagemUrl(urls2[ui]);
+            if (img2) return img2;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+async function buscarFotoCompleta(ean, nomeProduto) {
+  var token = ++fotoToken;
+  var cod = normalizarCodigo(ean);
+  var nome = String(nomeProduto || '').trim();
+  document.getElementById('fotoRow').style.display = 'flex';
+  setFotoPreview(null);
+  setFotoStatus('Buscando foto no Google Drive…');
+
+  var img = null;
+  if (cod) {
+    img = await buscarFotoDrive(cod, 'produto');
+    if (token !== fotoToken) return false;
+    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Google Drive.', 'ok'); return true; }
+  }
+  if (cod) {
+    setFotoStatus('Buscando no catálogo Bluesoft Cosmos…');
+    img = await buscarFotoCosmos(cod);
+    if (token !== fotoToken) return false;
+    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Bluesoft Cosmos.', 'ok'); return true; }
+  }
+  if (nome) {
+    var achadoNome = await buscarFotoWeb(nome, function(msg) { if (token === fotoToken) setFotoStatus(msg); });
+    if (token !== fotoToken) return false;
+    if (achadoNome && achadoNome.img) { fotoImg = achadoNome.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoNome.fonte + '.', 'ok'); return true; }
+  }
+  if (cod) {
+    var achadoCod = await buscarFotoWeb(cod, function(msg) { if (token === fotoToken) setFotoStatus(msg); });
+    if (token !== fotoToken) return false;
+    if (achadoCod && achadoCod.img) { fotoImg = achadoCod.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoCod.fonte + '.', 'ok'); return true; }
+  }
+  setFotoStatus('Buscando no Open Food Facts…');
+  img = await buscarFotoOpenFoodFacts(cod, nome);
+  if (token !== fotoToken) return false;
+  if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Open Food Facts.', 'ok'); return true; }
+
+  limparFoto('Foto não encontrada automaticamente.');
+  document.getElementById('fotoRow').style.display = 'flex';
+  setFotoStatus('Foto não encontrada automaticamente.', 'warn');
+  return false;
+}
+
 async function buscarDescricao(ean) {
   var cfg = loadCfg();
   var row = document.getElementById('descRow');
@@ -1825,6 +2069,7 @@ async function buscarDescricao(ean) {
     el.textContent = resultado.descricao;
     el.className = 'desc-val found';
     descricaoAtual = resultado.descricao; // Salvar descrição atual
+    buscarFotoCompleta(ean, resultado.descricao);
 
     // Preço de venda — pra conferir se está batendo com o preço na gôndola
     if (resultado.preco !== undefined && resultado.preco !== null && resultado.preco !== '') {
@@ -1852,6 +2097,7 @@ async function buscarDescricao(ean) {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'desc-val notfound';
     descricaoAtual = ''; // Limpar descrição se não encontrado
+    buscarFotoCompleta(ean, '');
   }
 }
 
