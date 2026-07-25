@@ -562,6 +562,27 @@ body{
   font-size:12px;color:var(--green);font-weight:600;
   display:flex;align-items:center;gap:5px;padding:8px 0;margin-top:4px;
 }
+.tarefa-carrinho-ask{margin-top:8px;padding-top:10px;border-top:1px dashed var(--bd)}
+.tarefa-carrinho-label{font-size:12px;color:var(--tx2);line-height:1.4;margin-bottom:9px}
+.tarefa-carrinho-qtd{font-weight:800;color:var(--tx)}
+.tarefa-carrinho-btns{display:flex;gap:8px}
+.tarefa-carrinho-btn{
+  flex:1;min-height:52px;border-radius:9px;font-size:11px;font-weight:700;
+  border:1.5px solid var(--bd);background:var(--card);color:var(--tx);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  cursor:pointer;text-align:center;line-height:1.25;padding:6px 4px;
+}
+.tarefa-carrinho-btn i{font-size:16px}
+.tarefa-carrinho-btn.sim{border-color:rgba(16,185,129,.45);color:#0e9f6e}
+.tarefa-carrinho-btn.sim:active{background:rgba(16,185,129,.12)}
+.tarefa-carrinho-btn.nao{border-color:rgba(226,75,74,.4);color:var(--accent)}
+.tarefa-carrinho-btn.nao:active{background:rgba(226,75,74,.1)}
+.tarefa-resolved-sim,.tarefa-resolved-nao{
+  font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;
+  padding:8px 0 2px;margin-top:2px;
+}
+.tarefa-resolved-sim{color:#0e9f6e}
+.tarefa-resolved-nao{color:var(--warn)}
 .tarefa-badge{
   position:absolute;top:-4px;right:-4px;width:18px;height:18px;
   background:var(--warn);color:#000;border-radius:50%;font-size:10px;font-weight:800;
@@ -2476,7 +2497,25 @@ function _buildTarefaCards(prefixo) {
     var id = prefixo + i;
     var bodyHtml = '';
     if (jaConfirmada) {
-      bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — quantidade: ' + (t._qtdeLocal || '?') + ' un.</div>';
+      var qtd = t._qtdeLocal || 0;
+      if (t._carrinhoStatus === 'sim') {
+        bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
+          + '<div class="tarefa-resolved-sim"><i class="ti ti-basket-check"></i> Já está no carrinho com etiqueta de desconto</div>';
+      } else if (t._carrinhoStatus === 'nao') {
+        bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
+          + '<div class="tarefa-resolved-nao"><i class="ti ti-alert-triangle"></i> Ainda na prateleira, sem desconto</div>';
+      } else if (qtd > 0) {
+        bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
+          + '<div class="tarefa-carrinho-ask">'
+          +   '<div class="tarefa-carrinho-label">Ainda restam <span class="tarefa-carrinho-qtd">' + qtd + ' unidade' + (qtd === 1 ? '' : 's') + '</span> na loja. Já colocou no carrinho com etiqueta de desconto?</div>'
+          +   '<div class="tarefa-carrinho-btns">'
+          +     '<button class="tarefa-carrinho-btn sim" onclick="responderCarrinhoTarefa(' + i + ',\'sim\')"><i class="ti ti-basket-check"></i> Sim, já<br>etiquetei</button>'
+          +     '<button class="tarefa-carrinho-btn nao" onclick="responderCarrinhoTarefa(' + i + ',\'nao\')"><i class="ti ti-alert-triangle"></i> Ainda não,<br>tá na prateleira</button>'
+          +   '</div>'
+          + '</div>';
+      } else {
+        bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — 0 un. (sem estoque restante)</div>';
+      }
     } else {
       bodyHtml = '<div class="tarefa-qty-row">'
         + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(\'' + id + '\',-1)">−</button>'
@@ -2593,8 +2632,56 @@ function confirmarTarefa(idx) {
   }
   
   renderTarefas();
-  mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
-  
+
+  if (qty > 0) {
+    // Ainda tem estoque: pergunta se já foi pro carrinho com etiqueta de desconto.
+    // A tarefa fica visível até o colaborador responder — não some sozinha.
+    mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
+  } else {
+    mostrarToast('Tarefa confirmada! Sem estoque restante.', 'ok');
+    setTimeout(function() {
+      _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
+      renderTarefas();
+    }, 3000);
+  }
+}
+
+function responderCarrinhoTarefa(idx, resposta) {
+  var t = _tarefasPendentes[idx];
+  if (!t) return;
+
+  t._carrinhoStatus = resposta;
+
+  var locais = [];
+  try { locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]'); } catch(e) {}
+  var existente = locais.find(function(lt) { return lt.id === t.id; });
+  if (existente) {
+    existente.carrinhoStatus = resposta;
+    existente.carrinhoRespondidoEm = new Date().toISOString();
+  }
+  localStorage.setItem('coleta_tarefas', JSON.stringify(locais));
+
+  var cfg = loadCfg();
+  if (cfg.url) {
+    fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({
+        action: 'confirmarCarrinhoTarefa',
+        tarefaId: t.id,
+        carrinho: resposta === 'sim',
+        quantidade: t._qtdeLocal,
+        email: cfg.email
+      })
+    }).catch(function() {});
+  }
+
+  renderTarefas();
+  mostrarToast(
+    resposta === 'sim' ? 'Beleza, já no carrinho com desconto! 🏷️' : 'Ok, produto segue na prateleira por enquanto',
+    resposta === 'sim' ? 'ok' : 'warn'
+  );
+
   setTimeout(function() {
     _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
     renderTarefas();
