@@ -531,6 +531,19 @@ body{
   margin-left:auto;font-size:11px;font-weight:700;
   background:var(--warn);color:#000;padding:2px 8px;border-radius:99px;
 }
+.tarefa-card-top{display:flex;gap:12px;align-items:flex-start}
+.tarefa-foto{
+  position:relative;width:64px;height:64px;flex-shrink:0;
+  border:1px dashed var(--bds);border-radius:8px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--tx2);
+}
+.tarefa-foto img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.tarefa-foto .spin{
+  width:16px;height:16px;border:2px solid var(--bds);border-top-color:var(--accent);
+  border-radius:50%;animation:fotospin .7s linear infinite;
+}
+.tarefa-foto i{font-size:20px}
+.tarefa-card-info{flex:1;min-width:0}
 .tarefa-card{
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);
   padding:14px;margin-bottom:10px;
@@ -2525,13 +2538,53 @@ function _buildTarefaCards(prefixo) {
         + '<button class="tarefa-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar estoque</button>';
     }
     return '<div class="tarefa-card" id="tarefa_' + id + '">'
-      + '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
-      + (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
-      + (_fmtValidadeTarefa(t.validade) || '')
-      + (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
+      + '<div class="tarefa-card-top">'
+      +   '<div class="tarefa-foto" id="tarefaFoto_' + id + '"><span class="spin"></span></div>'
+      +   '<div class="tarefa-card-info">'
+      +     '<div class="tarefa-produto">' + (t.produto || 'Produto') + '</div>'
+      +     (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
+      +     (_fmtValidadeTarefa(t.validade) || '')
+      +     (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
+      +   '</div>'
+      + '</div>'
       + bodyHtml
       + '</div>';
   }).join('');
+}
+
+function _setTarefaFoto(id, img) {
+  var box = document.getElementById('tarefaFoto_' + id);
+  if (!box) return;
+  if (img) {
+    box.innerHTML = '';
+    var el = document.createElement('img');
+    el.src = img.src;
+    el.alt = 'Foto do produto';
+    box.appendChild(el);
+  } else {
+    box.innerHTML = '<i class="ti ti-photo-off"></i>';
+  }
+}
+
+async function _carregarFotoTarefa(id, ean, nomeProduto) {
+  var cod = normalizarCodigo(ean);
+  var nome = String(nomeProduto || '').trim();
+
+  var img = null;
+  if (cod) img = await buscarFotoDrive(cod, 'produto');
+  if (!img && cod) img = await buscarFotoCosmos(cod);
+  if (!img && cod) img = await buscarFotoOpenFoodFacts(cod, nome);
+  if (!img && nome) { var achado = await buscarFotoWeb(nome); if (achado) img = achado.img; }
+  if (!img && cod) { var achado2 = await buscarFotoWeb(cod); if (achado2) img = achado2.img; }
+
+  _setTarefaFoto(id, img);
+}
+
+function carregarFotosTarefas(prefixo) {
+  _tarefasPendentes.forEach(function(t, i) {
+    if (t._localConfirmada) return;
+    _carregarFotoTarefa(prefixo + i, t.cod, t.produto);
+  });
 }
 
 function renderTarefas() {
@@ -2556,6 +2609,7 @@ function renderTarefas() {
   section.classList.add('show');
   countEl.textContent = _tarefasPendentes.length;
   list.innerHTML = _buildTarefaCards('s');
+  carregarFotosTarefas('s');
 
   // Badge no header
   if (badge) {
@@ -2568,6 +2622,7 @@ function renderTarefas() {
     if (pendentes.length > 0) {
       modalCount.textContent = pendentes.length;
       modalBody.innerHTML = _buildTarefaCards('m');
+      carregarFotosTarefas('m');
       modal.classList.add('open');
     } else {
       modal.classList.remove('open');
