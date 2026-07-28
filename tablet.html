@@ -1943,14 +1943,44 @@ function proxyImagemUrl(url) {
   if (/\/\/images\.weserv\.nl\//i.test(url)) return url;
   return 'https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//i, '')) + '&output=png';
 }
+// Timeout curto pra fetch — sem isso, uma fonte lenta (Cosmos, Google, OFF...)
+// podia travar o app inteiro esperando o timeout padrão do navegador (40s+).
+function fetchComTimeout(url, options, ms) {
+  ms = ms || 5000;
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, ms);
+  var opts = Object.assign({}, options || {}, { signal: controller.signal });
+  return fetch(url, opts).finally(function() { clearTimeout(timer); });
+}
 function carregarImagemUrl(url, semProxy) {
   return new Promise(function(resolve) {
     if (!url) { resolve(null); return; }
+    var acabou = false;
+    // Limite de 3.5s por tentativa — sem isso uma imagem que nunca carrega
+    // (nem sucesso nem erro) prende a cascata inteira usando o timeout
+    // "natural" do navegador, que pode passar de 40s numa rede ruim.
+    var timer = setTimeout(function() {
+      if (acabou) return;
+      acabou = true;
+      if (!semProxy && /^https?:\/\//i.test(url)) {
+        carregarImagemUrl(proxyImagemUrl(url), true).then(resolve);
+      } else {
+        resolve(null);
+      }
+    }, 3500);
     var img = new Image();
     img.crossOrigin = 'anonymous';
     img.referrerPolicy = 'no-referrer';
-    img.onload = function() { resolve(img); };
+    img.onload = function() {
+      if (acabou) return;
+      acabou = true;
+      clearTimeout(timer);
+      resolve(img);
+    };
     img.onerror = function() {
+      if (acabou) return;
+      acabou = true;
+      clearTimeout(timer);
       if (!semProxy && /^https?:\/\//i.test(url)) {
         carregarImagemUrl(proxyImagemUrl(url), true).then(resolve);
       } else {
@@ -1968,7 +1998,7 @@ async function buscarFotoDrive(codigoBarras, tipo) {
     var url = cfg.url + '?action=buscarImagemProduto&codigoBarras=' + encodeURIComponent(cod) +
       '&tipo=' + encodeURIComponent(tipo || 'produto') +
       '&folderId=' + encodeURIComponent(DRIVE_FOLDER_ID);
-    var r = await fetch(url, { cache: 'no-store' });
+    var r = await fetchComTimeout(url, { cache: 'no-store' }, 5000);
     if (!r.ok) return null;
     var res = await r.json();
     if (res && res.ok && res.encontrado) {
@@ -1992,7 +2022,7 @@ async function buscarFotoGoogleCSE(query) {
     '&cx=' + encodeURIComponent(GCSE_CX) +
     '&searchType=image&num=6&safe=active&imgSize=medium&q=' + encodeURIComponent(query);
   try {
-    var r = await fetch(url, { cache: 'no-store' });
+    var r = await fetchComTimeout(url, { cache: 'no-store' }, 5000);
     if (!r.ok) return null;
     var j = await r.json();
     var items = j.items || [];
@@ -2011,7 +2041,7 @@ async function buscarFotoOpenverse(query) {
   if (!query) return null;
   try {
     var url = 'https://api.openverse.engineering/v1/images/?mature=false&page_size=12&q=' + encodeURIComponent(query);
-    var r = await fetch(url, { cache: 'no-store' });
+    var r = await fetchComTimeout(url, { cache: 'no-store' }, 5000);
     if (!r.ok) return null;
     var j = await r.json();
     var items = j.results || [];
@@ -2040,7 +2070,7 @@ async function buscarFotoOpenFoodFacts(ean, nomeProduto) {
   var cod = normalizarCodigo(ean);
   if (cod) {
     try {
-      var r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(cod) + '.json?fields=product_name,image_url,image_front_url,image_front_small_url', { cache: 'no-store' });
+      var r = await fetchComTimeout('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(cod) + '.json?fields=product_name,image_url,image_front_url,image_front_small_url', { cache: 'no-store' }, 5000);
       if (r.ok) {
         var j = await r.json();
         if (j && j.status === 1 && j.product) {
@@ -2056,7 +2086,7 @@ async function buscarFotoOpenFoodFacts(ean, nomeProduto) {
   var nome = String(nomeProduto || '').trim();
   if (nome) {
     try {
-      var sr = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(nome) + '&search_simple=1&action=process&json=1&page_size=5', { cache: 'no-store' });
+      var sr = await fetchComTimeout('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(nome) + '&search_simple=1&action=process&json=1&page_size=5', { cache: 'no-store' }, 5000);
       if (sr.ok) {
         var sj = await sr.json();
         var prods = sj.products || [];
@@ -2199,9 +2229,13 @@ async function buscarDescricao(ean) {
 
 async function tentarBusca(url, ean) {
   try {
-    var resp = await fetch(
+    // Apps Script pode ter cold start (por isso 10s, mais folgado que os 5s da
+    // cascata de foto), mas sem limite nenhum uma instância travada prendia
+    // a tela de "Buscando produto…" indefinidamente.
+    var resp = await fetchComTimeout(
       url + '?action=buscarEAN&ean=' + encodeURIComponent(ean),
-      { method: 'GET' }
+      { method: 'GET' },
+      10000
     );
     if (!resp.ok) return { encontrado: false };
     var data = await resp.json();
@@ -2218,9 +2252,10 @@ async function tentarBusca(url, ean) {
 // com a busca de descrição (ver buscarDescricao), não mais depois dela.
 async function tentarVerificarLotes(url, ean) {
   try {
-    var resp = await fetch(
+    var resp = await fetchComTimeout(
       url + '?action=verificarLotesEAN&ean=' + encodeURIComponent(ean),
-      { method: 'GET' }
+      { method: 'GET' },
+      10000
     );
     if (!resp.ok) return { ok: false };
     var data = await resp.json();
