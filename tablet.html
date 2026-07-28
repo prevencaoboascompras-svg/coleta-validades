@@ -3163,15 +3163,21 @@ function abrirLoteModal() {
       ? (String(l.quantidade).replace('.', ',') + ' kg')
       : l.quantidade;
 
+    // Pré-preenche com o estoque atual do lote (não com 1) — a pessoa parte
+    // do valor real e só ajusta pra cima ou pra baixo, em vez de digitar tudo de novo.
+    var qtyInicial = isKg
+      ? Number(l.quantidade || 0).toFixed(3).replace('.', ',')
+      : String(Math.max(0, parseInt(l.quantidade, 10) || 0));
+
     var stepperHtml = isKg
       ? ('<div class="lote-qty-stepper lote-qty-peso">'
           + '<button onclick="alterarLoteQty(' + i + ',-0.1)">−</button>'
-          + '<input type="tel" inputmode="decimal" id="loteQty_' + i + '" value="1,000" oninput="onLoteQtyPesoInput(this)">'
+          + '<input type="tel" inputmode="decimal" id="loteQty_' + i + '" value="' + qtyInicial + '" oninput="onLoteQtyPesoInput(this)">'
           + '<button onclick="alterarLoteQty(' + i + ',0.1)">+</button>'
           + '</div>')
       : ('<div class="lote-qty-stepper">'
           + '<button onclick="alterarLoteQty(' + i + ',-1)">−</button>'
-          + '<input type="tel" inputmode="numeric" class="lote-qty-input" id="loteQty_' + i + '" value="1" oninput="onLoteQtyInput(this)">'
+          + '<input type="tel" inputmode="numeric" class="lote-qty-input" id="loteQty_' + i + '" value="' + qtyInicial + '" oninput="onLoteQtyInput(this)">'
           + '<button onclick="alterarLoteQty(' + i + ',1)">+</button>'
           + '</div>');
 
