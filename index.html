@@ -143,6 +143,7 @@ body{
 }
 .prod-desc-val.loading{color:var(--tx2);font-style:italic;font-weight:400}
 .prod-desc-val.notfound{color:var(--warn);font-weight:400;font-size:12px}
+.prod-desc-val.notfound.codvalido{color:var(--green)}
 .prod-preco{
   flex-shrink:0;font-family:var(--mono);font-size:15px;font-weight:800;
   color:var(--accent);background:rgba(226,75,74,.1);
@@ -2071,6 +2072,11 @@ async function buscarFotoOpenFoodFacts(ean, nomeProduto) {
   }
   return null;
 }
+// validadaPorCodigo = true quando a fonte que achou a foto faz lookup pelo
+// próprio código de barras (Drive/Cosmos/OFF-por-código) — isso é evidência de
+// que o código lido é íntegro, mesmo que o produto não exista no banco interno.
+// false quando a foto veio de busca por nome/texto (Google/Openverse/OFF-por-nome),
+// que não valida o código, só ilustra o que o banco disse que era.
 async function buscarFotoCompleta(ean, nomeProduto) {
   var token = ++fotoToken;
   var cod = normalizarCodigo(ean);
@@ -2081,33 +2087,33 @@ async function buscarFotoCompleta(ean, nomeProduto) {
   var img = null;
   if (cod) {
     img = await buscarFotoDrive(cod, 'produto');
-    if (token !== fotoToken) return false;
-    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Google Drive.', 'ok'); return true; }
+    if (token !== fotoToken) return { achou: false };
+    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Google Drive.', 'ok'); return { achou: true, validadaPorCodigo: true, fonte: 'Google Drive' }; }
   }
   if (cod) {
     setFotoStatus('Buscando no catálogo Bluesoft Cosmos…');
     img = await buscarFotoCosmos(cod);
-    if (token !== fotoToken) return false;
-    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Bluesoft Cosmos.', 'ok'); return true; }
+    if (token !== fotoToken) return { achou: false };
+    if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Bluesoft Cosmos.', 'ok'); return { achou: true, validadaPorCodigo: true, fonte: 'Bluesoft Cosmos' }; }
   }
   if (nome) {
     var achadoNome = await buscarFotoWeb(nome, function(msg) { if (token === fotoToken) setFotoStatus(msg); });
-    if (token !== fotoToken) return false;
-    if (achadoNome && achadoNome.img) { fotoImg = achadoNome.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoNome.fonte + '.', 'ok'); return true; }
+    if (token !== fotoToken) return { achou: false };
+    if (achadoNome && achadoNome.img) { fotoImg = achadoNome.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoNome.fonte + '.', 'ok'); return { achou: true, validadaPorCodigo: false, fonte: achadoNome.fonte }; }
   }
   if (cod) {
     var achadoCod = await buscarFotoWeb(cod, function(msg) { if (token === fotoToken) setFotoStatus(msg); });
-    if (token !== fotoToken) return false;
-    if (achadoCod && achadoCod.img) { fotoImg = achadoCod.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoCod.fonte + '.', 'ok'); return true; }
+    if (token !== fotoToken) return { achou: false };
+    if (achadoCod && achadoCod.img) { fotoImg = achadoCod.img; setFotoPreview(fotoImg); setFotoStatus('Foto encontrada em ' + achadoCod.fonte + '.', 'ok'); return { achou: true, validadaPorCodigo: false, fonte: achadoCod.fonte }; }
   }
   setFotoStatus('Buscando no Open Food Facts…');
   img = await buscarFotoOpenFoodFacts(cod, nome);
-  if (token !== fotoToken) return false;
-  if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Open Food Facts.', 'ok'); return true; }
+  if (token !== fotoToken) return { achou: false };
+  if (img) { fotoImg = img; setFotoPreview(img); setFotoStatus('Foto encontrada no Open Food Facts.', 'ok'); return { achou: true, validadaPorCodigo: true, fonte: 'Open Food Facts' }; }
 
   limparFoto('');
   setFotoStatus('Foto não encontrada automaticamente.', 'warn');
-  return false;
+  return { achou: false };
 }
 
 async function buscarDescricao(ean) {
@@ -2178,7 +2184,16 @@ async function buscarDescricao(ean) {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'prod-desc-val notfound';
     descricaoAtual = ''; // Limpar descrição se não encontrado
-    buscarFotoCompleta(ean, '');
+    buscarFotoCompleta(ean, '').then(function(res) {
+      // Se a busca ainda for referente ao mesmo código (usuário não bipou outro nesse meio tempo)
+      // e a foto veio de uma fonte que indexa por código de barras (Drive/Cosmos/OFF-por-código),
+      // isso é evidência de que o código lido é válido — o problema é só falta de cadastro.
+      if ((codigoAtual || '') !== ean) return;
+      if (res && res.achou && res.validadaPorCodigo) {
+        el.textContent = 'Não cadastrado no seu banco, mas código válido (foto localizada em ' + res.fonte + ')';
+        el.className = 'prod-desc-val notfound codvalido';
+      }
+    });
   }
 }
 
