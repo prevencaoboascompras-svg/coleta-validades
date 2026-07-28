@@ -306,6 +306,34 @@ body{
   display:none;align-items:flex-end;justify-content:center;
 }
 .modal-bg.open{display:flex}
+
+/* Popup de alerta de validade vencida — cobre a tela toda, acima de tudo */
+.venc-alert-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.venc-alert-bg.open{display:flex}
+.venc-alert-box{
+  background:var(--surf);border-radius:20px;padding:32px 24px 24px;
+  width:100%;max-width:400px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.venc-alert-icon{
+  width:72px;height:72px;border-radius:50%;background:rgba(220,53,69,.12);
+  color:var(--err);font-size:36px;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 18px;
+}
+.venc-alert-title{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--tx)}
+.venc-alert-msg{font-size:14px;color:var(--tx2);line-height:1.5;margin-bottom:26px}
+.venc-alert-msg b{color:var(--err)}
+.venc-alert-btns{display:flex;flex-direction:column;gap:10px}
+.venc-alert-btn{
+  width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;
+  border:none;cursor:pointer;
+}
+.venc-alert-btn.corrigir{background:var(--accent);color:#fff}
+.venc-alert-btn.continuar{background:transparent;color:var(--tx2);border:1px solid var(--bd)}
+
 .modal-box{
   background:var(--surf);border-radius:20px 20px 0 0;
   padding:24px 20px 44px;width:100%;max-width:480px;
@@ -413,6 +441,8 @@ body{
 .drum-trigger:active{border-color:var(--accent)}
 .drum-trigger .dt-val{flex:1;font-size:16px}
 .drum-trigger .dt-val.empty{color:var(--tx2)}
+.drum-trigger .dt-val.vencida{color:var(--err);font-weight:600}
+.drum-trigger.vencida{border-color:var(--err)}
 .drum-trigger .dt-icon{font-size:18px;opacity:.6}
 
 .drum-modal{
@@ -1006,6 +1036,19 @@ body{
       <div class="drum-col" id="drumDia"></div>
       <div class="drum-col" id="drumMes"></div>
       <div class="drum-col" id="drumAno"></div>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP: ALERTA DE VALIDADE VENCIDA -->
+<div class="venc-alert-bg" id="vencAlertBg">
+  <div class="venc-alert-box">
+    <div class="venc-alert-icon"><i class="ti ti-alert-triangle"></i></div>
+    <div class="venc-alert-title">Data já vencida</div>
+    <div class="venc-alert-msg">Você está informando a validade <b id="vencAlertData"></b>, que é anterior à data de hoje. Deseja corrigir a data ou continuar mesmo assim?</div>
+    <div class="venc-alert-btns">
+      <button class="venc-alert-btn corrigir" onclick="vencAlertCorrigir()"><i class="ti ti-calendar"></i>&nbsp; Corrigir data</button>
+      <button class="venc-alert-btn continuar" onclick="vencAlertContinuar()">Continuar mesmo assim</button>
     </div>
   </div>
 </div>
@@ -3024,12 +3067,59 @@ function confirmarDrum() {
   var yy = _drumAno;
   var valFormatada = dd + '/' + mm + '/' + yy;
 
+  // Verifica se a data escolhida já está vencida (anterior a hoje)
+  var dataEscolhida = new Date(yy, _drumMes - 1, _drumDia);
+  var hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  dataEscolhida.setHours(0,0,0,0);
+
+  if (dataEscolhida < hoje) {
+    // Não aplica ainda — abre popup pedindo confirmação
+    _vencPendente = { dd: dd, mm: mm, yy: yy, valFormatada: valFormatada };
+    document.getElementById('vencAlertData').textContent = valFormatada;
+    document.getElementById('vencAlertBg').classList.add('open');
+    return;
+  }
+
+  _aplicarValidade(dd, mm, yy, valFormatada);
+  fecharDrum();
+}
+
+function _aplicarValidade(dd, mm, yy, valFormatada) {
   document.getElementById('fValidade').value = valFormatada;
 
   var disp = document.getElementById('drumDisplay');
-  disp.textContent = dd + ' de ' + MESES_PT[_drumMes-1] + '. de ' + yy;
+  disp.textContent = dd + ' de ' + MESES_PT[mm-1] + '. de ' + yy;
   disp.classList.remove('empty');
 
+  var vencida = new Date(yy, mm - 1, dd);
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  vencida.setHours(0,0,0,0);
+  var drumTrigger = document.getElementById('drumTrigger');
+  if (vencida < hoje) {
+    disp.classList.add('vencida');
+    drumTrigger.classList.add('vencida');
+  } else {
+    disp.classList.remove('vencida');
+    drumTrigger.classList.remove('vencida');
+  }
+}
+
+var _vencPendente = null;
+
+function vencAlertCorrigir() {
+  // Fecha o popup e mantém o drum aberto para o colaborador corrigir a data
+  document.getElementById('vencAlertBg').classList.remove('open');
+  _vencPendente = null;
+}
+
+function vencAlertContinuar() {
+  // Aplica a validade vencida mesmo assim
+  if (_vencPendente) {
+    _aplicarValidade(_vencPendente.dd, _vencPendente.mm, _vencPendente.yy, _vencPendente.valFormatada);
+    _vencPendente = null;
+  }
+  document.getElementById('vencAlertBg').classList.remove('open');
   fecharDrum();
 }
 
