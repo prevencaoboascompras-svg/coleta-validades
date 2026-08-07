@@ -2623,9 +2623,15 @@ function _buildTarefaCards(prefixo) {
         bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — 0 un. (sem estoque restante)</div>';
       }
     } else {
+      // v-fix: o campo começa em 0 (não em 1). Não há como saber o estoque
+      // real de cada lote a partir da tarefa em si (ela é uma instrução do
+      // gestor, não uma leitura ao vivo da planilha) — então o padrão mais
+      // seguro é assumir "sem estoque restante" e deixar o colaborador
+      // incrementar se ainda sobrou alguma unidade, em vez do contrário
+      // (assumir 1 e exigir que ele lembre de zerar quando vendeu tudo).
       bodyHtml = '<div class="tarefa-qty-row">'
         + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(\'' + id + '\',-1)">−</button>'
-        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + id + '" value="1">'
+        + '<input type="tel" inputmode="numeric" class="tarefa-qty-input" id="tarefaQty_' + id + '" value="0">'
         + '<button class="tarefa-qty-btn" onclick="alterarTarefaQty(\'' + id + '\',+1)">+</button>'
         + '</div>'
         + '<button class="tarefa-confirm-btn" onclick="confirmarTarefa(' + i + ')"><i class="ti ti-check"></i> Confirmar estoque</button>';
