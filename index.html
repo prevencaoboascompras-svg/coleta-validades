@@ -70,6 +70,25 @@ body{
 }
 .pend-dot.show{display:block}
 
+/* ── BANNER DE PENDENTES (v-fix: aviso explícito na tela principal, não
+   só a bolinha escondida no ícone de configurações) ── */
+.pend-banner{
+  display:none;margin:0 16px 0;padding:12px 14px;border-radius:var(--r);
+  background:rgba(186,117,23,.15);border:1px solid var(--warn);
+  align-items:center;gap:10px;
+}
+.pend-banner.show{display:flex}
+.pend-banner-icon{font-size:20px;color:var(--warn);flex-shrink:0}
+.pend-banner-text{flex:1;font-size:13px;color:var(--tx);line-height:1.4}
+.pend-banner-text b{color:var(--warn)}
+.pend-banner-btn{
+  flex-shrink:0;height:36px;padding:0 14px;background:var(--warn);color:#1a1200;
+  font-weight:700;font-size:13px;border:none;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.pend-banner-btn:active{opacity:.8}
+.pend-banner-btn:disabled{opacity:.6;cursor:default}
+
 /* ── SCANNER WRAPPER ── */
 .scan-wrap{
   position:relative;background:#000;overflow:hidden;
@@ -836,6 +855,18 @@ body{
     </button>
   </div>
 </header>
+
+<!-- BANNER DE REGISTROS PENDENTES (v-fix: aviso explícito, visível direto
+     na tela principal, em vez de só a bolinha no ícone de configurações) -->
+<div class="pend-banner" id="pendBanner">
+  <i class="ti ti-cloud-off pend-banner-icon"></i>
+  <div class="pend-banner-text">
+    <b><span id="pendBannerCount">0</span> registro(s)</b> salvos localmente sem enviar — sem conexão ou erro ao salvar.
+  </div>
+  <button class="pend-banner-btn" id="pendBannerBtn" onclick="reenviarPendentes()">
+    <i class="ti ti-upload"></i> Reenviar
+  </button>
+</div>
 
 <!-- SCANNER -->
 <div class="scan-wrap" id="scanWrap">
@@ -2434,18 +2465,35 @@ async function reenviarPendentes() {
   if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return; }
   if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return; }
 
+  var bannerBtn = document.getElementById('pendBannerBtn');
+  var settingsBtn = document.getElementById('resendBtn');
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) { b.disabled = true; } });
+  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando…';
+
+  // v-fix: antes, se QUALQUER item falhasse, a lista inteira de pendentes
+  // era mantida — inclusive os que já tinham sido enviados com sucesso
+  // nesta mesma tentativa. Isso fazia dois estragos: (1) o aviso de
+  // pendente nunca sumia mesmo quando quase tudo já tinha ido, e (2) os
+  // itens que já foram enviados com sucesso eram reenviados de novo na
+  // próxima tentativa, duplicando o registro na planilha. Agora só o que
+  // de fato falhou continua na lista de pendentes.
+  var restantes = [];
   var ok = 0, fail = 0;
   for (var i = 0; i < arr.length; i++) {
     try { await enviar(arr[i]); ok++; }
-    catch(e) { fail++; }
+    catch(e) { fail++; restantes.push(arr[i]); }
   }
+  savePend(restantes);
 
   if (fail === 0) {
-    savePend([]);
-    mostrarToast(ok + ' registro(s) enviado(s)!', 'ok');
+    mostrarToast(ok + ' registro(s) enviado(s) com sucesso!', 'ok');
+  } else if (ok > 0) {
+    mostrarToast(ok + ' enviado(s), ' + fail + ' ainda pendente(s) — sem conexão ou erro no servidor', 'err');
   } else {
-    mostrarToast(ok + ' enviados, ' + fail + ' falharam', 'err');
+    mostrarToast('Não foi possível enviar — verifique sua conexão', 'err');
   }
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) { b.disabled = false; } });
+  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar';
   atualizarPendUI();
 }
 
@@ -2455,6 +2503,12 @@ function atualizarPendUI() {
   document.getElementById('pendDot').classList.toggle('show', n > 0);
   document.getElementById('resendCount').textContent = n;
   document.getElementById('resendBtn').classList.toggle('show', n > 0);
+  // v-fix: banner explícito na tela principal, além da bolinha no ícone
+  // de configurações — some sozinho quando não há mais nada pendente.
+  var banner = document.getElementById('pendBanner');
+  if (banner) banner.classList.toggle('show', n > 0);
+  var bannerCount = document.getElementById('pendBannerCount');
+  if (bannerCount) bannerCount.textContent = n;
 }
 
 // ═══════════════════════════════════════════════════════════
