@@ -1919,10 +1919,6 @@ function fecharManual() {
   document.getElementById('manualInput').value = '';
 }
 
-function onManualInput(v) {
-  // Não dispara automaticamente — aguarda Enter ou botão OK
-}
-
 function confirmarManual() {
   var v = document.getElementById('manualInput').value.trim();
   if (v.length < 1) {
