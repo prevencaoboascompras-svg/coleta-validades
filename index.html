@@ -3453,7 +3453,13 @@ function carregarColaboradores() {
 
   return fetch(url)
     .then(function(resp) { return resp.json(); })
-    .then(function(todos) {
+    .then(function(data) {
+      // O GAS responde como { ok:true, usuarios:[...] } (ou, em versões
+      // antigas, como um array puro). Aceita os dois formatos.
+      var todos = Array.isArray(data) ? data : (data && Array.isArray(data.usuarios) ? data.usuarios : null);
+      if (!todos) {
+        throw new Error('Resposta do GAS em formato inesperado: ' + JSON.stringify(data).slice(0, 200));
+      }
       var ativos = todos.filter(function(c) { return c.ativo; });
       var inativos = todos.filter(function(c) { return !c.ativo; });
       COLABORADORES = ativos.concat(inativos);
@@ -3657,10 +3663,33 @@ function iniciarModoTablet() {
 // Lista filtrada atual (referenciada pelo índice no onclick)
 var _tabletListaAtual = [];
 
+// Nomes que colidem (mesmo primeiro nome) na lista exibida ficam
+// ambíguos como card ("Stefani" e "Stefani" sem diferença visual no
+// nome grande). Pra esses casos, mostra nome + sobrenome em vez de só
+// o primeiro nome, só nos que colidem — os demais continuam exibindo
+// apenas o primeiro nome, como antes.
+function _nomeExibicaoTablet_(c, contagemPrimeiroNome) {
+  var primeiro = primeiroNome(c.nome);
+  if (contagemPrimeiroNome[primeiro.toLowerCase()] > 1) {
+    var partes = c.nome.trim().split(/\s+/);
+    return partes.length > 1 ? (partes[0] + ' ' + partes[1]) : c.nome;
+  }
+  return primeiro;
+}
+
 function renderGridTablet(lista) {
   _tabletListaAtual = lista;
   var grid = document.getElementById('tabletGrid');
   var cores = ['#E24B4A','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+
+  // Conta quantas vezes cada primeiro nome aparece na lista atual,
+  // pra saber quem precisa do sobrenome pra se diferenciar.
+  var contagemPrimeiroNome = {};
+  lista.forEach(function(c) {
+    var chave = primeiroNome(c.nome).toLowerCase();
+    contagemPrimeiroNome[chave] = (contagemPrimeiroNome[chave] || 0) + 1;
+  });
+
   grid.innerHTML = lista.map(function(c, i) {
     var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
     var cor = cores[i % cores.length];
@@ -3673,7 +3702,7 @@ function renderGridTablet(lista) {
     var disabled = (!c.email || inativo) ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"' : '';
     return '<button class="tablet-user-btn" onclick="selecionarUsuarioTabletIdx(' + i + ')" ' + disabled + '>'
       + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
-      + '<div class="tablet-user-name">' + primeiroNome(c.nome) + '</div>'
+      + '<div class="tablet-user-name">' + _nomeExibicaoTablet_(c, contagemPrimeiroNome) + '</div>'
       + emailInfo
       + '</button>';
   }).join('');
