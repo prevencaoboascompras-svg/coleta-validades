@@ -3440,37 +3440,35 @@ function fecharWelcome() {
 // ═══════════════════════════════════════════════════════════
 //  ANIVERSÁRIOS
 // ═══════════════════════════════════════════════════════════
-var COLABORADORES = [
-  { nome: '1960-NF',                          email: 'pontodigital1960@gmail.com',         aniv: '29/03' },
-  { nome: 'Televendas',                       email: 'comercialvitoriacarnes@gmail.com',   aniv: '31/10' },
-  { nome: 'Cesar Augusto Porto Pacheco',      email: 'cesarporto0319@gmail.com',           aniv: '13/08' },
-  { nome: 'Claudionir Oliveira Silveira',     email: 'claudiosilveira0221@gmail.com',      aniv: '22/01' },
-  { nome: 'Eduardo',                          email: 'eduardo20querotti@gmail.com',        aniv: '20/03' },
-  { nome: 'Leila Schonhofen da Rocha',        email: 'leila.darocha.5@gmail.com',          aniv: '10/03' },
-  { nome: 'Leonardo',                         email: 'prevencaoboascompras@gmail.com',     aniv: '12/01' },
-  { nome: 'Mari Estela da Silveira Neumann',  email: 'marineumann@gmail.com',              aniv: '07/12' },
-  { nome: 'Natanieli Gama Gulart',            email: 'gamagulartn@gmail.com',              aniv: '30/03' },
-  { nome: 'Rafael da Costa Pereira',          email: 'sinuelo6@gmail.com',                 aniv: '26/03' },
-  { nome: 'Stefani Lima',                     email: 'lima23stefani@gmail.com',            aniv: '23/01' },
-  { nome: 'Stefani Lima',                     email: 'stefanilima000@gmail.com',           aniv: '23/01' },
-  { nome: 'Taiti Gabriela Witter Loch',       email: 'taitigabriel@hotmail.com',           aniv: '13/06' },
-  { nome: 'Valdeci',                          email: 'teste@gmail.com',                                  },
-  { nome: 'Vinicius',                         email: 'viniciusaraujomotorola@gmail.com',   aniv: '20/09' },
-  { nome: 'Wagner',                           email: 'limawagner8213@gmail.com',           aniv: '29/04' },
-  { nome: 'Weslyn Pinheiro Duarte',           email: 'pinheiroduarteweslyn@gmail.com',     aniv: '17/10' },
-  { nome: 'Angela Maria Duarte de Oliveira',  email: 'angelamaria.ao727@gmail.com',        aniv: '01/09' },
-  { nome: 'Carlos Henrique Gonçalves',        email: '',                                   aniv: '03/05' },
-  { nome: 'Cleiton Barbosa Alencastro',       email: 'cleitonbarbosaalencastro@gmail.com', aniv: '04/09' },
-  { nome: 'Cristiano da Rosa Ramos',          email: '',                                   aniv: '11/03' },
-  { nome: 'Jose Kael da Conceição',           email: '',                                   aniv: '05/05' },
-  { nome: 'Juliana',                          email: '',                                   aniv: '24/01' },
-  { nome: 'Karen Machado Fortuna',            email: 'katulula28251723@gmail.com',         aniv: '28/08' },
-  { nome: 'Katia Brasil Vieira',              email: '',                                   aniv: '11/11' },
-  { nome: 'Leticia',                          email: '',                                   aniv: '31/10' },
-  { nome: 'Michael de Matos Leal',            email: '',                                   aniv: '05/02' },
-  { nome: 'Pedro',                            email: '',                                   aniv: '12/09' },
-  
-];
+// Lista de colaboradores agora vem da aba "Colaboradores" da planilha AURA
+// via Apps Script (não fica mais fixa no código). Ver carregarColaboradores().
+var COLABORADORES = [];
+
+// Busca colaboradores no GAS e ordena: ativos primeiro (ordem da planilha),
+// inativos por último. Também guarda um cache local para não deixar o app
+// sem lista nenhuma se a rede falhar num carregamento seguinte.
+function carregarColaboradores() {
+  var cfg = loadCfg();
+  var url = (cfg.url || DEFAULT_URL) + '?action=getUsuarios';
+
+  return fetch(url)
+    .then(function(resp) { return resp.json(); })
+    .then(function(todos) {
+      var ativos = todos.filter(function(c) { return c.ativo; });
+      var inativos = todos.filter(function(c) { return !c.ativo; });
+      COLABORADORES = ativos.concat(inativos);
+      try { localStorage.setItem('colaboradoresCache', JSON.stringify(COLABORADORES)); } catch (e) {}
+      return COLABORADORES;
+    })
+    .catch(function(err) {
+      console.error('Erro ao carregar colaboradores do GAS:', err);
+      try {
+        var cache = localStorage.getItem('colaboradoresCache');
+        if (cache) COLABORADORES = JSON.parse(cache);
+      } catch (e) {}
+      return COLABORADORES;
+    });
+}
 
 // Retorna o primeiro nome (ex: "Leonardo de Souza Ribeiro" → "Leonardo")
 function primeiroNome(nome) {
@@ -3666,10 +3664,13 @@ function renderGridTablet(lista) {
   grid.innerHTML = lista.map(function(c, i) {
     var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
     var cor = cores[i % cores.length];
-    var emailInfo = c.email
-      ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
-      : '<div class="tablet-no-email">sem email cadastrado</div>';
-    var disabled = !c.email ? 'style="opacity:.5;pointer-events:none"' : '';
+    var emailInfo = !c.ativo
+      ? '<div class="tablet-no-email">inativo</div>'
+      : (c.email
+        ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
+        : '<div class="tablet-no-email">sem email cadastrado</div>');
+    var inativo = c.ativo === false;
+    var disabled = (!c.email || inativo) ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"' : '';
     return '<button class="tablet-user-btn" onclick="selecionarUsuarioTabletIdx(' + i + ')" ' + disabled + '>'
       + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
       + '<div class="tablet-user-name">' + primeiroNome(c.nome) + '</div>'
@@ -3718,7 +3719,7 @@ function selecionarUsuarioTablet(nome, email) {
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
-(function init() {
+(async function init() {
   var cfg = loadCfg();
 
   // Restaurar setor e tipo da última sessão
@@ -3730,6 +3731,10 @@ function selecionarUsuarioTablet(nome, email) {
 
   renderHistorico();
   atualizarPendUI();
+
+  // Carrega a lista de colaboradores da planilha antes de qualquer coisa
+  // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
+  await carregarColaboradores();
 
   if (_modoTablet) {
     // Modo tablet: sempre mostra o seletor de usuário
