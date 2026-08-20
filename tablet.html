@@ -3648,7 +3648,14 @@ function pararConfete() {
 // ═══════════════════════════════════════════════════════════
 //  MODO TABLET — seletor de usuário
 // ═══════════════════════════════════════════════════════════
-var _modoTablet = window.location.search.indexOf('tablet') >= 0;
+// Modo tablet é ativado por dois caminhos independentes:
+//  1) query string contendo "tablet" (ex: ?tablet) — mantido por
+//     compatibilidade com links/atalhos antigos;
+//  2) o próprio arquivo servido ser "tablet.html" — assim, mesmo que
+//     um app instalado (PWA) no Android abra sem preservar a query
+//     string, o modo tablet continua ativo por causa do nome do arquivo.
+var _modoTablet = window.location.search.indexOf('tablet') >= 0
+  || /tablet\.html$/i.test(window.location.pathname);
 
 function iniciarModoTablet() {
   var grid = document.getElementById('tabletGrid');
