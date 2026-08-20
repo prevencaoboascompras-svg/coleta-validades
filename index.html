@@ -3561,6 +3561,14 @@ function diasParaAniversario(anivStr) {
 }
 
 function verificarAniversario(email, nomeGAS) {
+  // Sempre começa escondendo o banner do colaborador anterior — antes,
+  // ao trocar de usuário (no tablet) pra alguém sem aniversário
+  // cadastrado, o banner do colaborador anterior ficava preso na tela
+  // porque nenhum caminho de saída antecipada (colaborador não achado,
+  // aniversário inválido/vazio) escondia o banner explicitamente.
+  var banner = document.getElementById('anivBanner');
+  if (banner) banner.classList.remove('show');
+
   // Tenta usar o nome vindo do GAS (campo nomeColaborador), senão tenta pelo email
   var colaborador = null;
 
@@ -3590,7 +3598,6 @@ function verificarAniversario(email, nomeGAS) {
     mostrarParabens(colaborador.nome);
   } else {
     // Sempre mostra o banner com contagem regressiva
-    var banner = document.getElementById('anivBanner');
     var title  = document.getElementById('anivBannerTitle');
     var sub    = document.getElementById('anivBannerSub');
     if (dias === 1) {
