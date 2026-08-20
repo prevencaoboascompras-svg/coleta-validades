@@ -3508,16 +3508,26 @@ function encontrarColaborador(email) {
   return null;
 }
 
-// Dias para o próximo aniversário (ignora o ano)
+// Dias para o próximo aniversário (ignora o ano). Retorna null quando
+// o campo "Aniversário" está vazio ou num formato que não dá pra
+// interpretar (ex: célula vazia na planilha) — em vez de gerar NaN,
+// que fazia aparecer "faltam NaN dias" pra quem tinha esse campo em
+// branco ou mal preenchido.
 function diasParaAniversario(anivStr) {
-  var partes = anivStr.split('/');
-  var dia = parseInt(partes[0]);
-  var mes = parseInt(partes[1]) - 1; // 0-indexed
+  var s = String(anivStr || '').trim();
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return null;
+
+  var dia = parseInt(m[1], 10);
+  var mes = parseInt(m[2], 10) - 1; // 0-indexed
+  if (dia < 1 || dia > 31 || mes < 0 || mes > 11) return null;
+
   var hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
   var anivEsteAno = new Date(hoje.getFullYear(), mes, dia);
   anivEsteAno.setHours(0, 0, 0, 0);
+  if (isNaN(anivEsteAno.getTime())) return null;
 
   var diff = Math.round((anivEsteAno - hoje) / 86400000);
   if (diff < 0) {
@@ -3551,6 +3561,7 @@ function verificarAniversario(email, nomeGAS) {
   if (!colaborador) return;
 
   var dias = diasParaAniversario(colaborador.aniv);
+  if (dias === null) return; // aniversário vazio ou inválido na planilha — não mostra nada
   var nome = primeiroNome(colaborador.nome);
 
   if (dias === 0) {
