@@ -1146,6 +1146,7 @@ body{
 // ═══════════════════════════════════════════════════════════
 //  STORAGE
 // ═══════════════════════════════════════════════════════════
+// v6.31 FRONT — redução de delay: endpoint consolidado + outbox + scanner sem esperas artificiais.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -1599,15 +1600,14 @@ async function iniciarScanner() {
 
             if (!scannerAtivo) return;
 
-            // Pequeno delay para dar feedback visual antes de parar
-            setTimeout(function() {
-              // Recheca de novo: a sessão pode ter mudado durante esse tempo
-              if (meuSession !== _scanSessionId) {
-                console.warn('Descartado após delay: sessão antiga #' + meuSession);
-                return;
-              }
-              onScanSuccess(result.getText());
-            }, 120);
+            // v6.31 FRONT: sem atraso artificial após o decode. O próprio
+            // onScanSuccess já faz flash, vibração e bip; iniciar a consulta
+            // imediatamente reduz a latência percebida em cada leitura.
+            if (meuSession !== _scanSessionId) {
+              console.warn('Descartado após decode: sessão antiga #' + meuSession);
+              return;
+            }
+            onScanSuccess(result.getText());
           }
           // error é normal quando nenhum código é detectado no frame
         }
@@ -2173,6 +2173,9 @@ async function buscarFotoCompleta(ean, nomeProduto) {
   return { achou: false };
 }
 
+// v6.31 FRONT — produto + preço + lotes em uma única chamada ao backend.
+// Mantém fallback para as actions antigas caso o HTML seja aberto antes de o
+// Code.gs v6.31 ser publicado.
 async function buscarDescricao(ean) {
   var cfg = loadCfg();
   var el  = document.getElementById('descVal');
@@ -2188,34 +2191,52 @@ async function buscarDescricao(ean) {
     return;
   }
 
-  // Monta as variantes possíveis do código e busca todas EM PARALELO
-  // (antes eram até 3 chamadas em sequência, agora é 1 espera só)
   var variantes = [ean];
   if (ean.length === 12) variantes.push('0' + ean);
   else if (ean.length === 13 && ean.charAt(0) === '0') variantes.push(ean.substring(1));
 
-  // Dispara a busca de descrição E a verificação de lotes NO MESMO INSTANTE,
-  // em vez de esperar a descrição voltar pra só então checar os lotes.
-  // Antes eram 2 round-trips ao Apps Script em sequência (~3s); agora os dois
-  // rodam em paralelo e o tempo total cai pro do mais lento dos dois (~1-1.5s).
-  var buscaPromise = Promise.all(
-    variantes.map(function(v) { return tentarBusca(cfg.url, v); })
-  );
-  var lotesPromise = Promise.all(
-    variantes.map(function(v) { return tentarVerificarLotes(cfg.url, v); })
-  );
+  // Tenta PRIMEIRO somente o código que foi lido. A variante UPC/EAN só
+  // gera um segundo request se a primeira realmente não encontrar o produto.
+  // Assim o caminho normal cai de 2–4 requests para apenas 1.
+  var resultado = null;
+  var eanEncontrado = ean;
+  var primeira = await tentarBuscaCompleta(cfg.url, variantes[0]);
+  var endpointNovoDisponivel = primeira.suportado;
 
-  var respostas = await buscaPromise;
-  var idxAchado = respostas.findIndex(function(r) { return r.encontrado; });
-  var resultado = idxAchado >= 0 ? respostas[idxAchado] : { encontrado: false };
+  if (primeira.suportado && primeira.encontrado) {
+    resultado = primeira;
+  } else if (primeira.suportado && variantes.length > 1) {
+    var segunda = await tentarBuscaCompleta(cfg.url, variantes[1]);
+    if (segunda.suportado && segunda.encontrado) {
+      resultado = segunda;
+      eanEncontrado = variantes[1];
+    }
+  } else if (!primeira.suportado) {
+    // Backend antigo: preserva a otimização anterior, disparando descrição e
+    // lotes em paralelo para não criar regressão de performance.
+    var buscasPromise = Promise.all(variantes.map(function(v) { return tentarBusca(cfg.url, v); }));
+    var lotesPromise = Promise.all(variantes.map(function(v) { return tentarVerificarLotes(cfg.url, v); }));
+    var buscasAntigas = await buscasPromise;
+    var idxAntigo = buscasAntigas.findIndex(function(r) { return r.encontrado; });
+    if (idxAntigo >= 0) {
+      var lotesAntigosTodos = await lotesPromise;
+      eanEncontrado = variantes[idxAntigo];
+      var lotesDoMesmoCodigo = lotesAntigosTodos[idxAntigo];
+      resultado = Object.assign({}, buscasAntigas[idxAntigo], {
+        lotes: (lotesDoMesmoCodigo && lotesDoMesmoCodigo.ok && lotesDoMesmoCodigo.lotes) ? lotesDoMesmoCodigo.lotes : []
+      });
+    }
+  }
 
-  if (resultado.encontrado) {
+  // Outro bipe aconteceu enquanto a requisição estava em voo: não deixa a
+  // resposta antiga sobrescrever a tela do produto novo.
+  if ((codigoAtual || '') !== ean) return;
+
+  if (resultado && resultado.encontrado) {
     el.textContent = resultado.descricao;
     el.className = 'prod-desc-val';
-    descricaoAtual = resultado.descricao; // Salvar descrição atual
-    buscarFotoCompleta(ean, resultado.descricao);
+    descricaoAtual = resultado.descricao;
 
-    // Preço de venda — pra conferir se está batendo com o preço na gôndola
     if (resultado.preco !== undefined && resultado.preco !== null && resultado.preco !== '') {
       var precoNum = Number(resultado.preco);
       if (!isNaN(precoNum)) {
@@ -2224,44 +2245,78 @@ async function buscarDescricao(ean) {
       }
     }
 
-    // Feedback de lotes já cadastrados — resultado já deve estar pronto (ou quase),
-    // já que a chamada foi disparada em paralelo lá em cima
-    var ean_lotes = variantes[idxAchado];
-    lotesPromise.then(function(lotesRespostas) {
-      // Se o código mudou enquanto a busca rodava (outro bipe), ignora resultado antigo
-      if ((codigoAtual || '') !== ean) return;
-      var loteAchado = lotesRespostas.find(function(r) { return r.ok && r.lotes && r.lotes.length; });
-      if (loteAchado) {
-        _loteEanAtual = ean_lotes;
-        _lotesEncontrados = loteAchado.lotes;
-        abrirLoteModal();
-      }
-    });
+    // Lotes vêm na MESMA resposta do produto. O modal ganha prioridade sobre
+    // foto/catálogos externos para não competir com a etapa operacional.
+    var lotes = Array.isArray(resultado.lotes) ? resultado.lotes : [];
+    if (lotes.length) {
+      _loteEanAtual = eanEncontrado;
+      _lotesEncontrados = lotes;
+      abrirLoteModal();
+    }
+
+    // Foto é decorativa: começa somente depois de produto/preço/lotes já terem
+    // sido renderizados. Não bloqueia o fluxo do operador.
+    setTimeout(function() {
+      if ((codigoAtual || '') === ean) buscarFotoCompleta(ean, resultado.descricao);
+    }, 0);
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
     el.className = 'prod-desc-val notfound';
-    descricaoAtual = ''; // Limpar descrição se não encontrado
-    buscarFotoCompleta(ean, '').then(function(res) {
-      // Se a busca ainda for referente ao mesmo código (usuário não bipou outro nesse meio tempo)
-      // e a foto veio de uma fonte que indexa por código de barras (Drive/Cosmos/OFF-por-código),
-      // isso é evidência de que o código lido é válido — o problema é só falta de cadastro.
+    descricaoAtual = '';
+
+    // Também deixa a pesquisa de foto fora do caminho crítico.
+    setTimeout(function() {
       if ((codigoAtual || '') !== ean) return;
-      if (res && res.achou && res.validadaPorCodigo) {
-        el.textContent = 'Não cadastrado no seu banco, mas código válido (foto localizada em ' + res.fonte + ')';
-        el.className = 'prod-desc-val notfound codvalido';
-      }
-    });
+      buscarFotoCompleta(ean, '').then(function(res) {
+        if ((codigoAtual || '') !== ean) return;
+        if (res && res.achou && res.validadaPorCodigo) {
+          el.textContent = 'Não cadastrado no seu banco, mas código válido (foto localizada em ' + res.fonte + ')';
+          el.className = 'prod-desc-val notfound codvalido';
+        }
+      });
+    }, 0);
   }
 }
 
+async function tentarBuscaCompleta(url, ean) {
+  try {
+    var resp = await fetchComTimeout(
+      url + '?action=buscarEANCompleto&ean=' + encodeURIComponent(ean),
+      { method: 'GET', cache: 'no-store' },
+      10000
+    );
+    if (!resp.ok) return { suportado: false, encontrado: false };
+    var data = await resp.json();
+
+    // A action nova sempre responde com alguma destas chaves. Se vier uma
+    // resposta genérica/vazia de uma implantação antiga, tratamos como não
+    // suportada e acionamos o fallback.
+    var suportado = !!(data && (
+      Object.prototype.hasOwnProperty.call(data, 'descricao') ||
+      Object.prototype.hasOwnProperty.call(data, 'lotes') ||
+      Object.prototype.hasOwnProperty.call(data, 'custo')
+    ));
+    if (!suportado) return { suportado: false, encontrado: false };
+
+    return {
+      suportado: true,
+      encontrado: !!(data.ok && data.descricao),
+      descricao: data.descricao || '',
+      preco: data.preco,
+      custo: data.custo,
+      lotes: Array.isArray(data.lotes) ? data.lotes : []
+    };
+  } catch (e) {
+    return { suportado: false, encontrado: false };
+  }
+}
+
+// Fallback de compatibilidade com backend anterior à v6.31.
 async function tentarBusca(url, ean) {
   try {
-    // Apps Script pode ter cold start (por isso 10s, mais folgado que os 5s da
-    // cascata de foto), mas sem limite nenhum uma instância travada prendia
-    // a tela de "Buscando produto…" indefinidamente.
     var resp = await fetchComTimeout(
       url + '?action=buscarEAN&ean=' + encodeURIComponent(ean),
-      { method: 'GET' },
+      { method: 'GET', cache: 'no-store' },
       10000
     );
     if (!resp.ok) return { encontrado: false };
@@ -2275,18 +2330,15 @@ async function tentarBusca(url, ean) {
   }
 }
 
-// Mesma ideia do tentarBusca, mas pro endpoint de lotes — disparada em paralelo
-// com a busca de descrição (ver buscarDescricao), não mais depois dela.
 async function tentarVerificarLotes(url, ean) {
   try {
     var resp = await fetchComTimeout(
       url + '?action=verificarLotesEAN&ean=' + encodeURIComponent(ean),
-      { method: 'GET' },
+      { method: 'GET', cache: 'no-store' },
       10000
     );
     if (!resp.ok) return { ok: false };
-    var data = await resp.json();
-    return data; // { ok, lotes } ou { ok:false }
+    return await resp.json();
   } catch (e) {
     return { ok: false };
   }
@@ -2347,9 +2399,17 @@ function pesoParaNumero() {
 // ═══════════════════════════════════════════════════════════
 //  REGISTER
 // ═══════════════════════════════════════════════════════════
+// v6.31 FRONT — outbox persistente. O operador não espera o Apps Script para
+// começar o próximo item; o envio acontece em fila e é sempre sequencial.
+var _filaEnvioAtiva = false;
+
+function _novoQid_() {
+  return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+}
+
 function registrar() {
   var codigo  = codigoAtual || document.getElementById('manualInput').value.trim();
-  var valRaw  = document.getElementById('fValidade').value;   // YYYY-MM-DD
+  var valRaw  = document.getElementById('fValidade').value;
   var setor   = document.getElementById('fSetor').value;
   var qty     = pesoAtivo ? pesoParaNumero() : (parseInt(document.getElementById('fQty').value) || 1);
   var cfg     = loadCfg();
@@ -2361,47 +2421,31 @@ function registrar() {
   if (!email)   { mostrarToast('Configure seu e-mail nas configurações', 'warn'); abrirConfig(); return; }
   if (pesoAtivo && qty <= 0) { mostrarToast('Informe o peso do produto', 'err'); return; }
 
-  // Já está em DD/MM/YYYY (vem do drum picker)
-  var validade = valRaw;
-
   var dados = {
+    _qid: _novoQid_(),
     ts: new Date().toISOString(),
     codigo: codigo,
-    descricao: descricaoAtual || '', // Incluir descrição do produto
-    validade: validade,
+    descricao: descricaoAtual || '',
+    validade: valRaw,
     setor: setor,
     quantidade: qty,
     unidade: pesoAtivo ? 'kg' : 'un',
     email: email
   };
 
-  // Lembrar setor
   cfg.lastSetor = setor;
   saveCfg(cfg);
 
-  // UI loading
-  var btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  document.getElementById('submitIcon').innerHTML = '<i class="ti ti-loader-2"></i>';
-  document.getElementById('submitTxt').textContent  = 'ENVIANDO…';
+  // Segurança primeiro: persiste na fila ANTES de liberar a tela. Se o browser
+  // fechar, a bateria acabar ou a rede cair durante o POST, o registro continua
+  // disponível para reenvio.
+  salvarPendente(dados);
+  registrarHistorico(dados, 'pend');
 
-  enviar(dados)
-    .then(function() {
-      registrarHistorico(dados, 'ok');
-      mostrarToast('Registrado com sucesso!', 'ok');
-      resetAposEnvio();
-    })
-    .catch(function() {
-      salvarPendente(dados);
-      registrarHistorico(dados, 'pend');
-      mostrarToast('Salvo localmente — sem conexão', 'warn');
-      resetAposEnvio();
-    })
-    .finally(function() {
-      btn.disabled = false;
-      document.getElementById('submitIcon').innerHTML = '<i class="ti ti-check"></i>';
-      document.getElementById('submitTxt').textContent  = 'REGISTRAR VALIDADE';
-    });
+  // Libera a próxima coleta imediatamente. A fila é processada em background.
+  mostrarToast(navigator.onLine ? 'Registro salvo — enviando…' : 'Registro salvo localmente — sem conexão', navigator.onLine ? 'ok' : 'warn');
+  resetAposEnvio();
+  processarFilaEnvio(false);
 }
 
 async function enviar(dados) {
@@ -2409,9 +2453,7 @@ async function enviar(dados) {
   if (!cfg.url) throw new Error('sem-url');
   if (!navigator.onLine) throw new Error('offline');
 
-  // POST com corpo JSON → doPost no Apps Script
-  // Content-Type text/plain evita preflight CORS bloqueado pelo Google
-  var resp = await fetch(cfg.url, {
+  var resp = await fetchComTimeout(cfg.url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
     body: JSON.stringify({
@@ -2421,29 +2463,40 @@ async function enviar(dados) {
       quantidade: dados.quantidade,
       unidade:    dados.unidade  || 'un',
       email:      dados.email     || '',
-      ts:         dados.ts
+      ts:         dados.ts,
+      qid:        dados._qid || ''
     })
-  });
+  }, 15000);
 
   if (!resp.ok) throw new Error('http-' + resp.status);
+
+  // O backend atual responde JSON. Se vier ok:false, o item PERMANECE na
+  // fila. Corpo vazio/não JSON em uma publicação antiga continua aceito se o
+  // HTTP foi 2xx.
+  var body = await resp.text();
+  if (body) {
+    var json = null;
+    try { json = JSON.parse(body); } catch (eJson) { json = null; }
+    if (json && json.ok === false) throw new Error(json.erro || 'backend-ok-false');
+  }
 }
 
 function resetAposEnvio() {
   resetCodigo();
-  descricaoAtual = ''; // Limpar descrição
-  
-  // Limpar todas as informações de escaneamento para nova bipagem
+  descricaoAtual = '';
   document.getElementById('fQty').value = '1';
   document.getElementById('fPeso').value = '';
-  if (pesoAtivo) togglePeso(); // volta pro modo quantidade
-  document.getElementById('fSetor').value = ''; // Limpar setor
-  document.getElementById('fValidade').value = ''; // Limpar data de validade
+  if (pesoAtivo) togglePeso();
+  document.getElementById('fSetor').value = '';
+  document.getElementById('fValidade').value = '';
   document.getElementById('drumDisplay').textContent = 'Toque para selecionar…';
   document.getElementById('drumDisplay').classList.add('empty');
-  
   renderHistorico();
   atualizarPendUI();
-  setTimeout(iniciarScanner, 350);
+
+  // Era 350ms. Mantemos só um respiro curto para o DOM terminar o reset antes
+  // de reabrir a câmera, sem acrescentar quase meio segundo ao ciclo.
+  setTimeout(iniciarScanner, 80);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2451,9 +2504,77 @@ function resetAposEnvio() {
 // ═══════════════════════════════════════════════════════════
 function salvarPendente(dados) {
   var arr = loadPend();
-  arr.push(dados);
+  if (!dados._qid) dados._qid = _novoQid_();
+  var existe = arr.some(function(x) { return x && x._qid === dados._qid; });
+  if (!existe) arr.push(dados);
   savePend(arr);
   atualizarPendUI();
+  return dados._qid;
+}
+
+function _removerPendente_(qid) {
+  if (!qid) return;
+  var arr = loadPend().filter(function(x) { return !x || x._qid !== qid; });
+  savePend(arr);
+  atualizarPendUI();
+}
+
+function _atualizarHistoricoStatus_(qid, status) {
+  if (!qid) return;
+  var arr = loadHist();
+  var mudou = false;
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && arr[i]._qid === qid) {
+      arr[i].status = status;
+      mudou = true;
+      break;
+    }
+  }
+  if (mudou) {
+    saveHist(arr);
+    renderHistorico();
+  }
+}
+
+// Drena a fila em ordem e com UM POST por vez. Isso evita que um único aparelho
+// crie concorrência desnecessária no ScriptLock do backend.
+async function processarFilaEnvio(modoManual) {
+  if (_filaEnvioAtiva) return { ok: 0, fail: 0, ocupada: true };
+  if (!navigator.onLine) return { ok: 0, fail: loadPend().length, offline: true };
+
+  _filaEnvioAtiva = true;
+  var ok = 0, fail = 0;
+  try {
+    while (navigator.onLine) {
+      var fila = loadPend();
+      if (!fila.length) break;
+
+      // Migra pendências criadas por versões antigas do front, que ainda não
+      // tinham _qid. Sem isso elas seriam enviadas mas não poderiam ser removidas
+      // individualmente da outbox nova.
+      var migrou = false;
+      for (var qi = 0; qi < fila.length; qi++) {
+        if (fila[qi] && !fila[qi]._qid) { fila[qi]._qid = _novoQid_(); migrou = true; }
+      }
+      if (migrou) savePend(fila);
+
+      var item = fila[0];
+      try {
+        await enviar(item);
+        _removerPendente_(item._qid);
+        _atualizarHistoricoStatus_(item._qid, 'ok');
+        ok++;
+      } catch (e) {
+        fail = loadPend().length;
+        console.warn('Fila de envio pausada: ' + (e && e.message ? e.message : e));
+        break;
+      }
+    }
+  } finally {
+    _filaEnvioAtiva = false;
+    atualizarPendUI();
+  }
+  return { ok: ok, fail: fail };
 }
 
 async function reenviarPendentes() {
@@ -2463,32 +2584,19 @@ async function reenviarPendentes() {
 
   var bannerBtn = document.getElementById('pendBannerBtn');
   var settingsBtn = document.getElementById('resendBtn');
-  [bannerBtn, settingsBtn].forEach(function(b) { if (b) { b.disabled = true; } });
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = true; });
   if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando…';
 
-  // v-fix: antes, se QUALQUER item falhasse, a lista inteira de pendentes
-  // era mantida — inclusive os que já tinham sido enviados com sucesso
-  // nesta mesma tentativa. Isso fazia dois estragos: (1) o aviso de
-  // pendente nunca sumia mesmo quando quase tudo já tinha ido, e (2) os
-  // itens que já foram enviados com sucesso eram reenviados de novo na
-  // próxima tentativa, duplicando o registro na planilha. Agora só o que
-  // de fato falhou continua na lista de pendentes.
-  var restantes = [];
-  var ok = 0, fail = 0;
-  for (var i = 0; i < arr.length; i++) {
-    try { await enviar(arr[i]); ok++; }
-    catch(e) { fail++; restantes.push(arr[i]); }
-  }
-  savePend(restantes);
+  var antes = loadPend().length;
+  var r = await processarFilaEnvio(true);
+  var depois = loadPend().length;
+  var enviados = Math.max(0, antes - depois);
 
-  if (fail === 0) {
-    mostrarToast(ok + ' registro(s) enviado(s) com sucesso!', 'ok');
-  } else if (ok > 0) {
-    mostrarToast(ok + ' enviado(s), ' + fail + ' ainda pendente(s) — sem conexão ou erro no servidor', 'err');
-  } else {
-    mostrarToast('Não foi possível enviar — verifique sua conexão', 'err');
-  }
-  [bannerBtn, settingsBtn].forEach(function(b) { if (b) { b.disabled = false; } });
+  if (!depois) mostrarToast(enviados + ' registro(s) enviado(s) com sucesso!', 'ok');
+  else if (enviados) mostrarToast(enviados + ' enviado(s), ' + depois + ' ainda pendente(s)', 'warn');
+  else mostrarToast('Não foi possível enviar — verifique a conexão/servidor', 'err');
+
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = false; });
   if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar';
   atualizarPendUI();
 }
@@ -3048,14 +3156,19 @@ window.addEventListener('offline', function() {
 });
 window.addEventListener('online', function() {
   document.getElementById('offlineBar').classList.remove('show');
-  // Tenta reenviar pendentes automaticamente
+  // Tenta drenar a fila automaticamente, sem bloquear a coleta.
   var pend = loadPend();
-  if (pend.length) reenviarPendentes();
+  if (pend.length) processarFilaEnvio(false);
   // Atualizar tarefas
   buscarTarefas();
 });
 if (!navigator.onLine) {
   document.getElementById('offlineBar').classList.add('show');
+}
+else {
+  // Retoma automaticamente qualquer envio que tenha ficado na fila após
+  // fechamento/reabertura do app.
+  setTimeout(function() { if (loadPend().length) processarFilaEnvio(false); }, 500);
 }
 
 
