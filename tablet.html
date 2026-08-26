@@ -2021,6 +2021,14 @@ function _buscarImagemProdutoJsonp(cod, tipo, nomeProduto, timeoutMs) {
       if (timer) clearTimeout(timer);
       try { delete window[cb]; } catch (e) { window[cb] = undefined; }
       if (script.parentNode) script.parentNode.removeChild(script);
+      try {
+        if(payload&&payload.salvoNoDrive&&typeof _notificarFotoCentralColeta==='function'){
+          var canon=String(payload.codigoCanonico||payload.codigoSolicitado||cod);
+          var solicitado=String(payload.codigoSolicitado||cod);
+          if(canon)_notificarFotoCentralColeta(canon);
+          if(solicitado&&solicitado!==canon)_invalidarFotoCentralColeta(solicitado);
+        }
+      } catch(e2) {}
       resolve(payload || { ok:false });
     }
 
@@ -2046,16 +2054,40 @@ function _buscarImagemProdutoJsonp(cod, tipo, nomeProduto, timeoutMs) {
 // Cache somente em memória e curto: evita chamadas repetidas durante a coleta,
 // mas não prende uma foto antiga por dias caso ela seja corrigida em outro app.
 var _fotoCentralCache = {};
-var FOTO_CENTRAL_CACHE_TTL = 5 * 60 * 1000;
+var FOTO_CENTRAL_CACHE_TTL = 5 * 60 * 1000; // positivos podem ficar; negativos são liberados rapidamente abaixo
 var FOTO_CENTRAL_SYNC_KEY='boascompras_foto_central_sync_v1';
 function _invalidarFotoCentralColeta(cod){
   cod=normalizarCodigo(cod||'');
   if(!cod)return;
   Object.keys(_fotoCentralCache).forEach(function(k){if(k===cod||k.indexOf(cod+'|')===0)delete _fotoCentralCache[k];});
 }
+function _notificarFotoCentralColeta(cod){
+  _invalidarFotoCentralColeta(cod);
+  try{localStorage.setItem(FOTO_CENTRAL_SYNC_KEY,JSON.stringify({cod:String(cod||''),ts:Date.now(),n:Math.random()}));}catch(e){}
+}
+function _codigosFotoEquivalentesColeta(a,b){
+  a=normalizarCodigo(a||'');b=normalizarCodigo(b||'');
+  if(!a||!b)return false;
+  if(a===b)return true;
+  if(a.length===12&&('0'+a)===b)return true;
+  if(b.length===12&&('0'+b)===a)return true;
+  return false;
+}
 window.addEventListener('storage',function(ev){
   if(ev.key!==FOTO_CENTRAL_SYNC_KEY||!ev.newValue)return;
-  try{var d=JSON.parse(ev.newValue);if(d&&d.cod)_invalidarFotoCentralColeta(d.cod);}catch(e){}
+  try{
+    var d=JSON.parse(ev.newValue);
+    if(d&&d.cod){
+      _invalidarFotoCentralColeta(d.cod);
+      if(_codigosFotoEquivalentesColeta(codigoAtual,d.cod)){
+        var nomeAtual='';
+        try{nomeAtual=(document.getElementById('descVal')&&document.getElementById('descVal').textContent)||'';}catch(e2){}
+        setTimeout(function(){
+          if(_codigosFotoEquivalentesColeta(codigoAtual,d.cod))buscarFotoCompleta(codigoAtual,nomeAtual);
+        },0);
+      }
+    }
+  }catch(e){}
 });
 setInterval(function(){_fotoCentralCache={};},5*60*1000);
 
@@ -2077,7 +2109,7 @@ function resolverFotoCentral(ean, nomeProduto) {
 
   var promise=(async function() {
     try{
-      var res=await _buscarImagemProdutoJsonp(cod,'produto',nomeProduto,8000);
+      var res=await _buscarImagemProdutoJsonp(cod,'produto',nomeProduto,20000);
       if(res && res.ok && res.encontrado){
         var src='';
         if(res.base64)src='data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
@@ -2091,6 +2123,18 @@ function resolverFotoCentral(ean, nomeProduto) {
     return {img:null,fonte:'',origem:''};
   })();
   _fotoCentralCache[chave]={ts:Date.now(),promise:promise};
+  promise.then(function(r){
+    if(r&&r.img)return;
+    setTimeout(function(){
+      var atual=_fotoCentralCache[chave];
+      if(atual&&atual.promise===promise)delete _fotoCentralCache[chave];
+    },20000);
+  }).catch(function(){
+    setTimeout(function(){
+      var atual=_fotoCentralCache[chave];
+      if(atual&&atual.promise===promise)delete _fotoCentralCache[chave];
+    },5000);
+  });
   return promise;
 }
 
@@ -2223,7 +2267,7 @@ async function buscarDescricao(ean) {
     // Foto é decorativa: começa somente depois de produto/preço/lotes já terem
     // sido renderizados. Não bloqueia o fluxo do operador.
     setTimeout(function() {
-      if ((codigoAtual || '') === ean) buscarFotoCompleta(ean, resultado.descricao);
+      if ((codigoAtual || '') === ean) buscarFotoCompleta(eanEncontrado||ean, resultado.descricao);
     }, 0);
   } else {
     el.textContent = 'Produto não encontrado no banco de dados';
