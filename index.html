@@ -1154,8 +1154,7 @@ var K_PEND = 'coleta_pend';
 // URL padrão do Apps Script (já configurada para o usuário)
 var DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwjsogX93Xxfb5jyFy1IqknZ7lk2OOaOOG_oOhpGdKETgZgIkTrZOBY36_UzS35Ns8s/exec';
 
-// ── FOTO DO PRODUTO: Drive -> Bluesoft Cosmos -> sem foto ──
-var DRIVE_FOLDER_ID = '1Qhsc63GHVcACTzYTp392O_S3iMd8vmpS';
+// ── FOTO DO PRODUTO: banco central compartilhado ──
 var fotoImg = null;
 var fotoToken = 0;
 
@@ -1934,8 +1933,11 @@ function confirmarManual() {
 //  BUSCA DE DESCRIÇÃO — aba BANCO DE DADOS
 // ═══════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════
-//  FOTO DO PRODUTO: Drive -> Bluesoft Cosmos -> sem foto
-//  Sem Google, Openverse ou Open Food Facts para evitar esperas.
+// FOTO OFICIAL DO PRODUTO — banco central compartilhado
+// Arsenal, AURA e Coleta consultam a MESMA action buscarImagemProduto.
+// O Code.gs decide Drive -> Cosmos -> UPCitemdb validado e, ao encontrar
+// externamente, salva no Drive. O navegador nunca acessa o CDN do Cosmos
+// nem recebe o ID da pasta do Drive.
 // ═══════════════════════════════════════════════════════════
 function setFotoStatus(msg, tipo) {
   var el = document.getElementById('fotoStatus');
@@ -1951,7 +1953,7 @@ function setFotoPreview(img) {
     box.innerHTML = '';
     var el = document.createElement('img');
     el.src = img.src;
-    el.alt = 'Foto do produto';
+    el.alt = 'Foto oficial do produto';
     box.appendChild(el);
   } else {
     box.innerHTML = '<span class="spin"></span>';
@@ -1968,8 +1970,6 @@ function limparFoto(msg) {
   setFotoStatus(msg || '');
 }
 
-// Timeout curto para chamadas do app. A foto é decorativa e nunca deve
-// bloquear o fluxo do operador.
 function fetchComTimeout(url, options, ms) {
   ms = ms || 5000;
   var controller = new AbortController();
@@ -1978,8 +1978,6 @@ function fetchComTimeout(url, options, ms) {
   return fetch(url, opts).finally(function() { clearTimeout(timer); });
 }
 
-// Carrega somente a URL informada. Não usa proxy nem outro catálogo:
-// se o Cosmos não responder, o produto fica sem foto.
 function carregarImagemUrl(url, timeoutMs) {
   return new Promise(function(resolve) {
     if (!url) { resolve(null); return; }
@@ -1990,8 +1988,6 @@ function carregarImagemUrl(url, timeoutMs) {
       resolve(null);
     }, timeoutMs || 2500);
     var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.referrerPolicy = 'no-referrer';
     img.onload = function() {
       if (acabou) return;
       acabou = true;
@@ -2008,12 +2004,11 @@ function carregarImagemUrl(url, timeoutMs) {
   });
 }
 
-// JSONP somente para buscarImagemProduto. Evita bloqueio CORS entre o
-// GitHub Pages e o Web App do Apps Script, como no AURA principal.
-function _buscarImagemProdutoJsonp(cod, tipo, timeoutMs) {
+// JSONP central: mesma rota usada no AURA e no Arsenal.
+function _buscarImagemProdutoJsonp(cod, tipo, nomeProduto, timeoutMs) {
   return new Promise(function(resolve) {
     var cfg = loadCfg();
-    if (!cfg.url) { resolve({ ok:false }); return; }
+    if (!cfg.url) { resolve({ ok:false, erro:'URL do Apps Script não configurada' }); return; }
 
     var cb = '__auraColetaImg_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     var script = document.createElement('script');
@@ -2030,108 +2025,119 @@ function _buscarImagemProdutoJsonp(cod, tipo, timeoutMs) {
     }
 
     window[cb] = function(payload) { finalizar(payload); };
-    script.onerror = function() { finalizar({ ok:false }); };
+    script.onerror = function() { finalizar({ ok:false, erro:'Falha no JSONP de imagem' }); };
 
     var sep = cfg.url.indexOf('?') >= 0 ? '&' : '?';
-    script.src = cfg.url + sep
+    var extra = sep
       + 'action=buscarImagemProduto'
       + '&codigoBarras=' + encodeURIComponent(cod)
-      + '&tipo=' + encodeURIComponent(tipo || 'produto')
-      + '&folderId=' + encodeURIComponent(DRIVE_FOLDER_ID)
+      + '&tipo=' + encodeURIComponent(tipo || 'produto');
+    if(nomeProduto)extra += '&nomeProduto=' + encodeURIComponent(nomeProduto);
+    script.src = cfg.url + extra
       + '&callback=' + encodeURIComponent(cb)
       + '&_=' + Date.now();
     script.async = true;
     document.head.appendChild(script);
 
-    timer = setTimeout(function() { finalizar({ ok:false, timeout:true }); }, timeoutMs || 5000);
+    timer = setTimeout(function() { finalizar({ ok:false, timeout:true }); }, timeoutMs || 8000);
   });
 }
 
-async function buscarFotoDrive(codigoBarras, tipo) {
-  var cod = normalizarCodigo(codigoBarras);
-  if (!cod) return null;
-  try {
-    var res = await _buscarImagemProdutoJsonp(cod, tipo || 'produto', 5000);
-    if (res && res.ok && res.encontrado) {
-      if (res.base64) {
-        return await carregarImagemUrl(
-          'data:' + (res.mimeType || 'image/png') + ';base64,' + res.base64,
-          1500
-        );
-      }
-      if (res.url || res.imageUrl) {
-        return await carregarImagemUrl(res.url || res.imageUrl, 2500);
-      }
-    }
-  } catch (e) {}
-  return null;
+// Cache somente em memória e curto: evita chamadas repetidas durante a coleta,
+// mas não prende uma foto antiga por dias caso ela seja corrigida em outro app.
+var _fotoCentralCache = {};
+var FOTO_CENTRAL_CACHE_TTL = 5 * 60 * 1000;
+var FOTO_CENTRAL_SYNC_KEY='boascompras_foto_central_sync_v1';
+function _invalidarFotoCentralColeta(cod){
+  cod=normalizarCodigo(cod||'');
+  if(!cod)return;
+  Object.keys(_fotoCentralCache).forEach(function(k){if(k===cod||k.indexOf(cod+'|')===0)delete _fotoCentralCache[k];});
+}
+window.addEventListener('storage',function(ev){
+  if(ev.key!==FOTO_CENTRAL_SYNC_KEY||!ev.newValue)return;
+  try{var d=JSON.parse(ev.newValue);if(d&&d.cod)_invalidarFotoCentralColeta(d.cod);}catch(e){}
+});
+setInterval(function(){_fotoCentralCache={};},5*60*1000);
+
+function _fonteFotoCentral(origem){
+  origem=String(origem||'').toLowerCase();
+  if(origem==='drive')return 'banco central (Drive)';
+  if(origem==='cosmos')return 'Bluesoft Cosmos → banco central';
+  if(origem==='upcitemdb')return 'UPCitemdb validado → banco central';
+  return 'banco central';
 }
 
-async function buscarFotoCosmos(ean) {
+function resolverFotoCentral(ean, nomeProduto) {
   var cod = normalizarCodigo(ean);
-  if (!cod || !/^\d{8,14}$/.test(cod)) return null;
-  try {
-    return await carregarImagemUrl(
-      'https://cdn-cosmos.bluesoft.com.br/products/' + cod,
-      2500
-    );
-  } catch (e) {
-    return null;
-  }
-}
+  nomeProduto=String(nomeProduto||'').trim();
+  if (!cod) return Promise.resolve({ img:null, fonte:'', origem:'' });
+  var chave=cod+'|'+(nomeProduto?nomeProduto.toLowerCase():'');
+  var hit=_fotoCentralCache[chave];
+  if(hit && (Date.now()-hit.ts)<FOTO_CENTRAL_CACHE_TTL)return hit.promise;
 
-// Uma única resolução compartilhada por toda a página. Se o mesmo EAN
-// aparecer no produto atual e numa tarefa, não repete Drive/Cosmos.
-var _fotoDriveCosmosCache = {};
-function resolverFotoDriveCosmos(ean) {
-  var cod = normalizarCodigo(ean);
-  if (!cod) return Promise.resolve({ img:null, fonte:'' });
-  if (_fotoDriveCosmosCache[cod]) return _fotoDriveCosmosCache[cod];
-
-  _fotoDriveCosmosCache[cod] = (async function() {
-    var img = await buscarFotoDrive(cod, 'produto');
-    if (img) return { img:img, fonte:'Google Drive' };
-
-    img = await buscarFotoCosmos(cod);
-    if (img) return { img:img, fonte:'Bluesoft Cosmos' };
-
-    return { img:null, fonte:'' };
+  var promise=(async function() {
+    try{
+      var res=await _buscarImagemProdutoJsonp(cod,'produto',nomeProduto,8000);
+      if(res && res.ok && res.encontrado){
+        var src='';
+        if(res.base64)src='data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+        else src=res.dataUrl||res.url||res.imageUrl||'';
+        if(src){
+          var img=await carregarImagemUrl(src,2500);
+          if(img)return {img:img,fonte:_fonteFotoCentral(res.origem),origem:String(res.origem||'')};
+        }
+      }
+    }catch(e){}
+    return {img:null,fonte:'',origem:''};
   })();
-
-  return _fotoDriveCosmosCache[cod];
+  _fotoCentralCache[chave]={ts:Date.now(),promise:promise};
+  return promise;
 }
 
-// validadaPorCodigo = true quando Drive/Cosmos encontram a foto pelo EAN.
+// Compatibilidade com nomes antigos: ambos apontam para o MESMO resolvedor.
+async function buscarFotoDrive(codigoBarras, tipo, nomeProduto) {
+  var r=await resolverFotoCentral(codigoBarras,nomeProduto||'');
+  return r&&r.img?r.img:null;
+}
+async function buscarFotoCosmos(ean,nomeProduto) {
+  var r=await resolverFotoCentral(ean,nomeProduto||'');
+  return r&&r.img?r.img:null;
+}
+function resolverFotoDriveCosmos(ean,nomeProduto){
+  return resolverFotoCentral(ean,nomeProduto||'');
+}
+
 async function buscarFotoCompleta(ean, nomeProduto) {
   var token = ++fotoToken;
   var cod = normalizarCodigo(ean);
-
   setFotoPreview(null);
-  setFotoStatus('Buscando foto no Google Drive…');
+  setFotoStatus('Buscando foto oficial no banco central…');
 
   if (!cod) {
-    limparFoto('Sem código de barras para buscar foto.');
+    limparFoto('Sem código para consultar a foto oficial.');
     return { achou:false };
   }
 
-  var resolvido = await resolverFotoDriveCosmos(cod);
+  var resolvido = await resolverFotoCentral(cod,nomeProduto||'');
   if (token !== fotoToken) return { achou:false };
 
   if (resolvido && resolvido.img) {
     fotoImg = resolvido.img;
     setFotoPreview(fotoImg);
-    setFotoStatus('Foto encontrada no ' + resolvido.fonte + '.', 'ok');
+    setFotoStatus('Foto oficial: ' + resolvido.fonte + '.', 'ok');
     return {
       achou:true,
       validadaPorCodigo:true,
-      fonte:resolvido.fonte
+      fonte:resolvido.fonte,
+      origem:resolvido.origem
     };
   }
 
-  limparFoto('Foto não encontrada no Drive nem no Bluesoft Cosmos.');
-  setFotoStatus('Sem foto — não encontrada no Drive nem no Bluesoft Cosmos.', 'warn');
+  limparFoto('Foto ainda não cadastrada no banco central.');
+  setFotoStatus('Sem foto oficial para este produto.', 'warn');
   return { achou:false };
 }
+
 
 // v6.31 FRONT — produto + preço + lotes em uma única chamada ao backend.
 // Mantém fallback para as actions antigas caso o HTML seja aberto antes de o
