@@ -318,7 +318,18 @@ body{
   font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx2);
   text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;
 }
-.hist-hdr-right{margin-left:auto;font-size:11px;color:var(--tx2);cursor:pointer}
+.hist-hdr-actions{margin-left:auto;display:flex;align-items:center;gap:7px}
+.hist-send-all{
+  display:none;height:30px;padding:0 10px;border:none;border-radius:8px;
+  background:#ff9f0a;color:#1b1200;font-size:10px;font-weight:900;
+  letter-spacing:.025em;cursor:pointer;align-items:center;gap:5px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap
+}
+.hist-send-all.show{display:inline-flex}
+.hist-send-all:hover{filter:brightness(1.05)}
+.hist-send-all:active{transform:scale(.97)}
+.hist-send-all:disabled{opacity:.55;cursor:default;transform:none}
+.hist-hdr-right{font-size:11px;color:var(--tx2);cursor:pointer}
 .hist-hdr-right:hover{color:var(--tx)}
 .hist-item{
   display:flex;align-items:center;gap:10px;padding:11px 14px;
@@ -1151,7 +1162,14 @@ body.retirada-aberta{overflow:hidden}
 <div class="hist-section">
   <div class="hist-hdr">
     <span>Últimos registros</span>
-    <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
+    <div class="hist-hdr-actions">
+      <button type="button" class="hist-send-all" id="histSendAllBtn" onclick="reenviarPendentes()" title="Enviar todos os registros que ainda estão só neste aparelho">
+        <i class="ti ti-cloud-upload"></i>
+        <span>Enviar todos</span>
+        <b id="histSendAllCount">0</b>
+      </button>
+      <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
+    </div>
   </div>
   <div id="histList"></div>
 </div>
@@ -1331,6 +1349,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.31 FRONT — redução de delay: endpoint consolidado + outbox + scanner sem esperas artificiais.
 // v6.32 RETIRADAS — tela interna + consulta por data + exportação PDF.
 // v6.33 PROTEÇÃO DE ENVIO — diferencia SÓ NO APARELHO de CONFIRMADO NA PLANILHA.
+// v6.34 ENVIAR TODOS — botão no topo de Últimos registros usa a mesma outbox segura.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -2788,8 +2807,10 @@ async function reenviarPendentes() {
 
   var bannerBtn = document.getElementById('pendBannerBtn');
   var settingsBtn = document.getElementById('resendBtn');
-  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = true; });
+  var histSendAllBtn = document.getElementById('histSendAllBtn');
+  [bannerBtn, settingsBtn, histSendAllBtn].forEach(function(b) { if (b) b.disabled = true; });
   if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando…';
+  if (histSendAllBtn) histSendAllBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando todos…';
 
   var antes = loadPend().length;
   var r = await processarFilaEnvio(true);
@@ -2800,8 +2821,11 @@ async function reenviarPendentes() {
   else if (enviados) mostrarToast(enviados + ' enviado(s), ' + depois + ' ainda pendente(s)', 'warn');
   else mostrarToast('Não foi possível enviar — verifique a conexão/servidor', 'err');
 
-  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = false; });
+  [bannerBtn, settingsBtn, histSendAllBtn].forEach(function(b) { if (b) b.disabled = false; });
   if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar agora';
+  if (histSendAllBtn) {
+    histSendAllBtn.innerHTML = '<i class="ti ti-cloud-upload"></i><span>Enviar todos</span><b id="histSendAllCount">'+loadPend().length+'</b>';
+  }
   atualizarPendUI();
 }
 
@@ -2817,6 +2841,13 @@ function atualizarPendUI() {
   if (banner) banner.classList.toggle('show', n > 0);
   var bannerCount = document.getElementById('pendBannerCount');
   if (bannerCount) bannerCount.textContent = n;
+
+  // Botão "Enviar todos" no topo da lista de últimos registros.
+  var histSendAllBtn = document.getElementById('histSendAllBtn');
+  var histSendAllCount = document.getElementById('histSendAllCount');
+  if (histSendAllBtn) histSendAllBtn.classList.toggle('show', n > 0);
+  if (histSendAllCount) histSendAllCount.textContent = n;
+
   document.body.classList.toggle('tem-registros-nao-confirmados', n > 0);
   if (banner) banner.setAttribute('aria-label', n > 0 ? (n + ' registro(s) ainda não confirmados na planilha') : 'Nenhum registro pendente');
 }
