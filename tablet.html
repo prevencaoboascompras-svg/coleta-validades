@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#fcfbf8">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="AURA">
 <title>AURA</title>
@@ -992,7 +993,7 @@ body.retirada-aberta{overflow:hidden}
 <!-- HEADER -->
 <header class="hdr">
   <div>
-    <div class="hdr-title">Coleta de <span>Validades</span></div>
+    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.5</small></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
@@ -1180,7 +1181,7 @@ body.retirada-aberta{overflow:hidden}
       <button type="button" class="hist-send-all" id="histSendAllBtn" onclick="reenviarPendentes()" title="Enviar todos os registros que ainda estão só neste aparelho">
         <i class="ti ti-cloud-upload"></i>
         <span>Enviar todos</span>
-        <b id="histSendAllCount">0</b>
+        <b id="histSendAllCount" style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#1b1200;color:#ffb340;display:inline-flex;align-items:center;justify-content:center">0</b>
       </button>
       <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
     </div>
@@ -1365,6 +1366,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.33 PROTEÇÃO DE ENVIO — diferencia SÓ NO APARELHO de CONFIRMADO NA PLANILHA.
 // v6.34 ENVIAR TODOS — botão no topo de Últimos registros usa a mesma outbox segura.
 // v6.35 REENVIO ROBUSTO — botão por item + Enviar todos continua após erro + motivo visível.
+// v6.36 DEPLOY CHECK — badge v1.5 + diagnóstico + arquivo final já nomeado tablet.html.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -3488,6 +3490,33 @@ function mostrarToast(msg, tipo) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
+
+function auraDiagnosticoEnvio(){
+  var cfg=loadCfg();
+  var pend=loadPend();
+  var hist=loadHist();
+  var info={
+    build:'AURA Coleta Tablet v1.5',
+    api:cfg.url||'',
+    online:navigator.onLine,
+    pendentes:pend.length,
+    primeiroQid:pend[0]&&pend[0]._qid||'',
+    primeiroCodigo:pend[0]&&pend[0].codigo||'',
+    historico:hist.length,
+    enviarTodosExiste:!!document.getElementById('histSendAllBtn'),
+    reenvioIndividual:typeof reenviarPendenteIndividual==='function'
+  };
+  console.table(info);
+  return info;
+}
+
+console.log('AURA COLETA TABLET v1.5 CARREGADO');
+setTimeout(function(){
+  try{
+    var d=auraDiagnosticoEnvio();
+    console.log('Pendentes locais:',d.pendentes,'| API:',d.api);
+  }catch(e){}
+},700);
 
 // ═══════════════════════════════════════════════════════════
 //  ONLINE / OFFLINE
