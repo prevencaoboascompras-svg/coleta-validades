@@ -109,6 +109,20 @@ body{
 .hist-status-badge.ok{color:#35c47c;border-color:rgba(53,196,124,.45);background:rgba(53,196,124,.10)}
 .hist-status-badge.pend{color:#ffb340;border-color:rgba(255,159,10,.55);background:rgba(255,159,10,.12)}
 .hist-status-badge.err{color:var(--err);border-color:rgba(220,53,69,.45);background:rgba(220,53,69,.10)}
+.hist-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.hist-retry{
+  min-width:86px;height:32px;padding:0 8px;border:1px solid rgba(255,159,10,.55);
+  border-radius:8px;background:rgba(255,159,10,.12);color:#ffb340;
+  font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.025em;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px
+}
+.hist-retry:hover{background:rgba(255,159,10,.20)}
+.hist-retry:disabled{opacity:.55;cursor:default}
+.hist-error{
+  margin-top:6px;padding:6px 7px;border-radius:7px;
+  background:rgba(220,53,69,.09);border:1px solid rgba(220,53,69,.25);
+  color:#ff8d98;font-size:9px;line-height:1.3;overflow-wrap:anywhere
+}
 @media(max-width:420px){
   .pend-banner{top:70px;margin:0 10px;padding:10px;gap:8px;align-items:flex-start}
   .pend-banner-btn{padding:0 9px;font-size:10px}
@@ -1350,6 +1364,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.32 RETIRADAS — tela interna + consulta por data + exportação PDF.
 // v6.33 PROTEÇÃO DE ENVIO — diferencia SÓ NO APARELHO de CONFIRMADO NA PLANILHA.
 // v6.34 ENVIAR TODOS — botão no topo de Últimos registros usa a mesma outbox segura.
+// v6.35 REENVIO ROBUSTO — botão por item + Enviar todos continua após erro + motivo visível.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -2666,6 +2681,7 @@ async function enviar(dados) {
   if (!cfg.url) throw new Error('sem-url');
   if (!navigator.onLine) throw new Error('offline');
 
+  console.log('Enviando validade para API:', cfg.url);
   var resp = await fetchComTimeout(cfg.url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
@@ -2779,6 +2795,7 @@ async function processarFilaEnvio(modoManual) {
         ok++;
       } catch (e) {
         fail = loadPend().length;
+        _atualizarHistoricoErro_(item._qid,e);
         console.warn('Fila de envio pausada: ' + (e && e.message ? e.message : e));
         break;
       }
@@ -2800,33 +2817,121 @@ async function processarFilaEnvio(modoManual) {
   return { ok: ok, fail: fail };
 }
 
-async function reenviarPendentes() {
-  var arr = loadPend();
-  if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return; }
-  if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return; }
-
-  var bannerBtn = document.getElementById('pendBannerBtn');
-  var settingsBtn = document.getElementById('resendBtn');
-  var histSendAllBtn = document.getElementById('histSendAllBtn');
-  [bannerBtn, settingsBtn, histSendAllBtn].forEach(function(b) { if (b) b.disabled = true; });
-  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando…';
-  if (histSendAllBtn) histSendAllBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando todos…';
-
-  var antes = loadPend().length;
-  var r = await processarFilaEnvio(true);
-  var depois = loadPend().length;
-  var enviados = Math.max(0, antes - depois);
-
-  if (!depois) mostrarToast(enviados + ' registro(s) enviado(s) com sucesso!', 'ok');
-  else if (enviados) mostrarToast(enviados + ' enviado(s), ' + depois + ' ainda pendente(s)', 'warn');
-  else mostrarToast('Não foi possível enviar — verifique a conexão/servidor', 'err');
-
-  [bannerBtn, settingsBtn, histSendAllBtn].forEach(function(b) { if (b) b.disabled = false; });
-  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar agora';
-  if (histSendAllBtn) {
-    histSendAllBtn.innerHTML = '<i class="ti ti-cloud-upload"></i><span>Enviar todos</span><b id="histSendAllCount">'+loadPend().length+'</b>';
+function _erroEnvioLegivel_(e){
+  var msg=String(e&&e.message?e.message:e||'Erro desconhecido');
+  if(/Failed to fetch|NetworkError|Load failed|fetch/i.test(msg)){
+    return 'Falha de rede/CORS ao acessar o Apps Script';
   }
-  atualizarPendUI();
+  if(/tempo|timeout/i.test(msg))return 'Tempo esgotado ao aguardar o Apps Script';
+  if(/^http-\d+/i.test(msg))return 'Servidor respondeu '+msg.replace(/^http-/i,'HTTP ');
+  return msg;
+}
+
+function _atualizarHistoricoErro_(qid, erro){
+  if(!qid)return;
+  var arr=loadHist(), mudou=false;
+  for(var i=0;i<arr.length;i++){
+    if(arr[i]&&arr[i]._qid===qid){
+      arr[i].status='err';
+      arr[i].erroEnvio=_erroEnvioLegivel_(erro);
+      mudou=true;
+      break;
+    }
+  }
+  if(mudou){ saveHist(arr); renderHistorico(); }
+}
+
+function _limparHistoricoErro_(qid){
+  if(!qid)return;
+  var arr=loadHist(), mudou=false;
+  for(var i=0;i<arr.length;i++){
+    if(arr[i]&&arr[i]._qid===qid){
+      if(arr[i].erroEnvio){ delete arr[i].erroEnvio; mudou=true; }
+      break;
+    }
+  }
+  if(mudou)saveHist(arr);
+}
+
+async function reenviarPendenteIndividual(qid){
+  if(!qid)return;
+  if(!navigator.onLine){mostrarToast('Sem conexão com a internet','err');return;}
+
+  var item=loadPend().find(function(x){return x&&x._qid===qid;});
+  if(!item){
+    mostrarToast('Este registro não está mais pendente.','ok');
+    atualizarPendUI(); renderHistorico(); return;
+  }
+
+  var btn=document.querySelector('[data-retry-qid="'+qid+'"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Enviando…';}
+
+  try{
+    await enviar(item);
+    _removerPendente_(qid);
+    _limparHistoricoErro_(qid);
+    _atualizarHistoricoStatus_(qid,'ok');
+    mostrarToast('CONFIRMADO NA PLANILHA ✓','ok');
+  }catch(e){
+    _atualizarHistoricoErro_(qid,e);
+    mostrarToast('Não enviado: '+_erroEnvioLegivel_(e),'err');
+    console.warn('Reenvio individual falhou',qid,e);
+  }finally{
+    atualizarPendUI();
+    renderHistorico();
+  }
+}
+
+async function reenviarPendentes(){
+  var arr=loadPend().slice();
+  if(!arr.length){mostrarToast('Nenhum registro pendente','ok');return;}
+  if(!navigator.onLine){mostrarToast('Ainda sem conexão','err');return;}
+
+  var bannerBtn=document.getElementById('pendBannerBtn');
+  var settingsBtn=document.getElementById('resendBtn');
+  var histSendAllBtn=document.getElementById('histSendAllBtn');
+  [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=true;});
+  if(bannerBtn)bannerBtn.innerHTML='<i class="ti ti-loader-2"></i> Enviando…';
+  if(histSendAllBtn)histSendAllBtn.innerHTML='<i class="ti ti-loader-2"></i> Enviando todos…';
+
+  var enviados=0, falharam=0;
+  try{
+    var filaAtual=loadPend(), migrou=false;
+    filaAtual.forEach(function(x){if(x&&!x._qid){x._qid=_novoQid_();migrou=true;}});
+    if(migrou)savePend(filaAtual);
+    arr=loadPend().slice();
+
+    for(var i=0;i<arr.length;i++){
+      var item=arr[i];
+      if(!item||!item._qid)continue;
+      try{
+        await enviar(item);
+        _removerPendente_(item._qid);
+        _limparHistoricoErro_(item._qid);
+        _atualizarHistoricoStatus_(item._qid,'ok');
+        enviados++;
+      }catch(e){
+        _atualizarHistoricoErro_(item._qid,e);
+        falharam++;
+        console.warn('Enviar todos: item falhou',item._qid,e);
+      }
+    }
+  }finally{
+    [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=false;});
+    if(bannerBtn)bannerBtn.innerHTML='<i class="ti ti-upload"></i> Reenviar agora';
+    atualizarPendUI();
+    renderHistorico();
+  }
+
+  var restante=loadPend().length;
+  if(!restante){
+    mostrarToast(enviados+' registro(s) CONFIRMADOS NA PLANILHA ✓','ok');
+  }else if(enviados){
+    mostrarToast(enviados+' confirmado(s); '+restante+' ainda no aparelho','warn');
+  }else{
+    var primeiroErro=(loadHist().find(function(x){return x&&x.status==='err'&&x.erroEnvio;})||{}).erroEnvio;
+    mostrarToast('Nenhum foi enviado'+(primeiroErro?': '+primeiroErro:''),'err');
+  }
 }
 
 function atualizarPendUI() {
@@ -2909,6 +3014,13 @@ function renderHistorico() {
   list.innerHTML = arr.slice(0, 10).map(function(item) {
     var emoji  = SETOR_EMOJI[item.setor] || '<i class="ti ti-package"></i>';
     var status = item.status === 'ok' ? '<div class="hist-status-badge ok"><i class="ti ti-circle-check"></i> Confirmado<br>na planilha</div>' : item.status === 'pend' ? '<div class="hist-status-badge pend"><i class="ti ti-device-mobile"></i> Só no aparelho</div>' : '<div class="hist-status-badge err"><i class="ti ti-circle-x"></i> Erro de envio</div>';
+    var aindaPendente=!!(item._qid&&loadPend().some(function(p){return p&&p._qid===item._qid;}));
+    var retryHtml=aindaPendente
+      ? '<button type="button" class="hist-retry" data-retry-qid="'+item._qid+'" onclick="event.stopPropagation();reenviarPendenteIndividual(\''+item._qid+'\')"><i class="ti ti-upload"></i> Reenviar</button>'
+      : '';
+    var erroHtml=item.erroEnvio
+      ? '<div class="hist-error"><b>Motivo:</b> '+String(item.erroEnvio).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})+'</div>'
+      : '';
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
     var desc   = item.descricao ? '<div class="hist-desc">' + item.descricao + '</div>' : '';
@@ -2921,7 +3033,8 @@ function renderHistorico() {
       +   desc
       +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;' + qtdTxt + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
       + '</div>'
-      + '<div class="hist-status">' + status + '</div>'
+      + '<div class="hist-actions">' + status + retryHtml + '</div>'
+      + erroHtml
       + '</div>';
   }).join('');
 }
