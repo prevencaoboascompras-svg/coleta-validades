@@ -119,6 +119,18 @@ body{
 }
 .hist-retry:hover{background:rgba(255,159,10,.20)}
 .hist-retry:disabled{opacity:.55;cursor:default}
+.hist-recover{
+  min-width:92px;height:32px;padding:0 8px;border:1px solid rgba(255,214,10,.65);
+  border-radius:8px;background:rgba(255,214,10,.13);color:#ffd60a;
+  font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.025em;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px
+}
+.hist-recover:hover{background:rgba(255,214,10,.22)}
+.hist-orphan{
+  min-width:110px;padding:5px 7px;border-radius:8px;border:1px solid rgba(255,214,10,.45);
+  font-size:8px;font-weight:900;line-height:1.15;text-align:center;text-transform:uppercase;
+  letter-spacing:.03em;color:#ffd60a;background:rgba(255,214,10,.10)
+}
 .hist-error{
   margin-top:6px;padding:6px 7px;border-radius:7px;
   background:rgba(220,53,69,.09);border:1px solid rgba(220,53,69,.25);
@@ -993,7 +1005,7 @@ body.retirada-aberta{overflow:hidden}
 <!-- HEADER -->
 <header class="hdr">
   <div>
-    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.5</small></div>
+    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.6</small></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
@@ -1367,6 +1379,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.34 ENVIAR TODOS — botão no topo de Últimos registros usa a mesma outbox segura.
 // v6.35 REENVIO ROBUSTO — botão por item + Enviar todos continua após erro + motivo visível.
 // v6.36 DEPLOY CHECK — badge v1.5 + diagnóstico + arquivo final já nomeado tablet.html.
+// v6.37 RECOVERY — histórico pendente sem outbox pode ser reconstruído e reenviado.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -2952,8 +2965,18 @@ function atualizarPendUI() {
   // Botão "Enviar todos" no topo da lista de últimos registros.
   var histSendAllBtn = document.getElementById('histSendAllBtn');
   var histSendAllCount = document.getElementById('histSendAllCount');
-  if (histSendAllBtn) histSendAllBtn.classList.toggle('show', n > 0);
-  if (histSendAllCount) histSendAllCount.textContent = n;
+  var recuperaveis = contarHistoricoRecuperavel_();
+  var totalAcao = n + recuperaveis;
+  if (histSendAllBtn) {
+    histSendAllBtn.classList.toggle('show', totalAcao > 0);
+    histSendAllBtn.onclick = enviarTodosComRecuperacao_;
+    histSendAllBtn.title = recuperaveis > 0
+      ? ('Recuperar '+recuperaveis+' registro(s) do histórico e enviar todos')
+      : 'Enviar todos os registros pendentes';
+    var label=histSendAllBtn.querySelector('span');
+    if(label)label.textContent = recuperaveis > 0 ? 'Recuperar e enviar' : 'Enviar todos';
+  }
+  if (histSendAllCount) histSendAllCount.textContent = totalAcao;
 
   document.body.classList.toggle('tem-registros-nao-confirmados', n > 0);
   if (banner) banner.setAttribute('aria-label', n > 0 ? (n + ' registro(s) ainda não confirmados na planilha') : 'Nenhum registro pendente');
@@ -3006,6 +3029,127 @@ function registrarHistorico(dados, status) {
   saveHist(arr);
 }
 
+function _hashTextoRecuperacao_(s){
+  var h=2166136261;
+  s=String(s||'');
+  for(var i=0;i<s.length;i++){
+    h^=s.charCodeAt(i);
+    h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);
+  }
+  return (h>>>0).toString(36);
+}
+
+function _qidRecuperacaoHistorico_(item){
+  if(item&&item._qid)return item._qid;
+  var base=[
+    item&&item.ts||'',
+    item&&item.codigo||'',
+    item&&item.validade||'',
+    item&&item.setor||'',
+    item&&item.quantidade||'',
+    item&&item.unidade||''
+  ].join('|');
+  return 'rec_'+_hashTextoRecuperacao_(base);
+}
+
+function _historicoEstaNaFila_(item){
+  if(!item)return false;
+  var qid=item._qid||'';
+  if(qid && loadPend().some(function(p){return p&&p._qid===qid;}))return true;
+
+  // Compatibilidade com histórico antigo sem qid: usa assinatura dos dados.
+  return loadPend().some(function(p){
+    return p &&
+      String(p.codigo||'')===String(item.codigo||'') &&
+      String(p.validade||'')===String(item.validade||'') &&
+      String(p.setor||'')===String(item.setor||'') &&
+      Number(p.quantidade||0)===Number(item.quantidade||0) &&
+      String(p.ts||'')===String(item.ts||'');
+  });
+}
+
+function _historicoRecuperavel_(item){
+  if(!item)return false;
+  if(item.status!=='pend' && item.status!=='err')return false;
+  return !_historicoEstaNaFila_(item);
+}
+
+function contarHistoricoRecuperavel_(){
+  return loadHist().filter(_historicoRecuperavel_).length;
+}
+
+function recuperarHistoricoParaFila_(item){
+  if(!item)return null;
+  if(_historicoEstaNaFila_(item))return item._qid||null;
+
+  var cfg=loadCfg();
+  var qid=_qidRecuperacaoHistorico_(item);
+  var dados={
+    _qid:qid,
+    ts:item.ts||new Date().toISOString(),
+    codigo:item.codigo||'',
+    descricao:item.descricao||'',
+    validade:item.validade||'',
+    setor:item.setor||'',
+    quantidade:Number(item.quantidade||1),
+    unidade:item.unidade||'un',
+    email:item.email||cfg.email||''
+  };
+
+  salvarPendente(dados);
+
+  // Atualiza o próprio histórico com o qid estável para próximos reenvios.
+  var hist=loadHist(), mudou=false;
+  for(var i=0;i<hist.length;i++){
+    var h=hist[i];
+    if(h===item ||
+       (String(h.ts||'')===String(item.ts||'') &&
+        String(h.codigo||'')===String(item.codigo||'') &&
+        String(h.validade||'')===String(item.validade||'') &&
+        String(h.setor||'')===String(item.setor||'') &&
+        Number(h.quantidade||0)===Number(item.quantidade||0))){
+      h._qid=qid;
+      h.status='pend';
+      delete h.erroEnvio;
+      mudou=true;
+      break;
+    }
+  }
+  if(mudou)saveHist(hist);
+  return qid;
+}
+
+async function recuperarEReenviarHistoricoItem_(idx){
+  var hist=loadHist();
+  var item=hist[idx];
+  if(!item){mostrarToast('Registro do histórico não encontrado.','err');return;}
+
+  var qid=recuperarHistoricoParaFila_(item);
+  if(!qid){mostrarToast('Não consegui recuperar este registro.','err');return;}
+
+  mostrarToast('Registro recuperado para a fila. Enviando…','warn');
+  renderHistorico();
+  atualizarPendUI();
+  await reenviarPendenteIndividual(qid);
+}
+
+async function enviarTodosComRecuperacao_(){
+  var hist=loadHist();
+  var rec=0;
+  hist.forEach(function(item){
+    if(_historicoRecuperavel_(item)){
+      if(recuperarHistoricoParaFila_(item))rec++;
+    }
+  });
+
+  if(rec>0){
+    mostrarToast(rec+' registro(s) recuperado(s) do histórico para a fila.','warn');
+  }
+  atualizarPendUI();
+  renderHistorico();
+  await reenviarPendentes();
+}
+
 function renderHistorico() {
   var arr  = loadHist();
   var list = document.getElementById('histList');
@@ -3013,13 +3157,19 @@ function renderHistorico() {
     list.innerHTML = '<div class="hist-empty">Nenhum registro nesta sessão</div>';
     return;
   }
-  list.innerHTML = arr.slice(0, 10).map(function(item) {
+  list.innerHTML = arr.slice(0, 10).map(function(item,idx) {
     var emoji  = SETOR_EMOJI[item.setor] || '<i class="ti ti-package"></i>';
     var status = item.status === 'ok' ? '<div class="hist-status-badge ok"><i class="ti ti-circle-check"></i> Confirmado<br>na planilha</div>' : item.status === 'pend' ? '<div class="hist-status-badge pend"><i class="ti ti-device-mobile"></i> Só no aparelho</div>' : '<div class="hist-status-badge err"><i class="ti ti-circle-x"></i> Erro de envio</div>';
-    var aindaPendente=!!(item._qid&&loadPend().some(function(p){return p&&p._qid===item._qid;}));
+    var aindaPendente=_historicoEstaNaFila_(item);
+    var recuperavel=_historicoRecuperavel_(item);
+    if(recuperavel){
+      status='<div class="hist-orphan"><i class="ti ti-history"></i> Histórico sem fila<br>recuperável</div>';
+    }
     var retryHtml=aindaPendente
       ? '<button type="button" class="hist-retry" data-retry-qid="'+item._qid+'" onclick="event.stopPropagation();reenviarPendenteIndividual(\''+item._qid+'\')"><i class="ti ti-upload"></i> Reenviar</button>'
-      : '';
+      : (recuperavel
+          ? '<button type="button" class="hist-recover" onclick="event.stopPropagation();recuperarEReenviarHistoricoItem_('+idx+')"><i class="ti ti-restore"></i> Recuperar</button>'
+          : '');
     var erroHtml=item.erroEnvio
       ? '<div class="hist-error"><b>Motivo:</b> '+String(item.erroEnvio).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})+'</div>'
       : '';
@@ -3496,13 +3646,14 @@ function auraDiagnosticoEnvio(){
   var pend=loadPend();
   var hist=loadHist();
   var info={
-    build:'AURA Coleta Tablet v1.5',
+    build:'AURA Coleta Tablet v1.6',
     api:cfg.url||'',
     online:navigator.onLine,
     pendentes:pend.length,
     primeiroQid:pend[0]&&pend[0]._qid||'',
     primeiroCodigo:pend[0]&&pend[0].codigo||'',
     historico:hist.length,
+    historicoRecuperavel:contarHistoricoRecuperavel_(),
     enviarTodosExiste:!!document.getElementById('histSendAllBtn'),
     reenvioIndividual:typeof reenviarPendenteIndividual==='function'
   };
@@ -3510,7 +3661,7 @@ function auraDiagnosticoEnvio(){
   return info;
 }
 
-console.log('AURA COLETA TABLET v1.5 CARREGADO');
+console.log('AURA COLETA TABLET v1.6 CARREGADO');
 setTimeout(function(){
   try{
     var d=auraDiagnosticoEnvio();
