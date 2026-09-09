@@ -70,24 +70,50 @@ body{
 }
 .pend-dot.show{display:block}
 
-/* ── BANNER DE PENDENTES (v-fix: aviso explícito na tela principal, não
-   só a bolinha escondida no ícone de configurações) ── */
+/* ── PROTEÇÃO DE ENVIO — enquanto existir item na outbox, deixa claro
+   que o dado está APENAS NO APARELHO e ainda não foi confirmado na planilha. ── */
 .pend-banner{
-  display:none;margin:0 16px 0;padding:12px 14px;border-radius:var(--r);
-  background:rgba(186,117,23,.15);border:1px solid var(--warn);
-  align-items:center;gap:10px;
+  display:none;position:sticky;top:72px;z-index:46;
+  margin:0 16px;padding:12px 13px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(125,38,13,.98),rgba(92,24,12,.98));
+  border:2px solid #ff9f0a;box-shadow:0 7px 22px rgba(0,0,0,.28);
+  align-items:center;gap:11px;
 }
 .pend-banner.show{display:flex}
-.pend-banner-icon{font-size:20px;color:var(--warn);flex-shrink:0}
-.pend-banner-text{flex:1;font-size:13px;color:var(--tx);line-height:1.4}
-.pend-banner-text b{color:var(--warn)}
+.pend-banner-icon{
+  width:38px;height:38px;border-radius:50%;font-size:22px;color:#1c1200;
+  background:#ff9f0a;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.pend-banner-text{flex:1;font-size:12px;color:#fff;line-height:1.35;min-width:0}
+.pend-banner-title{
+  display:block;font-size:12px;font-weight:900;letter-spacing:.055em;
+  color:#ffd27a;text-transform:uppercase;margin-bottom:2px;
+}
+.pend-banner-text b{color:#fff;font-weight:850}
+.pend-banner-sub{display:block;font-size:10.5px;color:rgba(255,255,255,.83);margin-top:2px}
 .pend-banner-btn{
-  flex-shrink:0;height:36px;padding:0 14px;background:var(--warn);color:#1a1200;
-  font-weight:700;font-size:13px;border:none;border-radius:8px;cursor:pointer;
-  display:flex;align-items:center;gap:6px;white-space:nowrap;
+  flex-shrink:0;min-height:40px;padding:0 13px;background:#ff9f0a;color:#1a1200;
+  font-weight:850;font-size:12px;border:none;border-radius:9px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
 }
 .pend-banner-btn:active{opacity:.8}
 .pend-banner-btn:disabled{opacity:.6;cursor:default}
+
+/* Histórico: não depender apenas do ícone. O texto elimina a dúvida de status. */
+.hist-status{margin-left:auto;flex-shrink:0}
+.hist-status-badge{
+  min-width:92px;padding:5px 7px;border-radius:8px;border:1px solid var(--bd);
+  font-size:9px;font-weight:850;line-height:1.15;text-align:center;text-transform:uppercase;
+  letter-spacing:.035em;display:flex;align-items:center;justify-content:center;gap:4px;
+}
+.hist-status-badge.ok{color:#35c47c;border-color:rgba(53,196,124,.45);background:rgba(53,196,124,.10)}
+.hist-status-badge.pend{color:#ffb340;border-color:rgba(255,159,10,.55);background:rgba(255,159,10,.12)}
+.hist-status-badge.err{color:var(--err);border-color:rgba(220,53,69,.45);background:rgba(220,53,69,.10)}
+@media(max-width:420px){
+  .pend-banner{top:70px;margin:0 10px;padding:10px;gap:8px;align-items:flex-start}
+  .pend-banner-btn{padding:0 9px;font-size:10px}
+  .hist-status-badge{min-width:78px;font-size:8px;padding:5px}
+}
 
 /* ── SCANNER WRAPPER ── */
 .scan-wrap{
@@ -962,15 +988,17 @@ body.retirada-aberta{overflow:hidden}
   </div>
 </header>
 
-<!-- BANNER DE REGISTROS PENDENTES (v-fix: aviso explícito, visível direto
-     na tela principal, em vez de só a bolinha no ícone de configurações) -->
-<div class="pend-banner" id="pendBanner">
-  <i class="ti ti-cloud-off pend-banner-icon"></i>
+<!-- PROTEÇÃO DE ENVIO: enquanto houver pendência, não deixa o operador
+     confundir "salvo no aparelho" com "confirmado na planilha". -->
+<div class="pend-banner" id="pendBanner" role="alert" aria-live="assertive">
+  <div class="pend-banner-icon"><i class="ti ti-device-mobile-exclamation"></i></div>
   <div class="pend-banner-text">
-    <b><span id="pendBannerCount">0</span> registro(s)</b> salvos localmente sem enviar — sem conexão ou erro ao salvar.
+    <span class="pend-banner-title">Não enviado à planilha</span>
+    <b><span id="pendBannerCount">0</span> registro(s) estão salvos somente neste aparelho.</b>
+    <span class="pend-banner-sub">Só considere concluído quando o item aparecer como “CONFIRMADO NA PLANILHA”.</span>
   </div>
   <button class="pend-banner-btn" id="pendBannerBtn" onclick="reenviarPendentes()">
-    <i class="ti ti-upload"></i> Reenviar
+    <i class="ti ti-upload"></i> Reenviar agora
   </button>
 </div>
 
@@ -1302,6 +1330,7 @@ body.retirada-aberta{overflow:hidden}
 // ═══════════════════════════════════════════════════════════
 // v6.31 FRONT — redução de delay: endpoint consolidado + outbox + scanner sem esperas artificiais.
 // v6.32 RETIRADAS — tela interna + consulta por data + exportação PDF.
+// v6.33 PROTEÇÃO DE ENVIO — diferencia SÓ NO APARELHO de CONFIRMADO NA PLANILHA.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -2608,7 +2637,7 @@ function registrar() {
   registrarHistorico(dados, 'pend');
 
   // Libera a próxima coleta imediatamente. A fila é processada em background.
-  mostrarToast(navigator.onLine ? 'Registro salvo — enviando…' : 'Registro salvo localmente — sem conexão', navigator.onLine ? 'ok' : 'warn');
+  mostrarToast(navigator.onLine ? 'SALVO NO APARELHO — aguardando confirmação da planilha…' : 'SALVO SOMENTE NO APARELHO — sem conexão', 'warn');
   resetAposEnvio();
   processarFilaEnvio(false);
 }
@@ -2739,6 +2768,16 @@ async function processarFilaEnvio(modoManual) {
     _filaEnvioAtiva = false;
     atualizarPendUI();
   }
+
+  // Em envio automático, só agora — depois da resposta positiva do backend —
+  // mostramos que o dado realmente chegou à planilha.
+  if (!modoManual && ok > 0) {
+    if (loadPend().length === 0) {
+      mostrarToast(ok === 1 ? 'CONFIRMADO NA PLANILHA ✓' : (ok + ' REGISTROS CONFIRMADOS NA PLANILHA ✓'), 'ok');
+    } else {
+      mostrarToast(ok + ' confirmado(s); ' + loadPend().length + ' ainda só no aparelho', 'warn');
+    }
+  }
   return { ok: ok, fail: fail };
 }
 
@@ -2762,7 +2801,7 @@ async function reenviarPendentes() {
   else mostrarToast('Não foi possível enviar — verifique a conexão/servidor', 'err');
 
   [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = false; });
-  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar';
+  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar agora';
   atualizarPendUI();
 }
 
@@ -2778,6 +2817,8 @@ function atualizarPendUI() {
   if (banner) banner.classList.toggle('show', n > 0);
   var bannerCount = document.getElementById('pendBannerCount');
   if (bannerCount) bannerCount.textContent = n;
+  document.body.classList.toggle('tem-registros-nao-confirmados', n > 0);
+  if (banner) banner.setAttribute('aria-label', n > 0 ? (n + ' registro(s) ainda não confirmados na planilha') : 'Nenhum registro pendente');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2836,7 +2877,7 @@ function renderHistorico() {
   }
   list.innerHTML = arr.slice(0, 10).map(function(item) {
     var emoji  = SETOR_EMOJI[item.setor] || '<i class="ti ti-package"></i>';
-    var status = item.status === 'ok' ? '<i class="ti ti-circle-check"></i>' : item.status === 'pend' ? '<i class="ti ti-loader-2"></i>' : '<i class="ti ti-circle-x"></i>';
+    var status = item.status === 'ok' ? '<div class="hist-status-badge ok"><i class="ti ti-circle-check"></i> Confirmado<br>na planilha</div>' : item.status === 'pend' ? '<div class="hist-status-badge pend"><i class="ti ti-device-mobile"></i> Só no aparelho</div>' : '<div class="hist-status-badge err"><i class="ti ti-circle-x"></i> Erro de envio</div>';
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
     var desc   = item.descricao ? '<div class="hist-desc">' + item.descricao + '</div>' : '';
