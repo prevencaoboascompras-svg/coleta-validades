@@ -1005,7 +1005,7 @@ body.retirada-aberta{overflow:hidden}
 <!-- HEADER -->
 <header class="hdr">
   <div>
-    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.6</small></div>
+    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.7</small></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
@@ -1380,6 +1380,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.35 REENVIO ROBUSTO — botão por item + Enviar todos continua após erro + motivo visível.
 // v6.36 DEPLOY CHECK — badge v1.5 + diagnóstico + arquivo final já nomeado tablet.html.
 // v6.37 RECOVERY — histórico pendente sem outbox pode ser reconstruído e reenviado.
+// v6.38 RECOVERY DIRETO — envia do histórico primeiro; outbox é fallback se o POST falhar.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -3078,77 +3079,183 @@ function contarHistoricoRecuperavel_(){
   return loadHist().filter(_historicoRecuperavel_).length;
 }
 
-function recuperarHistoricoParaFila_(item){
-  if(!item)return null;
-  if(_historicoEstaNaFila_(item))return item._qid||null;
-
+function _dadosRecuperadosDoHistorico_(item){
   var cfg=loadCfg();
-  var qid=_qidRecuperacaoHistorico_(item);
-  var dados={
-    _qid:qid,
-    ts:item.ts||new Date().toISOString(),
-    codigo:item.codigo||'',
-    descricao:item.descricao||'',
-    validade:item.validade||'',
-    setor:item.setor||'',
-    quantidade:Number(item.quantidade||1),
-    unidade:item.unidade||'un',
-    email:item.email||cfg.email||''
+  return {
+    _qid:_qidRecuperacaoHistorico_(item),
+    ts:item&&item.ts||new Date().toISOString(),
+    codigo:item&&item.codigo||'',
+    descricao:item&&item.descricao||'',
+    validade:item&&item.validade||'',
+    setor:item&&item.setor||'',
+    quantidade:Number(item&&item.quantidade||1),
+    unidade:item&&item.unidade||'un',
+    email:item&&item.email||cfg.email||''
   };
+}
 
-  salvarPendente(dados);
-
-  // Atualiza o próprio histórico com o qid estável para próximos reenvios.
+function _atualizarHistoricoRecuperado_(item, dados, status, erro){
   var hist=loadHist(), mudou=false;
   for(var i=0;i<hist.length;i++){
     var h=hist[i];
-    if(h===item ||
-       (String(h.ts||'')===String(item.ts||'') &&
-        String(h.codigo||'')===String(item.codigo||'') &&
-        String(h.validade||'')===String(item.validade||'') &&
-        String(h.setor||'')===String(item.setor||'') &&
-        Number(h.quantidade||0)===Number(item.quantidade||0))){
-      h._qid=qid;
-      h.status='pend';
-      delete h.erroEnvio;
+    var mesmo = h===item ||
+      (String(h.ts||'')===String(item&&item.ts||'') &&
+       String(h.codigo||'')===String(item&&item.codigo||'') &&
+       String(h.validade||'')===String(item&&item.validade||'') &&
+       String(h.setor||'')===String(item&&item.setor||'') &&
+       Number(h.quantidade||0)===Number(item&&item.quantidade||0));
+    if(mesmo){
+      h._qid=dados._qid;
+      h.status=status;
+      if(erro) h.erroEnvio=_erroEnvioLegivel_(erro);
+      else delete h.erroEnvio;
       mudou=true;
       break;
     }
   }
   if(mudou)saveHist(hist);
-  return qid;
 }
 
+// Recuperação v1.7:
+// envia DIRETAMENTE a partir do histórico. A fila local vira somente
+// fallback caso o POST falhe. Assim não dependemos de salvar na outbox
+// e logo em seguida reencontrar o item para poder enviar.
 async function recuperarEReenviarHistoricoItem_(idx){
   var hist=loadHist();
   var item=hist[idx];
   if(!item){mostrarToast('Registro do histórico não encontrado.','err');return;}
+  if(!_historicoRecuperavel_(item)){
+    mostrarToast('Este registro não precisa mais de recuperação.','ok');
+    renderHistorico(); atualizarPendUI(); return;
+  }
+  if(!navigator.onLine){
+    var dadosOffline=_dadosRecuperadosDoHistorico_(item);
+    salvarPendente(dadosOffline);
+    _atualizarHistoricoRecuperado_(item,dadosOffline,'pend',null);
+    mostrarToast('Sem internet: registro recuperado e mantido na fila local.','warn');
+    renderHistorico(); atualizarPendUI(); return;
+  }
 
-  var qid=recuperarHistoricoParaFila_(item);
-  if(!qid){mostrarToast('Não consegui recuperar este registro.','err');return;}
+  var dados=_dadosRecuperadosDoHistorico_(item);
+  var btns=document.querySelectorAll('.hist-recover');
+  btns.forEach(function(b){b.disabled=true;});
 
-  mostrarToast('Registro recuperado para a fila. Enviando…','warn');
-  renderHistorico();
-  atualizarPendUI();
-  await reenviarPendenteIndividual(qid);
+  try{
+    console.log('RECOVERY v1.7 enviando direto do histórico:',dados._qid,dados.codigo);
+    await enviar(dados);
+
+    // Se por algum motivo esse qid já existia na fila, remove após confirmação.
+    _removerPendente_(dados._qid);
+    _atualizarHistoricoRecuperado_(item,dados,'ok',null);
+
+    mostrarToast('RECUPERADO E CONFIRMADO NA PLANILHA ✓','ok');
+  }catch(e){
+    // Se não confirmou, garante persistência na outbox.
+    salvarPendente(dados);
+    _atualizarHistoricoRecuperado_(item,dados,'err',e);
+    mostrarToast('Não confirmou. Registro ficou salvo na fila: '+_erroEnvioLegivel_(e),'err');
+    console.warn('Recovery individual v1.7 falhou',dados._qid,e);
+  }finally{
+    renderHistorico();
+    atualizarPendUI();
+  }
+}
+
+async function _enviarFilaRobustaV17_(){
+  var fila=loadPend().slice();
+  var ok=0, fail=0;
+
+  for(var i=0;i<fila.length;i++){
+    var item=fila[i];
+    if(!item)continue;
+    if(!item._qid){
+      item._qid=_novoQid_();
+      // persiste a migração antes de tentar
+      var atual=loadPend();
+      for(var j=0;j<atual.length;j++){
+        if(atual[j]===item || (
+          String(atual[j]&&atual[j].ts||'')===String(item.ts||'') &&
+          String(atual[j]&&atual[j].codigo||'')===String(item.codigo||'')
+        )){
+          atual[j]._qid=item._qid; break;
+        }
+      }
+      savePend(atual);
+    }
+
+    try{
+      await enviar(item);
+      _removerPendente_(item._qid);
+      _limparHistoricoErro_(item._qid);
+      _atualizarHistoricoStatus_(item._qid,'ok');
+      ok++;
+    }catch(e){
+      _atualizarHistoricoErro_(item._qid,e);
+      fail++;
+      console.warn('Fila robusta v1.7: item falhou',item._qid,e);
+      // não interrompe os próximos
+    }
+  }
+  return {ok:ok,fail:fail};
 }
 
 async function enviarTodosComRecuperacao_(){
-  var hist=loadHist();
-  var rec=0;
-  hist.forEach(function(item){
-    if(_historicoRecuperavel_(item)){
-      if(recuperarHistoricoParaFila_(item))rec++;
-    }
-  });
-
-  if(rec>0){
-    mostrarToast(rec+' registro(s) recuperado(s) do histórico para a fila.','warn');
+  if(!navigator.onLine){
+    mostrarToast('Sem conexão com a internet. Os registros continuam no aparelho.','err');
+    return;
   }
-  atualizarPendUI();
-  renderHistorico();
-  await reenviarPendentes();
+
+  var bannerBtn=document.getElementById('pendBannerBtn');
+  var settingsBtn=document.getElementById('resendBtn');
+  var histSendAllBtn=document.getElementById('histSendAllBtn');
+  [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=true;});
+  if(histSendAllBtn)histSendAllBtn.innerHTML='<i class="ti ti-loader-2"></i> Recuperando e enviando…';
+
+  var recuperadosOk=0, recuperadosFail=0;
+  try{
+    // Tira uma fotografia da lista antes de alterar status.
+    var recuperaveis=loadHist().filter(_historicoRecuperavel_);
+
+    for(var i=0;i<recuperaveis.length;i++){
+      var item=recuperaveis[i];
+      var dados=_dadosRecuperadosDoHistorico_(item);
+
+      try{
+        console.log('RECOVERY TODOS v1.7:',dados._qid,dados.codigo);
+        await enviar(dados);
+        _removerPendente_(dados._qid);
+        _atualizarHistoricoRecuperado_(item,dados,'ok',null);
+        recuperadosOk++;
+      }catch(e){
+        salvarPendente(dados);
+        _atualizarHistoricoRecuperado_(item,dados,'err',e);
+        recuperadosFail++;
+        console.warn('Recovery todos v1.7 falhou',dados._qid,e);
+      }
+    }
+
+    // Depois tenta qualquer pendência que já existia ou que acabou de cair
+    // na outbox por falha da recuperação.
+    var filaResult=await _enviarFilaRobustaV17_();
+
+    var restante=loadPend().length;
+    var totalOk=recuperadosOk+filaResult.ok;
+
+    if(restante===0 && recuperadosFail===0){
+      mostrarToast(totalOk+' registro(s) CONFIRMADOS NA PLANILHA ✓','ok');
+    }else if(totalOk>0){
+      mostrarToast(totalOk+' confirmado(s); '+restante+' ainda no aparelho','warn');
+    }else{
+      var primeiroErro=(loadHist().find(function(x){return x&&x.erroEnvio;})||{}).erroEnvio;
+      mostrarToast('Nenhum registro confirmou'+(primeiroErro?': '+primeiroErro:''),'err');
+    }
+  }finally{
+    [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=false;});
+    renderHistorico();
+    atualizarPendUI();
+  }
 }
+
 
 function renderHistorico() {
   var arr  = loadHist();
@@ -3646,7 +3753,7 @@ function auraDiagnosticoEnvio(){
   var pend=loadPend();
   var hist=loadHist();
   var info={
-    build:'AURA Coleta Tablet v1.6',
+    build:'AURA Coleta Tablet v1.7',
     api:cfg.url||'',
     online:navigator.onLine,
     pendentes:pend.length,
@@ -3654,6 +3761,7 @@ function auraDiagnosticoEnvio(){
     primeiroCodigo:pend[0]&&pend[0].codigo||'',
     historico:hist.length,
     historicoRecuperavel:contarHistoricoRecuperavel_(),
+    recoveryDiretoV17:true,
     enviarTodosExiste:!!document.getElementById('histSendAllBtn'),
     reenvioIndividual:typeof reenviarPendenteIndividual==='function'
   };
@@ -3661,7 +3769,7 @@ function auraDiagnosticoEnvio(){
   return info;
 }
 
-console.log('AURA COLETA TABLET v1.6 CARREGADO');
+console.log('AURA COLETA TABLET v1.7 CARREGADO');
 setTimeout(function(){
   try{
     var d=auraDiagnosticoEnvio();
