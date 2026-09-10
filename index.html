@@ -3897,6 +3897,7 @@ function fecharWelcome() {
 // Lista de colaboradores agora vem da aba "Colaboradores" da planilha AURA
 // via Apps Script (não fica mais fixa no código). Ver carregarColaboradores().
 var COLABORADORES = [];
+console.info('[Coleta Individual] Colaboradores universais + aliases v1');
 
 // Busca colaboradores no GAS e ordena: ativos primeiro (ordem da planilha),
 // inativos por último. Também guarda um cache local para não deixar o app
@@ -3941,7 +3942,7 @@ function encontrarColaborador(email) {
   if (!email) return null;
   var emailLower = email.toLowerCase();
 
-  // 1. Busca direta por email (mais confiável)
+  // 1. Busca direta por e-mail atual (mais confiável)
   for (var i = 0; i < COLABORADORES.length; i++) {
     var c = COLABORADORES[i];
     if (c.email && c.email.toLowerCase() === emailLower) {
@@ -3949,7 +3950,20 @@ function encontrarColaborador(email) {
     }
   }
 
-  // 2. Fallback: partes do nome no email
+  // 2. Busca por e-mail anterior/alias.
+  // Assim uma troca de e-mail no cadastro universal não perde vínculo com
+  // dispositivos ou lançamentos que ainda tragam o endereço antigo.
+  for (var ia = 0; ia < COLABORADORES.length; ia++) {
+    var ca = COLABORADORES[ia];
+    var aliases = ca && Array.isArray(ca.aliases) ? ca.aliases : [];
+    for (var ja = 0; ja < aliases.length; ja++) {
+      if (String(aliases[ja] || '').toLowerCase() === emailLower) {
+        return ca;
+      }
+    }
+  }
+
+  // 3. Fallback: partes do nome no email
   for (var i = 0; i < COLABORADORES.length; i++) {
     var c = COLABORADORES[i];
     var parts = c.nome.toLowerCase().split(' ');
