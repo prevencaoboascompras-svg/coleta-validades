@@ -810,6 +810,16 @@ body{
 .tablet-user-name{font-size:13px;font-weight:700;color:var(--tx);line-height:1.3}
 .tablet-user-email{font-size:10px;color:var(--tx2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tablet-no-email{font-size:10px;color:var(--warn);margin-top:2px;font-style:italic}
+.tablet-grid-status{
+  grid-column:1/-1;padding:30px 18px;text-align:center;color:var(--tx2);
+  border:1px dashed var(--bd);border-radius:14px;background:var(--surf);
+  font-size:13px;line-height:1.45
+}
+.tablet-grid-status i{display:block;font-size:28px;margin-bottom:8px;color:var(--accent)}
+.tablet-grid-status strong{display:block;color:var(--tx);font-size:14px;margin-bottom:3px}
+.hdr-btn.tablet-switch-active{
+  color:var(--accent);border-color:rgba(226,75,74,.45)
+}
 
 /* ── POPUP PARABÉNS ── */
 .parabens-modal{
@@ -1005,12 +1015,12 @@ body.retirada-aberta{overflow:hidden}
 <!-- HEADER -->
 <header class="hdr">
   <div>
-    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.7</small></div>
+    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.8</small></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
-      <i class="ti ti-user-circle"></i>
+    <button class="hdr-btn tablet-switch-active" id="trocaUsuarioBtn" onclick="sairUsuarioTablet()" title="Sair deste usuário / entrar em outro" aria-label="Sair deste usuário e entrar em outro" style="display:none">
+      <i class="ti ti-logout"></i>
     </button>
     <button class="hdr-btn" onclick="abrirRetiradas()" title="Retiradas / produtos vencidos" aria-label="Abrir retiradas">
       <i class="ti ti-package-export retirada-launch-icon"></i>
@@ -1381,6 +1391,7 @@ body.retirada-aberta{overflow:hidden}
 // v6.36 DEPLOY CHECK — badge v1.5 + diagnóstico + arquivo final já nomeado tablet.html.
 // v6.37 RECOVERY — histórico pendente sem outbox pode ser reconstruído e reenviado.
 // v6.38 RECOVERY DIRETO — envia do histórico primeiro; outbox é fallback se o POST falhar.
+// v6.39 TABLET COMPARTILHADO — avatares abrem no primeiro frame + sair/trocar usuário.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -3753,7 +3764,7 @@ function auraDiagnosticoEnvio(){
   var pend=loadPend();
   var hist=loadHist();
   var info={
-    build:'AURA Coleta Tablet v1.7',
+    build:'AURA Coleta Tablet v1.8',
     api:cfg.url||'',
     online:navigator.onLine,
     pendentes:pend.length,
@@ -3762,6 +3773,10 @@ function auraDiagnosticoEnvio(){
     historico:hist.length,
     historicoRecuperavel:contarHistoricoRecuperavel_(),
     recoveryDiretoV17:true,
+    avataresTabletInstantaneosV18:true,
+    modoTablet:_modoTablet,
+    usuariosCarregados:COLABORADORES.length,
+    seletorAberto:!!(document.getElementById('tabletModal')&&document.getElementById('tabletModal').classList.contains('open')),
     enviarTodosExiste:!!document.getElementById('histSendAllBtn'),
     reenvioIndividual:typeof reenviarPendenteIndividual==='function'
   };
@@ -3769,7 +3784,7 @@ function auraDiagnosticoEnvio(){
   return info;
 }
 
-console.log('AURA COLETA TABLET v1.7 CARREGADO');
+console.log('AURA COLETA TABLET v1.8 CARREGADO');
 setTimeout(function(){
   try{
     var d=auraDiagnosticoEnvio();
@@ -4185,7 +4200,6 @@ function fecharWelcome() {
 // Lista de colaboradores agora vem da aba "Colaboradores" da planilha AURA
 // via Apps Script (não fica mais fixa no código). Ver carregarColaboradores().
 var COLABORADORES = [];
-console.info('[Coleta Tablet] Colaboradores universais + aliases v1');
 
 // Busca colaboradores no GAS e ordena: ativos primeiro (ordem da planilha),
 // inativos por último. Também guarda um cache local para não deixar o app
@@ -4206,14 +4220,23 @@ function carregarColaboradores() {
       var ativos = todos.filter(function(c) { return c.ativo; });
       var inativos = todos.filter(function(c) { return !c.ativo; });
       COLABORADORES = ativos.concat(inativos);
-      try { localStorage.setItem('colaboradoresCache', JSON.stringify(COLABORADORES)); } catch (e) {}
+      if (typeof _tabletSalvarCacheUsuarios_ === 'function') {
+        _tabletSalvarCacheUsuarios_(COLABORADORES);
+      } else {
+        try { localStorage.setItem('colaboradoresCache', JSON.stringify(COLABORADORES)); } catch (e) {}
+      }
       return COLABORADORES;
     })
     .catch(function(err) {
       console.error('Erro ao carregar colaboradores do GAS:', err);
       try {
-        var cache = localStorage.getItem('colaboradoresCache');
-        if (cache) COLABORADORES = JSON.parse(cache);
+        if (typeof _tabletLerCacheUsuarios_ === 'function') {
+          var listaCache = _tabletLerCacheUsuarios_();
+          if (listaCache.length) COLABORADORES = listaCache;
+        } else {
+          var cache = localStorage.getItem('colaboradoresCache');
+          if (cache) COLABORADORES = JSON.parse(cache);
+        }
       } catch (e) {}
       return COLABORADORES;
     });
@@ -4230,7 +4253,7 @@ function encontrarColaborador(email) {
   if (!email) return null;
   var emailLower = email.toLowerCase();
 
-  // 1. Busca direta por e-mail atual (mais confiável)
+  // 1. Busca direta por email (mais confiável)
   for (var i = 0; i < COLABORADORES.length; i++) {
     var c = COLABORADORES[i];
     if (c.email && c.email.toLowerCase() === emailLower) {
@@ -4238,20 +4261,7 @@ function encontrarColaborador(email) {
     }
   }
 
-  // 2. Busca por e-mail anterior/alias.
-  // Assim uma troca de e-mail no cadastro universal não perde vínculo com
-  // dispositivos ou lançamentos que ainda tragam o endereço antigo.
-  for (var ia = 0; ia < COLABORADORES.length; ia++) {
-    var ca = COLABORADORES[ia];
-    var aliases = ca && Array.isArray(ca.aliases) ? ca.aliases : [];
-    for (var ja = 0; ja < aliases.length; ja++) {
-      if (String(aliases[ja] || '').toLowerCase() === emailLower) {
-        return ca;
-      }
-    }
-  }
-
-  // 3. Fallback: partes do nome no email
+  // 2. Fallback: partes do nome no email
   for (var i = 0; i < COLABORADORES.length; i++) {
     var c = COLABORADORES[i];
     var parts = c.nome.toLowerCase().split(' ');
@@ -4737,35 +4747,84 @@ function exportarRetiradasPDF(){
 
 
 // ═══════════════════════════════════════════════════════════
-//  MODO TABLET — seletor de usuário
+//  MODO TABLET — seletor de usuário v1.8
+//  Tablet de uso comum: seleção SEMPRE é a tela inicial.
 // ═══════════════════════════════════════════════════════════
-// Modo tablet é ativado por dois caminhos independentes:
-//  1) query string contendo "tablet" (ex: ?tablet) — mantido por
-//     compatibilidade com links/atalhos antigos;
-//  2) o próprio arquivo servido ser "tablet.html" — assim, mesmo que
-//     um app instalado (PWA) no Android abra sem preservar a query
-//     string, o modo tablet continua ativo por causa do nome do arquivo.
 var _modoTablet = window.location.search.indexOf('tablet') >= 0
   || /tablet\.html$/i.test(window.location.pathname);
 
-function iniciarModoTablet() {
-  var grid = document.getElementById('tabletGrid');
-  var usuarios = COLABORADORES.filter(function(c) {
-    // inclui todos, mas marca quem não tem email
-    return true;
-  });
-  renderGridTablet(usuarios);
-  document.getElementById('tabletModal').classList.add('open');
+var _tabletListaAtual = [];
+var _tabletSelecionandoUsuario = false;
+
+// Cache de usuários separado do restante dos dados operacionais.
+// O localStorage pode estar cheio; por isso também usamos sessionStorage.
+// A leitura do localStorage continua funcionando mesmo quando não há espaço
+// para novas gravações.
+function _tabletLerCacheUsuarios_() {
+  var fontes = [];
+  try { fontes.push(sessionStorage.getItem('colaboradoresCache')); } catch(e) {}
+  try { fontes.push(localStorage.getItem('colaboradoresCache')); } catch(e) {}
+
+  for (var i=0;i<fontes.length;i++) {
+    if (!fontes[i]) continue;
+    try {
+      var arr = JSON.parse(fontes[i]);
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch(e) {}
+  }
+  return [];
 }
 
-// Lista filtrada atual (referenciada pelo índice no onclick)
-var _tabletListaAtual = [];
+function _tabletSalvarCacheUsuarios_(lista) {
+  if (!Array.isArray(lista) || !lista.length) return;
+  var json = JSON.stringify(lista);
+  try { sessionStorage.setItem('colaboradoresCache', json); } catch(e) {}
+  try { localStorage.setItem('colaboradoresCache', json); } catch(e) {
+    console.warn('Tablet: localStorage cheio; cache de avatares mantido na sessão.');
+  }
+}
 
-// Nomes que colidem (mesmo primeiro nome) na lista exibida ficam
-// ambíguos como card ("Stefani" e "Stefani" sem diferença visual no
-// nome grande). Pra esses casos, mostra nome + sobrenome em vez de só
-// o primeiro nome, só nos que colidem — os demais continuam exibindo
-// apenas o primeiro nome, como antes.
+function _tabletMostrarCarregando_() {
+  var grid = document.getElementById('tabletGrid');
+  if (!grid) return;
+  grid.innerHTML =
+    '<div class="tablet-grid-status">'
+    + '<i class="ti ti-users"></i>'
+    + '<strong>Carregando usuários…</strong>'
+    + 'A lista de avatares aparecerá aqui assim que o cadastro estiver disponível.'
+    + '</div>';
+}
+
+function iniciarModoTablet() {
+  if (!_modoTablet) return;
+
+  _tabletSelecionandoUsuario = true;
+
+  // Tablet compartilhado: não deixa câmera/scanner rodando atrás da
+  // tela de escolha de usuário.
+  try {
+    if (typeof scannerAtivo !== 'undefined' && scannerAtivo) pararScanner();
+  } catch(e) {}
+
+  var modal = document.getElementById('tabletModal');
+  if (modal) modal.classList.add('open');
+
+  var busca = document.getElementById('tabletSearch');
+  if (busca) busca.value = '';
+
+  // 1) tenta memória/cache imediatamente
+  if (!COLABORADORES.length) {
+    var cache = _tabletLerCacheUsuarios_();
+    if (cache.length) COLABORADORES = cache;
+  }
+
+  // 2) renderiza instantaneamente se já houver cache; senão mantém a
+  // tela fixa visível com "Carregando usuários…".
+  if (COLABORADORES.length) renderGridTablet(COLABORADORES);
+  else _tabletMostrarCarregando_();
+}
+
+// Nomes que colidem (mesmo primeiro nome) exibem também o sobrenome.
 function _nomeExibicaoTablet_(c, contagemPrimeiroNome) {
   var primeiro = primeiroNome(c.nome);
   if (contagemPrimeiroNome[primeiro.toLowerCase()] > 1) {
@@ -4776,12 +4835,24 @@ function _nomeExibicaoTablet_(c, contagemPrimeiroNome) {
 }
 
 function renderGridTablet(lista) {
+  lista = Array.isArray(lista) ? lista : [];
   _tabletListaAtual = lista;
+
   var grid = document.getElementById('tabletGrid');
+  if (!grid) return;
+
+  if (!lista.length) {
+    grid.innerHTML =
+      '<div class="tablet-grid-status">'
+      + '<i class="ti ti-user-off"></i>'
+      + '<strong>Nenhum usuário disponível</strong>'
+      + 'Verifique o cadastro de colaboradores ou a conexão.'
+      + '</div>';
+    return;
+  }
+
   var cores = ['#E24B4A','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
 
-  // Conta quantas vezes cada primeiro nome aparece na lista atual,
-  // pra saber quem precisa do sobrenome pra se diferenciar.
   var contagemPrimeiroNome = {};
   lista.forEach(function(c) {
     var chave = primeiroNome(c.nome).toLowerCase();
@@ -4789,15 +4860,22 @@ function renderGridTablet(lista) {
   });
 
   grid.innerHTML = lista.map(function(c, i) {
-    var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
+    var iniciais = String(c.nome||'')
+      .split(' ').filter(Boolean).slice(0,2)
+      .map(function(p){ return p[0]; }).join('').toUpperCase() || '?';
     var cor = cores[i % cores.length];
-    var emailInfo = !c.ativo
+
+    var emailInfo = c.ativo === false
       ? '<div class="tablet-no-email">inativo</div>'
       : (c.email
         ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
         : '<div class="tablet-no-email">sem email cadastrado</div>');
+
     var inativo = c.ativo === false;
-    var disabled = (!c.email || inativo) ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"' : '';
+    var disabled = (!c.email || inativo)
+      ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"'
+      : '';
+
     return '<button class="tablet-user-btn" onclick="selecionarUsuarioTabletIdx(' + i + ')" ' + disabled + '>'
       + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
       + '<div class="tablet-user-name">' + _nomeExibicaoTablet_(c, contagemPrimeiroNome) + '</div>'
@@ -4808,39 +4886,86 @@ function renderGridTablet(lista) {
 
 function selecionarUsuarioTabletIdx(i) {
   var c = _tabletListaAtual[i];
-  if (!c || !c.email) return;
+  if (!c || !c.email || c.ativo === false) return;
   selecionarUsuarioTablet(c.nome, c.email);
 }
 
 function filtrarUsuariosTablet(texto) {
-  var lower = texto.toLowerCase();
+  var lower = String(texto||'').toLowerCase().trim();
   var filtrados = COLABORADORES.filter(function(c) {
-    return c.nome.toLowerCase().indexOf(lower) >= 0;
+    var nome = String(c.nome||'').toLowerCase();
+    var email = String(c.email||'').toLowerCase();
+    return !lower || nome.indexOf(lower) >= 0 || email.indexOf(lower) >= 0;
   });
   renderGridTablet(filtrados);
 }
 
 function selecionarUsuarioTablet(nome, email) {
   if (!email) return;
-  // Salva na cfg apenas para esta sessão (não sobrescreve cfg permanente do tablet)
+
   var cfg = loadCfg();
   cfg.email = email.toLowerCase();
+  if (!cfg.url) cfg.url = DEFAULT_URL;
   saveCfg(cfg);
 
-  // Atualiza header
-  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
+  _tabletSelecionandoUsuario = false;
 
-  // ✅ CORREÇÃO: fecha o modal do seletor de usuário
-  document.getElementById('tabletModal').classList.remove('open');
+  document.querySelector('.hdr-sub').innerHTML =
+    '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
 
-  // Mostra botão de trocar usuário no header
+  var modal = document.getElementById('tabletModal');
+  if (modal) modal.classList.remove('open');
+
   var btn = document.getElementById('trocaUsuarioBtn');
   if (btn) btn.style.display = 'flex';
-  document.getElementById('tabletSearch').value = '';
 
-  // Verifica aniversário e busca tarefas
+  var search = document.getElementById('tabletSearch');
+  if (search) search.value = '';
+
   setTimeout(function() { verificarAniversario(email, nome); }, 400);
   setTimeout(function() { buscarTarefas(); }, 700);
+}
+
+// Ação explícita para tablet compartilhado.
+// Encerra a identidade atual antes de voltar para os avatares.
+function sairUsuarioTablet() {
+  if (!_modoTablet) {
+    iniciarModoTablet();
+    return;
+  }
+
+  try {
+    if (typeof scannerAtivo !== 'undefined' && scannerAtivo) pararScanner();
+  } catch(e) {}
+
+  // Limpa somente o usuário; mantém URL do Apps Script e demais
+  // configurações do aparelho.
+  var cfg = loadCfg();
+  cfg.email = '';
+  if (!cfg.url) cfg.url = DEFAULT_URL;
+  saveCfg(cfg);
+
+  document.querySelector('.hdr-sub').innerHTML =
+    '<i class="ti ti-users"></i> Tablet compartilhado — selecione um usuário';
+
+  var btn = document.getElementById('trocaUsuarioBtn');
+  if (btn) btn.style.display = 'none';
+
+  iniciarModoTablet();
+}
+
+// Atualiza a grade quando a lista do servidor chegar, sem fechar a tela.
+function _tabletAtualizarUsuariosDepoisDaRede_() {
+  if (!_modoTablet) return;
+  if (COLABORADORES.length) {
+    _tabletSalvarCacheUsuarios_(COLABORADORES);
+    if (_tabletSelecionandoUsuario ||
+        document.getElementById('tabletModal').classList.contains('open')) {
+      renderGridTablet(COLABORADORES);
+    }
+  } else if (_tabletSelecionandoUsuario) {
+    renderGridTablet([]);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4849,25 +4974,34 @@ function selecionarUsuarioTablet(nome, email) {
 (async function init() {
   var cfg = loadCfg();
 
-  // Restaurar setor e tipo da última sessão
   if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
-  // Mostrar email no header se configurado
-  if (cfg.email) {
-    document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + cfg.email;
+
+  // TABLET COMPARTILHADO:
+  // a tela de avatares abre IMEDIATAMENTE, antes de qualquer chamada de rede.
+  // Se existir cache, os nomes já aparecem no primeiro frame.
+  if (_modoTablet) {
+    var cacheInicial = _tabletLerCacheUsuarios_();
+    if (cacheInicial.length) COLABORADORES = cacheInicial;
+
+    document.querySelector('.hdr-sub').innerHTML =
+      '<i class="ti ti-users"></i> Tablet compartilhado — selecione um usuário';
+
+    iniciarModoTablet();
+  } else if (cfg.email) {
+    document.querySelector('.hdr-sub').innerHTML =
+      '<i class="ti ti-user"></i> ' + cfg.email;
   }
 
   renderHistorico();
   atualizarPendUI();
 
-  // Carrega a lista de colaboradores da planilha antes de qualquer coisa
-  // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
+  // Atualiza colaboradores em segundo plano. No tablet a tela já está aberta,
+  // portanto não existe mais a espera visual que fazia os avatares "sumirem".
   await carregarColaboradores();
 
   if (_modoTablet) {
-    // Modo tablet: sempre mostra o seletor de usuário
-    setTimeout(iniciarModoTablet, 100);
+    _tabletAtualizarUsuariosDepoisDaRede_();
   } else {
-    // Modo pessoal: fluxo normal
     setTimeout(buscarTarefas, 200);
     if (cfg.email) {
       setTimeout(function() { verificarAniversario(cfg.email, null); }, 500);
