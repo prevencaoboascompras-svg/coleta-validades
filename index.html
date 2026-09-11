@@ -3992,7 +3992,8 @@ function nfeSetorOptions_(atual){
 async function nfePost_(dados){
   var url=nfeCfgUrl_(); if(!url) throw new Error('Configure a URL da AURA nas configurações.');
   var opts={method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(dados)};
-  var r=(typeof fetchComTimeout==='function')?await fetchComTimeout(url,opts,30000):await fetch(url,opts);
+  var timeoutNFe=(dados&&dados.action==='nfeBuscarChave')?90000:45000;
+  var r=(typeof fetchComTimeout==='function')?await fetchComTimeout(url,opts,timeoutNFe):await fetch(url,opts);
   var txt=await r.text(); var j; try{j=JSON.parse(txt);}catch(e){throw new Error('Resposta inválida do servidor.');}
   return j;
 }
@@ -4038,7 +4039,7 @@ async function nfeColetaBuscarChave(chave){
       return;
     }
     _nfeColetaNota=j.nota; nfePrepararLotes_(_nfeColetaNota); nfeRenderNota_();
-  }catch(e){ document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(e.message||e)+'</div>'; }
+  }catch(e){ var em=String(e&&e.message||e||'Erro'); if(/abort/i.test(em)) em='A busca da NF-e demorou além do esperado. Tente novamente; se persistir, importe o XML desta nota como contingência.'; document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(em)+'</div>'; }
 }
 function nfeColetaLerArquivoXml(file){
   if(!file)return; var r=new FileReader();
