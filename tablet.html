@@ -115,6 +115,21 @@ body{
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
 
+/* v6.39 — modo NF-e otimizado para iPhone: mais área útil para enquadrar Code 128 longo */
+@media(max-width:480px){
+  body.nfe-fast-scan .scan-wrap{height:190px;min-height:190px;margin-top:12px;margin-bottom:12px}
+  body.nfe-fast-scan .corner.tl,body.nfe-fast-scan .corner.bl{left:10px}
+  body.nfe-fast-scan .corner.tr,body.nfe-fast-scan .corner.br{right:10px}
+  body.nfe-fast-scan .laser{left:12px;right:12px}
+  body.nfe-fast-scan .scan-wrap::after{
+    content:'NF-e: mantenha a chave inteira dentro da largura';
+    position:absolute;left:12px;right:12px;bottom:8px;z-index:8;
+    padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.58);color:#fff;
+    font-size:9px;font-weight:800;text-align:center;letter-spacing:.01em;pointer-events:none
+  }
+}
+
+
 /* idle / error overlays */
 .scan-state{
   position:absolute;inset:0;background:color-mix(in oklab, var(--bg) 92%, transparent);
@@ -1354,41 +1369,50 @@ var _scannerIniciando = false;
 // ── FOCUS HELPER ──────────────────────────────────────────
 // Aplica autofocus continuo e tenta ajustar foco de perto
 // Funciona em ambos os motores (native e ZXing)
+function _scannerModoNFe_(){
+  return (typeof _nfeModoScan !== 'undefined') && !!_nfeModoScan;
+}
+
 function applyFocusConstraints(stream) {
   if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
   var track = stream.getVideoTracks()[0];
   var caps = {};
+  var modoNFe = _scannerModoNFe_();
   try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch(e) {}
 
   var advanced = [];
 
-  // 1) Autofocus continuo
+  // Sempre preferir autofocus contínuo.
   if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) {
     advanced.push({ focusMode: 'continuous' });
   }
 
-  // 2) Distancia de foco minima (para codigos pequenos de perto)
-  if (caps.focusDistance !== undefined) {
-    var minFocus = caps.focusDistance.min || 0;
-    advanced.push({ focusDistance: minFocus });
-  }
-
-  // 3) Zoom digital — ajuda quando o foco fisico nao chega
-  if (caps.zoom) {
-    var idealZoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 1.5));
-    advanced.push({ zoom: idealZoom });
+  if (modoNFe) {
+    // A chave NF-e é um Code 128 comprido. No iPhone NÃO forçamos foco mínimo
+    // nem zoom 1.5x, pois isso pode cortar as extremidades e provocar caça de foco.
+    if (caps.zoom && caps.zoom.min !== undefined && caps.zoom.max !== undefined) {
+      var zoomNeutro = Math.max(Number(caps.zoom.min)||1, Math.min(Number(caps.zoom.max)||1, 1));
+      advanced.push({ zoom: zoomNeutro });
+    }
+  } else {
+    // Fluxo normal de produtos: mantém ajuda de proximidade para EAN pequeno.
+    if (caps.focusDistance !== undefined && caps.focusDistance.min !== undefined) {
+      advanced.push({ focusDistance: caps.focusDistance.min });
+    }
+    if (caps.zoom && caps.zoom.min !== undefined && caps.zoom.max !== undefined) {
+      var idealZoom = Math.min(Number(caps.zoom.max)||1, Math.max(Number(caps.zoom.min)||1, 1.35));
+      advanced.push({ zoom: idealZoom });
+    }
   }
 
   if (advanced.length) {
     track.applyConstraints({ advanced: advanced }).catch(function() {
-      // Se falhar, tenta so o autofocus continuo
       if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) {
         track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
       }
     });
   }
 
-  // Re-aplicar foco periodicamente (alguns dispositivos resetam)
   if (window._focusInterval) clearInterval(window._focusInterval);
   window._focusInterval = setInterval(function() {
     if (!scannerAtivo) { clearInterval(window._focusInterval); return; }
@@ -1401,12 +1425,13 @@ function applyFocusConstraints(stream) {
       if (c.focusMode && c.focusMode.indexOf && c.focusMode.indexOf('continuous') >= 0) {
         adv.push({ focusMode: 'continuous' });
       }
-      if (c.focusDistance !== undefined) {
-        adv.push({ focusDistance: c.focusDistance.min || 0 });
+      // No modo NF-e, não mexer na distância do foco a cada 3s.
+      if (!modoNFe && c.focusDistance !== undefined && c.focusDistance.min !== undefined) {
+        adv.push({ focusDistance: c.focusDistance.min });
       }
       if (adv.length) t.applyConstraints({ advanced: adv }).catch(function(){});
     } catch(e) {}
-  }, 3000);
+  }, modoNFe ? 5000 : 3000);
 }
 
 // ── Painel de diagnóstico on-page (debug sem precisar de Mac/DevTools) ──
@@ -1656,9 +1681,15 @@ async function iniciarScanner() {
     var videoEl = document.getElementById('zxing-video');
     patchVideoForIOS(videoEl);
 
-    // Criar reader do ZXing
-    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
-    _zxingReader.timeBetweenScansMillis = 150; // scans mais frequentes (era 500)
+    // Criar reader do ZXing. No iPhone + NF-e usamos, quando disponível,
+    // o leitor 1D específico, pois a chave do DANFE é Code 128.
+    var _nfeIOSRapido = isIOS() && _scannerModoNFe_();
+    if (_nfeIOSRapido && ZXingBrowser.BrowserMultiFormatOneDReader) {
+      _zxingReader = new ZXingBrowser.BrowserMultiFormatOneDReader();
+    } else {
+      _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
+    }
+    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 45 : 150;
 
     // ── Restringir formatos de leitura ──────────────────────
     // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
@@ -1671,8 +1702,10 @@ async function iniciarScanner() {
     try {
       if (ZXingBrowser.BarcodeFormat) {
         var bf = ZXingBrowser.BarcodeFormat;
-        var fmtsDesejados = [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF]
-          .filter(function(f) { return f !== undefined; });
+        var fmtsDesejados = _nfeIOSRapido
+          ? [bf.CODE_128]
+          : [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF];
+        fmtsDesejados = fmtsDesejados.filter(function(f) { return f !== undefined; });
         if (fmtsDesejados.length) _zxingReader.possibleFormats = fmtsDesejados;
       }
     } catch(e) { /* se falhar, segue sem restringir formatos */ }
@@ -1684,7 +1717,18 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxConstraints = {
+      var zxConstraints = _nfeIOSRapido ? {
+        // 1280x720 reduz bastante o custo de decode no Safari sem perder
+        // resolução horizontal suficiente para a chave Code 128 do DANFE.
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+          aspectRatio: { ideal: 1.7777777778 }
+        },
+        audio: false
+      } : {
         video: {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1920, min: 1280 },
@@ -1781,6 +1825,7 @@ async function iniciarScanner() {
 
 function pararScanner() {
   scannerAtivo = false;
+  if (document && document.body) document.body.classList.remove('nfe-fast-scan');
   _scannerIniciando = false;
   _scanSessionId++; // invalida qualquer callback pendente desta sessão
   document.getElementById('laser').style.display = 'none';
@@ -4081,11 +4126,13 @@ function nfeRenderEntradaChave_(){
 }
 function nfeColetaIniciarScan(){
   nfeColetaFechar(); _nfeModoScan=true;
+  document.body.classList.add('nfe-fast-scan');
   if(typeof resetCodigo==='function') resetCodigo();
-  mostrarToast('Modo NF-e: bipe a chave de acesso de 44 dígitos', 'ok');
+  mostrarToast(isIOS()?'Modo NF-e rápido: enquadre a chave inteira na largura':'Modo NF-e: bipe a chave de acesso de 44 dígitos', 'ok');
   iniciarScanner();
 }
 function nfeFeedbackLeitura_(){
+  document.body.classList.remove('nfe-fast-scan');
   pararScanner();
   var flash=document.getElementById('scanFlash'); if(flash){flash.classList.add('show');setTimeout(function(){flash.classList.remove('show');},220);}
   if(navigator.vibrate)navigator.vibrate([60,30,60]); try{tocarBip();}catch(e){}
