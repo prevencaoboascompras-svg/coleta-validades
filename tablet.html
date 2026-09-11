@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#fcfbf8">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="AURA">
 <title>AURA</title>
@@ -71,76 +71,24 @@ body{
 }
 .pend-dot.show{display:block}
 
-/* ── PROTEÇÃO DE ENVIO — enquanto existir item na outbox, deixa claro
-   que o dado está APENAS NO APARELHO e ainda não foi confirmado na planilha. ── */
+/* ── BANNER DE PENDENTES (v-fix: aviso explícito na tela principal, não
+   só a bolinha escondida no ícone de configurações) ── */
 .pend-banner{
-  display:none;position:sticky;top:72px;z-index:46;
-  margin:0 16px;padding:12px 13px;border-radius:12px;
-  background:linear-gradient(135deg,rgba(125,38,13,.98),rgba(92,24,12,.98));
-  border:2px solid #ff9f0a;box-shadow:0 7px 22px rgba(0,0,0,.28);
-  align-items:center;gap:11px;
+  display:none;margin:0 16px 0;padding:12px 14px;border-radius:var(--r);
+  background:rgba(186,117,23,.15);border:1px solid var(--warn);
+  align-items:center;gap:10px;
 }
 .pend-banner.show{display:flex}
-.pend-banner-icon{
-  width:38px;height:38px;border-radius:50%;font-size:22px;color:#1c1200;
-  background:#ff9f0a;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.pend-banner-text{flex:1;font-size:12px;color:#fff;line-height:1.35;min-width:0}
-.pend-banner-title{
-  display:block;font-size:12px;font-weight:900;letter-spacing:.055em;
-  color:#ffd27a;text-transform:uppercase;margin-bottom:2px;
-}
-.pend-banner-text b{color:#fff;font-weight:850}
-.pend-banner-sub{display:block;font-size:10.5px;color:rgba(255,255,255,.83);margin-top:2px}
+.pend-banner-icon{font-size:20px;color:var(--warn);flex-shrink:0}
+.pend-banner-text{flex:1;font-size:13px;color:var(--tx);line-height:1.4}
+.pend-banner-text b{color:var(--warn)}
 .pend-banner-btn{
-  flex-shrink:0;min-height:40px;padding:0 13px;background:#ff9f0a;color:#1a1200;
-  font-weight:850;font-size:12px;border:none;border-radius:9px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
+  flex-shrink:0;height:36px;padding:0 14px;background:var(--warn);color:#1a1200;
+  font-weight:700;font-size:13px;border:none;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
 }
 .pend-banner-btn:active{opacity:.8}
 .pend-banner-btn:disabled{opacity:.6;cursor:default}
-
-/* Histórico: não depender apenas do ícone. O texto elimina a dúvida de status. */
-.hist-status{margin-left:auto;flex-shrink:0}
-.hist-status-badge{
-  min-width:92px;padding:5px 7px;border-radius:8px;border:1px solid var(--bd);
-  font-size:9px;font-weight:850;line-height:1.15;text-align:center;text-transform:uppercase;
-  letter-spacing:.035em;display:flex;align-items:center;justify-content:center;gap:4px;
-}
-.hist-status-badge.ok{color:#35c47c;border-color:rgba(53,196,124,.45);background:rgba(53,196,124,.10)}
-.hist-status-badge.pend{color:#ffb340;border-color:rgba(255,159,10,.55);background:rgba(255,159,10,.12)}
-.hist-status-badge.err{color:var(--err);border-color:rgba(220,53,69,.45);background:rgba(220,53,69,.10)}
-.hist-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
-.hist-retry{
-  min-width:86px;height:32px;padding:0 8px;border:1px solid rgba(255,159,10,.55);
-  border-radius:8px;background:rgba(255,159,10,.12);color:#ffb340;
-  font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.025em;
-  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px
-}
-.hist-retry:hover{background:rgba(255,159,10,.20)}
-.hist-retry:disabled{opacity:.55;cursor:default}
-.hist-recover{
-  min-width:92px;height:32px;padding:0 8px;border:1px solid rgba(255,214,10,.65);
-  border-radius:8px;background:rgba(255,214,10,.13);color:#ffd60a;
-  font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.025em;
-  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px
-}
-.hist-recover:hover{background:rgba(255,214,10,.22)}
-.hist-orphan{
-  min-width:110px;padding:5px 7px;border-radius:8px;border:1px solid rgba(255,214,10,.45);
-  font-size:8px;font-weight:900;line-height:1.15;text-align:center;text-transform:uppercase;
-  letter-spacing:.03em;color:#ffd60a;background:rgba(255,214,10,.10)
-}
-.hist-error{
-  margin-top:6px;padding:6px 7px;border-radius:7px;
-  background:rgba(220,53,69,.09);border:1px solid rgba(220,53,69,.25);
-  color:#ff8d98;font-size:9px;line-height:1.3;overflow-wrap:anywhere
-}
-@media(max-width:420px){
-  .pend-banner{top:70px;margin:0 10px;padding:10px;gap:8px;align-items:flex-start}
-  .pend-banner-btn{padding:0 9px;font-size:10px}
-  .hist-status-badge{min-width:78px;font-size:8px;padding:5px}
-}
 
 /* ── SCANNER WRAPPER ── */
 .scan-wrap{
@@ -345,18 +293,7 @@ body{
   font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--tx2);
   text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;
 }
-.hist-hdr-actions{margin-left:auto;display:flex;align-items:center;gap:7px}
-.hist-send-all{
-  display:none;height:30px;padding:0 10px;border:none;border-radius:8px;
-  background:#ff9f0a;color:#1b1200;font-size:10px;font-weight:900;
-  letter-spacing:.025em;cursor:pointer;align-items:center;gap:5px;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap
-}
-.hist-send-all.show{display:inline-flex}
-.hist-send-all:hover{filter:brightness(1.05)}
-.hist-send-all:active{transform:scale(.97)}
-.hist-send-all:disabled{opacity:.55;cursor:default;transform:none}
-.hist-hdr-right{font-size:11px;color:var(--tx2);cursor:pointer}
+.hist-hdr-right{margin-left:auto;font-size:11px;color:var(--tx2);cursor:pointer}
 .hist-hdr-right:hover{color:var(--tx)}
 .hist-item{
   display:flex;align-items:center;gap:10px;padding:11px 14px;
@@ -810,16 +747,6 @@ body{
 .tablet-user-name{font-size:13px;font-weight:700;color:var(--tx);line-height:1.3}
 .tablet-user-email{font-size:10px;color:var(--tx2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tablet-no-email{font-size:10px;color:var(--warn);margin-top:2px;font-style:italic}
-.tablet-grid-status{
-  grid-column:1/-1;padding:30px 18px;text-align:center;color:var(--tx2);
-  border:1px dashed var(--bd);border-radius:14px;background:var(--surf);
-  font-size:13px;line-height:1.45
-}
-.tablet-grid-status i{display:block;font-size:28px;margin-bottom:8px;color:var(--accent)}
-.tablet-grid-status strong{display:block;color:var(--tx);font-size:14px;margin-bottom:3px}
-.hdr-btn.tablet-switch-active{
-  color:var(--accent);border-color:rgba(226,75,74,.45)
-}
 
 /* ── POPUP PARABÉNS ── */
 .parabens-modal{
@@ -858,107 +785,24 @@ body{
 .parabens-btn:active{background:var(--accent2)}
 
 
-/* ═══════════════════════════════════════════════════════════════
-   RETIRADAS — tela interna (Coleta + Tablet)
-   ═══════════════════════════════════════════════════════════════ */
-.retirada-view{
-  display:none;position:fixed;inset:0;z-index:80;
-  width:100%;max-width:480px;margin:0 auto;left:50%;transform:translateX(-50%);
-  background:var(--bg3);color:var(--tx);overflow-y:auto;overscroll-behavior:contain;
-}
-.retirada-view.open{display:block}
-.retirada-head{
-  position:sticky;top:0;z-index:5;
-  display:flex;align-items:center;gap:10px;
-  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;
-  background:linear-gradient(135deg,#92190c,#b91c1c);color:#fff;
-  box-shadow:0 3px 14px rgba(0,0,0,.22)
-}
-.retirada-back{
-  width:42px;height:42px;flex-shrink:0;border:none;border-radius:11px;
-  background:rgba(255,255,255,.16);color:#fff;font-size:21px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer
-}
-.retirada-head-info{flex:1;min-width:0}
-.retirada-head-title{font-size:18px;font-weight:850;letter-spacing:-.02em}
-.retirada-head-sub{font-size:10px;opacity:.78;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.retirada-pdf{
-  min-width:58px;height:42px;border:none;border-radius:11px;
-  background:#fff;color:#a51616;font-size:11px;font-weight:850;
-  display:flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;cursor:pointer
-}
-.retirada-pdf:disabled{opacity:.45;cursor:default}
-.retirada-body{padding:12px 14px calc(28px + env(safe-area-inset-bottom,0px))}
-.retirada-filter{
-  background:var(--surf);border:1px solid var(--bd);border-radius:14px;
-  padding:12px;margin-bottom:11px
-}
-.retirada-filter-label{
-  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--tx2);margin-bottom:7px;display:flex;align-items:center;gap:5px
-}
-.retirada-date{
-  width:100%;height:48px;border:1px solid var(--bds);border-radius:10px;
-  background:var(--bg);color:var(--tx);padding:0 12px;font-size:16px;outline:none
-}
-.retirada-atalhos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.retirada-atalho{
-  height:36px;border:1px solid var(--bd);border-radius:9px;background:var(--card);
-  color:var(--tx);font-size:11px;font-weight:750;cursor:pointer
-}
-.retirada-atalho.hoje{border-color:rgba(185,28,28,.35);color:#b91c1c}
-.retirada-resumo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-.retirada-res-card{
-  background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:11px 12px
-}
-.retirada-res-label{font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;font-weight:800}
-.retirada-res-val{font-size:24px;font-weight:900;color:var(--err);line-height:1;margin-top:5px}
-.retirada-contexto{
-  font-size:11px;color:var(--tx2);line-height:1.45;margin:-2px 2px 10px;
-  display:flex;align-items:flex-start;gap:6px
-}
-.retirada-status{
-  display:none;padding:12px;border-radius:11px;margin-bottom:10px;
-  font-size:11px;line-height:1.45;background:var(--surf);border:1px solid var(--bd);color:var(--tx2)
-}
-.retirada-status.show{display:block}
-.retirada-item{
-  background:var(--surf);border:1px solid var(--bd);border-radius:13px;
-  overflow:hidden;margin-bottom:9px
-}
-.retirada-item-top{
-  position:relative;min-height:52px;padding:10px 12px 10px 54px;
-  background:linear-gradient(135deg,#92190c,#b91c1c);color:#fff;
-  display:flex;align-items:center
-}
-.retirada-qtd-badge{
-  position:absolute;left:10px;top:50%;transform:translateY(-50%);
-  min-width:34px;height:34px;padding:0 7px;border-radius:999px;background:#fff;color:#b91c1c;
-  font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 6px rgba(0,0,0,.24);white-space:nowrap
-}
-.retirada-item-name{font-size:14px;font-weight:800;line-height:1.25}
-.retirada-item-body{display:flex;gap:10px;padding:10px 11px 11px;align-items:flex-start}
-.retirada-foto{
-  position:relative;width:165px;height:165px;flex-shrink:0;
-  border:1px solid var(--bd);border-radius:9px;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--tx2)
-}
-.retirada-foto img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-.retirada-foto-spin{
-  width:18px;height:18px;border-radius:50%;border:2px solid var(--bd);
-  border-top-color:var(--err);animation:retiradaSpin .7s linear infinite
-}
-@keyframes retiradaSpin{to{transform:rotate(360deg)}}
-.retirada-grid{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:7px 10px}
-.retirada-info-label{font-size:8px;text-transform:uppercase;color:var(--tx2);letter-spacing:.06em;margin-bottom:2px}
-.retirada-info-val{font-size:12px;font-weight:700;color:var(--tx);overflow-wrap:anywhere}
-.retirada-info-wide{grid-column:1/-1}
-.retirada-empty{text-align:center;padding:44px 18px;color:var(--tx2)}
-.retirada-empty i{display:block;font-size:42px;color:var(--green);margin-bottom:10px}
-.retirada-empty strong{display:block;color:var(--tx);font-size:15px;margin-bottom:4px}
-.retirada-launch-icon{color:var(--err)}
-body.retirada-aberta{overflow:hidden}
+
+/* ═══════════════════════════════════════════════════════════
+   RECEBIMENTO NF-e — Coleta de Validades
+   ═══════════════════════════════════════════════════════════ */
+.nfe-entry{margin:10px 14px 2px;padding:12px 13px;background:linear-gradient(135deg,rgba(55,138,221,.12),rgba(29,158,117,.10));border:1px solid rgba(55,138,221,.28);border-radius:14px;display:flex;align-items:center;gap:10px}
+.nfe-entry-ico{width:40px;height:40px;border-radius:11px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:20px;color:#378ADD;flex:none}
+.nfe-entry-main{flex:1;min-width:0}.nfe-entry-title{font-size:12px;font-weight:800}.nfe-entry-sub{font-size:10px;color:var(--tx2);line-height:1.35;margin-top:2px}
+.nfe-entry-btn{border:none;border-radius:9px;padding:9px 11px;background:#378ADD;color:#fff;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.nfe-overlay{display:none;position:fixed;inset:0;z-index:100000;background:var(--bg3);overflow:auto;-webkit-overflow-scrolling:touch}
+.nfe-overlay.open{display:block}.nfe-shell{max-width:760px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:100px}
+.nfe-head{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--bd);padding:13px 14px;display:flex;align-items:center;gap:10px}
+.nfe-head-back{width:38px;height:38px;border:1px solid var(--bd);border-radius:10px;background:var(--surf);color:var(--tx);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.nfe-head-main{flex:1;min-width:0}.nfe-head-title{font-size:14px;font-weight:900}.nfe-head-sub{font-size:9.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.nfe-body{padding:14px}.nfe-state{text-align:center;padding:42px 18px;color:var(--tx2)}.nfe-state i{font-size:34px;display:block;margin-bottom:9px}.nfe-spin{animation:spin 1s linear infinite}
+.nfe-note{background:var(--surf);border:1px solid var(--bd);border-radius:13px;padding:12px;margin-bottom:12px}.nfe-note-top{display:flex;align-items:flex-start;gap:10px}.nfe-note-icon{width:38px;height:38px;border-radius:10px;background:#378ADD18;color:#378ADD;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}.nfe-note-name{font-size:12px;font-weight:900;line-height:1.3}.nfe-note-meta{font-size:10px;color:var(--tx2);line-height:1.55;margin-top:3px}.nfe-note-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.nfe-note-kpi{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:8px;text-align:center}.nfe-note-kpi b{display:block;font-size:15px}.nfe-note-kpi span{font-size:8.5px;color:var(--tx2);text-transform:uppercase;font-weight:700}
+.nfe-warn{border:1px solid rgba(186,117,23,.35);background:rgba(186,117,23,.10);color:var(--tx);padding:10px 11px;border-radius:10px;font-size:10.5px;line-height:1.45;margin-bottom:10px}.nfe-warn.danger{border-color:rgba(226,75,74,.35);background:rgba(226,75,74,.10)}
+.nfe-item{border:1px solid var(--bd);border-radius:13px;background:var(--bg);margin-bottom:10px;overflow:hidden}.nfe-item.off{opacity:.55}.nfe-item-hd{padding:10px 11px;background:var(--surf);display:flex;align-items:flex-start;gap:9px}.nfe-check{margin-top:3px}.nfe-item-main{flex:1;min-width:0}.nfe-item-name{font-size:11.5px;font-weight:850;line-height:1.3}.nfe-item-sub{font-size:9px;color:var(--tx2);margin-top:3px;line-height:1.4}.nfe-badge{display:inline-flex;align-items:center;border-radius:99px;padding:3px 7px;font-size:8px;font-weight:900;white-space:nowrap}.nfe-badge.ok{background:rgba(29,158,117,.13);color:#1D9E75}.nfe-badge.err{background:rgba(226,75,74,.12);color:#E24B4A}.nfe-item-body{padding:10px 11px}.nfe-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nfe-field label{display:block;font-size:8.5px;font-weight:800;color:var(--tx2);text-transform:uppercase;margin-bottom:4px}.nfe-field input,.nfe-field select{width:100%;height:36px;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 9px;font-size:11px;outline:none}.nfe-ean-row{display:flex;gap:6px}.nfe-ean-row input{flex:1;min-width:0}.nfe-mini-btn{height:36px;border:none;border-radius:8px;background:#378ADD;color:#fff;padding:0 10px;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap}.nfe-lotes-title{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2);margin:11px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}.nfe-add-lote{border:none;background:none;color:#378ADD;font-size:9px;font-weight:800;cursor:pointer}.nfe-lote{display:grid;grid-template-columns:1fr 86px 28px;gap:6px;margin-bottom:6px}.nfe-lote input{height:34px;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 7px;font-size:10.5px;min-width:0}.nfe-lote-del{height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--err);cursor:pointer}.nfe-xml-box{margin-top:12px;border:1px dashed var(--bds);border-radius:12px;padding:13px}.nfe-xml-box input{max-width:100%;font-size:11px}.nfe-actions{position:fixed;left:0;right:0;bottom:0;z-index:100001;background:var(--bg);border-top:1px solid var(--bd);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none}.nfe-overlay.open .nfe-actions{display:block}.nfe-save{display:block;width:min(732px,100%);margin:0 auto;border:none;border-radius:11px;background:#1D9E75;color:#fff;font-size:12px;font-weight:900;padding:13px 14px;cursor:pointer}.nfe-save:disabled{opacity:.5}.nfe-keybox{padding:20px 14px}.nfe-key-row{display:flex;gap:7px}.nfe-key-row input{flex:1;min-width:0;height:42px;border:1px solid var(--bds);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:10px}.nfe-key-row button{border:none;border-radius:10px;background:#378ADD;color:#fff;font-weight:900;padding:0 13px}.nfe-hint{font-size:10px;color:var(--tx2);line-height:1.45;margin-top:9px}
+@media(max-width:480px){.nfe-grid2{grid-template-columns:1fr}.nfe-note-kpis{grid-template-columns:repeat(3,1fr)}.nfe-lote{grid-template-columns:1fr 78px 28px}.nfe-entry{margin-left:12px;margin-right:12px}.nfe-entry-sub{font-size:9px}}
 
 </style>
 </head>
@@ -1015,15 +859,12 @@ body.retirada-aberta{overflow:hidden}
 <!-- HEADER -->
 <header class="hdr">
   <div>
-    <div class="hdr-title">Coleta de <span>Validades</span> <small style="font-size:9px;color:#ffb340;font-weight:900;vertical-align:middle">v1.8</small></div>
+    <div class="hdr-title">Coleta de <span>Validades</span></div>
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <button class="hdr-btn tablet-switch-active" id="trocaUsuarioBtn" onclick="sairUsuarioTablet()" title="Sair deste usuário / entrar em outro" aria-label="Sair deste usuário e entrar em outro" style="display:none">
-      <i class="ti ti-logout"></i>
-    </button>
-    <button class="hdr-btn" onclick="abrirRetiradas()" title="Retiradas / produtos vencidos" aria-label="Abrir retiradas">
-      <i class="ti ti-package-export retirada-launch-icon"></i>
+    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
+      <i class="ti ti-user-circle"></i>
     </button>
     <button class="hdr-btn" onclick="toggleDebugPanel()" title="Diagnóstico (console)">
       <i class="ti ti-bug"></i>
@@ -1036,17 +877,15 @@ body.retirada-aberta{overflow:hidden}
   </div>
 </header>
 
-<!-- PROTEÇÃO DE ENVIO: enquanto houver pendência, não deixa o operador
-     confundir "salvo no aparelho" com "confirmado na planilha". -->
-<div class="pend-banner" id="pendBanner" role="alert" aria-live="assertive">
-  <div class="pend-banner-icon"><i class="ti ti-device-mobile-exclamation"></i></div>
+<!-- BANNER DE REGISTROS PENDENTES (v-fix: aviso explícito, visível direto
+     na tela principal, em vez de só a bolinha no ícone de configurações) -->
+<div class="pend-banner" id="pendBanner">
+  <i class="ti ti-cloud-off pend-banner-icon"></i>
   <div class="pend-banner-text">
-    <span class="pend-banner-title">Não enviado à planilha</span>
-    <b><span id="pendBannerCount">0</span> registro(s) estão salvos somente neste aparelho.</b>
-    <span class="pend-banner-sub">Só considere concluído quando o item aparecer como “CONFIRMADO NA PLANILHA”.</span>
+    <b><span id="pendBannerCount">0</span> registro(s)</b> salvos localmente sem enviar — sem conexão ou erro ao salvar.
   </div>
   <button class="pend-banner-btn" id="pendBannerBtn" onclick="reenviarPendentes()">
-    <i class="ti ti-upload"></i> Reenviar agora
+    <i class="ti ti-upload"></i> Reenviar
   </button>
 </div>
 
@@ -1111,10 +950,22 @@ body.retirada-aberta{overflow:hidden}
 <div class="manual-wrap" id="manualWrap">
   <div class="manual-row">
     <input type="tel" inputmode="numeric" class="manual-input" id="manualInput"
-      placeholder="Digite o EAN ou código interno" maxlength="22"
+      placeholder="Digite EAN, código interno ou chave NF-e" maxlength="60"
       onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarManual();}">
     <button class="manual-ok-btn" onclick="confirmarManual()"><i class="ti ti-check"></i> OK</button>
   </div>
+</div>
+
+
+
+<!-- RECEBIMENTO POR NF-e -->
+<div class="nfe-entry" id="nfeEntry">
+  <div class="nfe-entry-ico"><i class="ti ti-file-invoice"></i></div>
+  <div class="nfe-entry-main">
+    <div class="nfe-entry-title">Receber mercadoria por NF-e</div>
+    <div class="nfe-entry-sub">Bipe a chave de 44 dígitos e informe as validades de toda a nota de uma vez.</div>
+  </div>
+  <button class="nfe-entry-btn" onclick="nfeColetaIniciarScan()"><i class="ti ti-scan"></i> BIPAR NF</button>
 </div>
 
 <!-- TAREFAS PENDENTES -->
@@ -1199,68 +1050,33 @@ body.retirada-aberta{overflow:hidden}
 <div class="hist-section">
   <div class="hist-hdr">
     <span>Últimos registros</span>
-    <div class="hist-hdr-actions">
-      <button type="button" class="hist-send-all" id="histSendAllBtn" onclick="reenviarPendentes()" title="Enviar todos os registros que ainda estão só neste aparelho">
-        <i class="ti ti-cloud-upload"></i>
-        <span>Enviar todos</span>
-        <b id="histSendAllCount" style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#1b1200;color:#ffb340;display:inline-flex;align-items:center;justify-content:center">0</b>
-      </button>
-      <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
-    </div>
+    <span class="hist-hdr-right" onclick="limparHistorico()">limpar</span>
   </div>
   <div id="histList"></div>
 </div>
 
-
-<!-- RETIRADAS — tela interna, sem sair do app -->
-<section class="retirada-view" id="retiradaView" aria-hidden="true">
-  <div class="retirada-head">
-    <button class="retirada-back" type="button" onclick="fecharRetiradas()" aria-label="Voltar para as coletas" title="Voltar para as coletas">
-      <i class="ti ti-arrow-left"></i>
-    </button>
-    <div class="retirada-head-info">
-      <div class="retirada-head-title">Retiradas</div>
-      <div class="retirada-head-sub">Produtos por data de vencimento</div>
-    </div>
-    <button class="retirada-pdf" id="retiradaPdfBtn" type="button" onclick="exportarRetiradasPDF()" disabled>
-      <i class="ti ti-file-type-pdf"></i> PDF
-    </button>
-  </div>
-
-  <div class="retirada-body">
-    <div class="retirada-filter">
-      <div class="retirada-filter-label"><i class="ti ti-calendar"></i> Data da retirada</div>
-      <input type="date" class="retirada-date" id="retiradaData" onchange="carregarRetiradas(true)">
-      <div class="retirada-atalhos">
-        <button type="button" class="retirada-atalho" onclick="retiradaAtalho(-1)">Ontem</button>
-        <button type="button" class="retirada-atalho hoje" onclick="retiradaAtalho(0)">Hoje</button>
-        <button type="button" class="retirada-atalho" onclick="retiradaAtalho(1)">Amanhã</button>
-      </div>
-    </div>
-
-    <div class="retirada-contexto" id="retiradaContexto">
-      <i class="ti ti-info-circle"></i>
-      <span>Escolha qualquer data passada, de hoje ou futura. A lista mostra os lotes cadastrados para vencer naquela data.</span>
-    </div>
-
-    <div class="retirada-resumo">
-      <div class="retirada-res-card">
-        <div class="retirada-res-label">Produtos</div>
-        <div class="retirada-res-val" id="retiradaTotalProdutos">0</div>
-      </div>
-      <div class="retirada-res-card">
-        <div class="retirada-res-label">Quantidade</div>
-        <div class="retirada-res-val" id="retiradaTotalQtd">0</div>
-      </div>
-    </div>
-
-    <div class="retirada-status" id="retiradaStatus"></div>
-    <div id="retiradaLista"></div>
-  </div>
-</section>
-
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+
+
+<!-- TELA RECEBIMENTO NF-e -->
+<div class="nfe-overlay" id="nfeOverlay">
+  <div class="nfe-shell">
+    <div class="nfe-head">
+      <button class="nfe-head-back" onclick="nfeColetaFechar()"><i class="ti ti-arrow-left"></i></button>
+      <div class="nfe-head-main">
+        <div class="nfe-head-title">Recebimento por NF-e</div>
+        <div class="nfe-head-sub" id="nfeHeadSub">Chave de acesso → produtos → validades</div>
+      </div>
+      <button class="nfe-head-back" onclick="nfeColetaNova()" title="Nova NF-e"><i class="ti ti-refresh"></i></button>
+    </div>
+    <div class="nfe-body" id="nfeBody"></div>
+  </div>
+  <div class="nfe-actions" id="nfeActions">
+    <button class="nfe-save" id="nfeSaveBtn" onclick="nfeColetaSalvar()"><i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e</button>
+  </div>
+</div>
 
 <!-- SETTINGS MODAL -->
 <div class="modal-bg" id="cfgModal" onclick="fecharConfigBg(event)">
@@ -1384,14 +1200,6 @@ body.retirada-aberta{overflow:hidden}
 //  STORAGE
 // ═══════════════════════════════════════════════════════════
 // v6.31 FRONT — redução de delay: endpoint consolidado + outbox + scanner sem esperas artificiais.
-// v6.32 RETIRADAS — tela interna + consulta por data + exportação PDF.
-// v6.33 PROTEÇÃO DE ENVIO — diferencia SÓ NO APARELHO de CONFIRMADO NA PLANILHA.
-// v6.34 ENVIAR TODOS — botão no topo de Últimos registros usa a mesma outbox segura.
-// v6.35 REENVIO ROBUSTO — botão por item + Enviar todos continua após erro + motivo visível.
-// v6.36 DEPLOY CHECK — badge v1.5 + diagnóstico + arquivo final já nomeado tablet.html.
-// v6.37 RECOVERY — histórico pendente sem outbox pode ser reconstruído e reenviado.
-// v6.38 RECOVERY DIRETO — envia do histórico primeiro; outbox é fallback se o POST falhar.
-// v6.39 TABLET COMPARTILHADO — avatares abrem no primeiro frame + sair/trocar usuário.
 var K_CFG  = 'coleta_cfg';
 var K_HIST = 'coleta_hist';
 var K_PEND = 'coleta_pend';
@@ -1466,6 +1274,7 @@ var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
 // SOLUÇÃO: cada iniciarScanner() gera um número de sessão novo. Qualquer
 // callback de uma sessão anterior é descartado, mesmo que chegue atrasado.
 var _scanSessionId = 0;
+var _scannerIniciando = false;
 
 // ── FOCUS HELPER ──────────────────────────────────────────
 // Aplica autofocus continuo e tenta ajustar foco de perto
@@ -1676,10 +1485,11 @@ async function iniciarScanner() {
     document.getElementById('laser').style.display = 'block';
     return;
   }
+  if (_scannerIniciando) return;
+  _scannerIniciando = true;
 
   // Nova sessão de scan — invalida qualquer callback "fantasma" de sessões anteriores
   var meuSession = ++_scanSessionId;
-  console.log('Nova sessão de scan iniciada: #' + meuSession);
 
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
@@ -1714,6 +1524,7 @@ async function iniciarScanner() {
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
       scannerAtivo = true;
+      _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
       var canvas = document.createElement('canvas');
@@ -1744,20 +1555,24 @@ async function iniciarScanner() {
   }
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
-  // Se ZXing ainda não carregou, aguarda até 3s antes de desistir
+  // Se o bundle ainda estiver carregando, aguardamos dentro da MESMA sessão.
+  // Isso evita chamar iniciarScanner() de novo e criar sessões duplicadas.
   if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
     var _zxWait = 0;
-    var _zxInterval = setInterval(function() {
+    while (_zxWait < 3000 && meuSession === _scanSessionId &&
+           (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader)) {
+      await new Promise(function(resolve){ setTimeout(resolve, 200); });
       _zxWait += 200;
-      if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
-        clearInterval(_zxInterval);
-        iniciarScanner();
-      } else if (_zxWait >= 3000) {
-        clearInterval(_zxInterval);
-        mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
-      }
-    }, 200);
-    return;
+    }
+    if (meuSession !== _scanSessionId) {
+      _scannerIniciando = false;
+      return;
+    }
+    if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
+      _scannerIniciando = false;
+      mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
+      return;
+    }
   }
   if (typeof ZXingBrowser !== 'undefined' && ZXingBrowser.BrowserMultiFormatReader) {
     var wrap2 = document.getElementById('scannerView');
@@ -1858,6 +1673,7 @@ async function iniciarScanner() {
       _zxingAtivo = true;
       _motorAtivo = 'zxing';
       scannerAtivo = true;
+      _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
       // Iniciar timer de aviso (vibra após 3s sem leitura)
@@ -1874,6 +1690,7 @@ async function iniciarScanner() {
         msg = 'Câmera traseira não encontrada — tente novamente';
       else if (/[Nn]ot[Rr]eadable|[Tt]rackStart/.test(String(err)))
         msg = 'Câmera em uso por outro app — feche outros apps que usam a câmera';
+      _scannerIniciando = false;
       mostrarErroScanner(msg);
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
       return;
@@ -1883,11 +1700,13 @@ async function iniciarScanner() {
   }
 
   // Nenhum motor disponível
+  _scannerIniciando = false;
   mostrarErroScanner('Scanner não suportado neste navegador. Use a entrada manual.');
 }
 
 function pararScanner() {
   scannerAtivo = false;
+  _scannerIniciando = false;
   _scanSessionId++; // invalida qualquer callback pendente desta sessão
   document.getElementById('laser').style.display = 'none';
 
@@ -2698,7 +2517,7 @@ function registrar() {
   registrarHistorico(dados, 'pend');
 
   // Libera a próxima coleta imediatamente. A fila é processada em background.
-  mostrarToast(navigator.onLine ? 'SALVO NO APARELHO — aguardando confirmação da planilha…' : 'SALVO SOMENTE NO APARELHO — sem conexão', 'warn');
+  mostrarToast(navigator.onLine ? 'Registro salvo — enviando…' : 'Registro salvo localmente — sem conexão', navigator.onLine ? 'ok' : 'warn');
   resetAposEnvio();
   processarFilaEnvio(false);
 }
@@ -2708,7 +2527,6 @@ async function enviar(dados) {
   if (!cfg.url) throw new Error('sem-url');
   if (!navigator.onLine) throw new Error('offline');
 
-  console.log('Enviando validade para API:', cfg.url);
   var resp = await fetchComTimeout(cfg.url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
@@ -2822,7 +2640,6 @@ async function processarFilaEnvio(modoManual) {
         ok++;
       } catch (e) {
         fail = loadPend().length;
-        _atualizarHistoricoErro_(item._qid,e);
         console.warn('Fila de envio pausada: ' + (e && e.message ? e.message : e));
         break;
       }
@@ -2831,134 +2648,31 @@ async function processarFilaEnvio(modoManual) {
     _filaEnvioAtiva = false;
     atualizarPendUI();
   }
-
-  // Em envio automático, só agora — depois da resposta positiva do backend —
-  // mostramos que o dado realmente chegou à planilha.
-  if (!modoManual && ok > 0) {
-    if (loadPend().length === 0) {
-      mostrarToast(ok === 1 ? 'CONFIRMADO NA PLANILHA ✓' : (ok + ' REGISTROS CONFIRMADOS NA PLANILHA ✓'), 'ok');
-    } else {
-      mostrarToast(ok + ' confirmado(s); ' + loadPend().length + ' ainda só no aparelho', 'warn');
-    }
-  }
   return { ok: ok, fail: fail };
 }
 
-function _erroEnvioLegivel_(e){
-  var msg=String(e&&e.message?e.message:e||'Erro desconhecido');
-  if(/Failed to fetch|NetworkError|Load failed|fetch/i.test(msg)){
-    return 'Falha de rede/CORS ao acessar o Apps Script';
-  }
-  if(/tempo|timeout/i.test(msg))return 'Tempo esgotado ao aguardar o Apps Script';
-  if(/^http-\d+/i.test(msg))return 'Servidor respondeu '+msg.replace(/^http-/i,'HTTP ');
-  return msg;
-}
+async function reenviarPendentes() {
+  var arr = loadPend();
+  if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return; }
+  if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return; }
 
-function _atualizarHistoricoErro_(qid, erro){
-  if(!qid)return;
-  var arr=loadHist(), mudou=false;
-  for(var i=0;i<arr.length;i++){
-    if(arr[i]&&arr[i]._qid===qid){
-      arr[i].status='err';
-      arr[i].erroEnvio=_erroEnvioLegivel_(erro);
-      mudou=true;
-      break;
-    }
-  }
-  if(mudou){ saveHist(arr); renderHistorico(); }
-}
+  var bannerBtn = document.getElementById('pendBannerBtn');
+  var settingsBtn = document.getElementById('resendBtn');
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = true; });
+  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-loader-2"></i> Enviando…';
 
-function _limparHistoricoErro_(qid){
-  if(!qid)return;
-  var arr=loadHist(), mudou=false;
-  for(var i=0;i<arr.length;i++){
-    if(arr[i]&&arr[i]._qid===qid){
-      if(arr[i].erroEnvio){ delete arr[i].erroEnvio; mudou=true; }
-      break;
-    }
-  }
-  if(mudou)saveHist(arr);
-}
+  var antes = loadPend().length;
+  var r = await processarFilaEnvio(true);
+  var depois = loadPend().length;
+  var enviados = Math.max(0, antes - depois);
 
-async function reenviarPendenteIndividual(qid){
-  if(!qid)return;
-  if(!navigator.onLine){mostrarToast('Sem conexão com a internet','err');return;}
+  if (!depois) mostrarToast(enviados + ' registro(s) enviado(s) com sucesso!', 'ok');
+  else if (enviados) mostrarToast(enviados + ' enviado(s), ' + depois + ' ainda pendente(s)', 'warn');
+  else mostrarToast('Não foi possível enviar — verifique a conexão/servidor', 'err');
 
-  var item=loadPend().find(function(x){return x&&x._qid===qid;});
-  if(!item){
-    mostrarToast('Este registro não está mais pendente.','ok');
-    atualizarPendUI(); renderHistorico(); return;
-  }
-
-  var btn=document.querySelector('[data-retry-qid="'+qid+'"]');
-  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Enviando…';}
-
-  try{
-    await enviar(item);
-    _removerPendente_(qid);
-    _limparHistoricoErro_(qid);
-    _atualizarHistoricoStatus_(qid,'ok');
-    mostrarToast('CONFIRMADO NA PLANILHA ✓','ok');
-  }catch(e){
-    _atualizarHistoricoErro_(qid,e);
-    mostrarToast('Não enviado: '+_erroEnvioLegivel_(e),'err');
-    console.warn('Reenvio individual falhou',qid,e);
-  }finally{
-    atualizarPendUI();
-    renderHistorico();
-  }
-}
-
-async function reenviarPendentes(){
-  var arr=loadPend().slice();
-  if(!arr.length){mostrarToast('Nenhum registro pendente','ok');return;}
-  if(!navigator.onLine){mostrarToast('Ainda sem conexão','err');return;}
-
-  var bannerBtn=document.getElementById('pendBannerBtn');
-  var settingsBtn=document.getElementById('resendBtn');
-  var histSendAllBtn=document.getElementById('histSendAllBtn');
-  [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=true;});
-  if(bannerBtn)bannerBtn.innerHTML='<i class="ti ti-loader-2"></i> Enviando…';
-  if(histSendAllBtn)histSendAllBtn.innerHTML='<i class="ti ti-loader-2"></i> Enviando todos…';
-
-  var enviados=0, falharam=0;
-  try{
-    var filaAtual=loadPend(), migrou=false;
-    filaAtual.forEach(function(x){if(x&&!x._qid){x._qid=_novoQid_();migrou=true;}});
-    if(migrou)savePend(filaAtual);
-    arr=loadPend().slice();
-
-    for(var i=0;i<arr.length;i++){
-      var item=arr[i];
-      if(!item||!item._qid)continue;
-      try{
-        await enviar(item);
-        _removerPendente_(item._qid);
-        _limparHistoricoErro_(item._qid);
-        _atualizarHistoricoStatus_(item._qid,'ok');
-        enviados++;
-      }catch(e){
-        _atualizarHistoricoErro_(item._qid,e);
-        falharam++;
-        console.warn('Enviar todos: item falhou',item._qid,e);
-      }
-    }
-  }finally{
-    [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=false;});
-    if(bannerBtn)bannerBtn.innerHTML='<i class="ti ti-upload"></i> Reenviar agora';
-    atualizarPendUI();
-    renderHistorico();
-  }
-
-  var restante=loadPend().length;
-  if(!restante){
-    mostrarToast(enviados+' registro(s) CONFIRMADOS NA PLANILHA ✓','ok');
-  }else if(enviados){
-    mostrarToast(enviados+' confirmado(s); '+restante+' ainda no aparelho','warn');
-  }else{
-    var primeiroErro=(loadHist().find(function(x){return x&&x.status==='err'&&x.erroEnvio;})||{}).erroEnvio;
-    mostrarToast('Nenhum foi enviado'+(primeiroErro?': '+primeiroErro:''),'err');
-  }
+  [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = false; });
+  if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar';
+  atualizarPendUI();
 }
 
 function atualizarPendUI() {
@@ -2973,25 +2687,6 @@ function atualizarPendUI() {
   if (banner) banner.classList.toggle('show', n > 0);
   var bannerCount = document.getElementById('pendBannerCount');
   if (bannerCount) bannerCount.textContent = n;
-
-  // Botão "Enviar todos" no topo da lista de últimos registros.
-  var histSendAllBtn = document.getElementById('histSendAllBtn');
-  var histSendAllCount = document.getElementById('histSendAllCount');
-  var recuperaveis = contarHistoricoRecuperavel_();
-  var totalAcao = n + recuperaveis;
-  if (histSendAllBtn) {
-    histSendAllBtn.classList.toggle('show', totalAcao > 0);
-    histSendAllBtn.onclick = enviarTodosComRecuperacao_;
-    histSendAllBtn.title = recuperaveis > 0
-      ? ('Recuperar '+recuperaveis+' registro(s) do histórico e enviar todos')
-      : 'Enviar todos os registros pendentes';
-    var label=histSendAllBtn.querySelector('span');
-    if(label)label.textContent = recuperaveis > 0 ? 'Recuperar e enviar' : 'Enviar todos';
-  }
-  if (histSendAllCount) histSendAllCount.textContent = totalAcao;
-
-  document.body.classList.toggle('tem-registros-nao-confirmados', n > 0);
-  if (banner) banner.setAttribute('aria-label', n > 0 ? (n + ' registro(s) ainda não confirmados na planilha') : 'Nenhum registro pendente');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3041,233 +2736,6 @@ function registrarHistorico(dados, status) {
   saveHist(arr);
 }
 
-function _hashTextoRecuperacao_(s){
-  var h=2166136261;
-  s=String(s||'');
-  for(var i=0;i<s.length;i++){
-    h^=s.charCodeAt(i);
-    h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);
-  }
-  return (h>>>0).toString(36);
-}
-
-function _qidRecuperacaoHistorico_(item){
-  if(item&&item._qid)return item._qid;
-  var base=[
-    item&&item.ts||'',
-    item&&item.codigo||'',
-    item&&item.validade||'',
-    item&&item.setor||'',
-    item&&item.quantidade||'',
-    item&&item.unidade||''
-  ].join('|');
-  return 'rec_'+_hashTextoRecuperacao_(base);
-}
-
-function _historicoEstaNaFila_(item){
-  if(!item)return false;
-  var qid=item._qid||'';
-  if(qid && loadPend().some(function(p){return p&&p._qid===qid;}))return true;
-
-  // Compatibilidade com histórico antigo sem qid: usa assinatura dos dados.
-  return loadPend().some(function(p){
-    return p &&
-      String(p.codigo||'')===String(item.codigo||'') &&
-      String(p.validade||'')===String(item.validade||'') &&
-      String(p.setor||'')===String(item.setor||'') &&
-      Number(p.quantidade||0)===Number(item.quantidade||0) &&
-      String(p.ts||'')===String(item.ts||'');
-  });
-}
-
-function _historicoRecuperavel_(item){
-  if(!item)return false;
-  if(item.status!=='pend' && item.status!=='err')return false;
-  return !_historicoEstaNaFila_(item);
-}
-
-function contarHistoricoRecuperavel_(){
-  return loadHist().filter(_historicoRecuperavel_).length;
-}
-
-function _dadosRecuperadosDoHistorico_(item){
-  var cfg=loadCfg();
-  return {
-    _qid:_qidRecuperacaoHistorico_(item),
-    ts:item&&item.ts||new Date().toISOString(),
-    codigo:item&&item.codigo||'',
-    descricao:item&&item.descricao||'',
-    validade:item&&item.validade||'',
-    setor:item&&item.setor||'',
-    quantidade:Number(item&&item.quantidade||1),
-    unidade:item&&item.unidade||'un',
-    email:item&&item.email||cfg.email||''
-  };
-}
-
-function _atualizarHistoricoRecuperado_(item, dados, status, erro){
-  var hist=loadHist(), mudou=false;
-  for(var i=0;i<hist.length;i++){
-    var h=hist[i];
-    var mesmo = h===item ||
-      (String(h.ts||'')===String(item&&item.ts||'') &&
-       String(h.codigo||'')===String(item&&item.codigo||'') &&
-       String(h.validade||'')===String(item&&item.validade||'') &&
-       String(h.setor||'')===String(item&&item.setor||'') &&
-       Number(h.quantidade||0)===Number(item&&item.quantidade||0));
-    if(mesmo){
-      h._qid=dados._qid;
-      h.status=status;
-      if(erro) h.erroEnvio=_erroEnvioLegivel_(erro);
-      else delete h.erroEnvio;
-      mudou=true;
-      break;
-    }
-  }
-  if(mudou)saveHist(hist);
-}
-
-// Recuperação v1.7:
-// envia DIRETAMENTE a partir do histórico. A fila local vira somente
-// fallback caso o POST falhe. Assim não dependemos de salvar na outbox
-// e logo em seguida reencontrar o item para poder enviar.
-async function recuperarEReenviarHistoricoItem_(idx){
-  var hist=loadHist();
-  var item=hist[idx];
-  if(!item){mostrarToast('Registro do histórico não encontrado.','err');return;}
-  if(!_historicoRecuperavel_(item)){
-    mostrarToast('Este registro não precisa mais de recuperação.','ok');
-    renderHistorico(); atualizarPendUI(); return;
-  }
-  if(!navigator.onLine){
-    var dadosOffline=_dadosRecuperadosDoHistorico_(item);
-    salvarPendente(dadosOffline);
-    _atualizarHistoricoRecuperado_(item,dadosOffline,'pend',null);
-    mostrarToast('Sem internet: registro recuperado e mantido na fila local.','warn');
-    renderHistorico(); atualizarPendUI(); return;
-  }
-
-  var dados=_dadosRecuperadosDoHistorico_(item);
-  var btns=document.querySelectorAll('.hist-recover');
-  btns.forEach(function(b){b.disabled=true;});
-
-  try{
-    console.log('RECOVERY v1.7 enviando direto do histórico:',dados._qid,dados.codigo);
-    await enviar(dados);
-
-    // Se por algum motivo esse qid já existia na fila, remove após confirmação.
-    _removerPendente_(dados._qid);
-    _atualizarHistoricoRecuperado_(item,dados,'ok',null);
-
-    mostrarToast('RECUPERADO E CONFIRMADO NA PLANILHA ✓','ok');
-  }catch(e){
-    // Se não confirmou, garante persistência na outbox.
-    salvarPendente(dados);
-    _atualizarHistoricoRecuperado_(item,dados,'err',e);
-    mostrarToast('Não confirmou. Registro ficou salvo na fila: '+_erroEnvioLegivel_(e),'err');
-    console.warn('Recovery individual v1.7 falhou',dados._qid,e);
-  }finally{
-    renderHistorico();
-    atualizarPendUI();
-  }
-}
-
-async function _enviarFilaRobustaV17_(){
-  var fila=loadPend().slice();
-  var ok=0, fail=0;
-
-  for(var i=0;i<fila.length;i++){
-    var item=fila[i];
-    if(!item)continue;
-    if(!item._qid){
-      item._qid=_novoQid_();
-      // persiste a migração antes de tentar
-      var atual=loadPend();
-      for(var j=0;j<atual.length;j++){
-        if(atual[j]===item || (
-          String(atual[j]&&atual[j].ts||'')===String(item.ts||'') &&
-          String(atual[j]&&atual[j].codigo||'')===String(item.codigo||'')
-        )){
-          atual[j]._qid=item._qid; break;
-        }
-      }
-      savePend(atual);
-    }
-
-    try{
-      await enviar(item);
-      _removerPendente_(item._qid);
-      _limparHistoricoErro_(item._qid);
-      _atualizarHistoricoStatus_(item._qid,'ok');
-      ok++;
-    }catch(e){
-      _atualizarHistoricoErro_(item._qid,e);
-      fail++;
-      console.warn('Fila robusta v1.7: item falhou',item._qid,e);
-      // não interrompe os próximos
-    }
-  }
-  return {ok:ok,fail:fail};
-}
-
-async function enviarTodosComRecuperacao_(){
-  if(!navigator.onLine){
-    mostrarToast('Sem conexão com a internet. Os registros continuam no aparelho.','err');
-    return;
-  }
-
-  var bannerBtn=document.getElementById('pendBannerBtn');
-  var settingsBtn=document.getElementById('resendBtn');
-  var histSendAllBtn=document.getElementById('histSendAllBtn');
-  [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=true;});
-  if(histSendAllBtn)histSendAllBtn.innerHTML='<i class="ti ti-loader-2"></i> Recuperando e enviando…';
-
-  var recuperadosOk=0, recuperadosFail=0;
-  try{
-    // Tira uma fotografia da lista antes de alterar status.
-    var recuperaveis=loadHist().filter(_historicoRecuperavel_);
-
-    for(var i=0;i<recuperaveis.length;i++){
-      var item=recuperaveis[i];
-      var dados=_dadosRecuperadosDoHistorico_(item);
-
-      try{
-        console.log('RECOVERY TODOS v1.7:',dados._qid,dados.codigo);
-        await enviar(dados);
-        _removerPendente_(dados._qid);
-        _atualizarHistoricoRecuperado_(item,dados,'ok',null);
-        recuperadosOk++;
-      }catch(e){
-        salvarPendente(dados);
-        _atualizarHistoricoRecuperado_(item,dados,'err',e);
-        recuperadosFail++;
-        console.warn('Recovery todos v1.7 falhou',dados._qid,e);
-      }
-    }
-
-    // Depois tenta qualquer pendência que já existia ou que acabou de cair
-    // na outbox por falha da recuperação.
-    var filaResult=await _enviarFilaRobustaV17_();
-
-    var restante=loadPend().length;
-    var totalOk=recuperadosOk+filaResult.ok;
-
-    if(restante===0 && recuperadosFail===0){
-      mostrarToast(totalOk+' registro(s) CONFIRMADOS NA PLANILHA ✓','ok');
-    }else if(totalOk>0){
-      mostrarToast(totalOk+' confirmado(s); '+restante+' ainda no aparelho','warn');
-    }else{
-      var primeiroErro=(loadHist().find(function(x){return x&&x.erroEnvio;})||{}).erroEnvio;
-      mostrarToast('Nenhum registro confirmou'+(primeiroErro?': '+primeiroErro:''),'err');
-    }
-  }finally{
-    [bannerBtn,settingsBtn,histSendAllBtn].forEach(function(b){if(b)b.disabled=false;});
-    renderHistorico();
-    atualizarPendUI();
-  }
-}
-
-
 function renderHistorico() {
   var arr  = loadHist();
   var list = document.getElementById('histList');
@@ -3275,22 +2743,9 @@ function renderHistorico() {
     list.innerHTML = '<div class="hist-empty">Nenhum registro nesta sessão</div>';
     return;
   }
-  list.innerHTML = arr.slice(0, 10).map(function(item,idx) {
+  list.innerHTML = arr.slice(0, 10).map(function(item) {
     var emoji  = SETOR_EMOJI[item.setor] || '<i class="ti ti-package"></i>';
-    var status = item.status === 'ok' ? '<div class="hist-status-badge ok"><i class="ti ti-circle-check"></i> Confirmado<br>na planilha</div>' : item.status === 'pend' ? '<div class="hist-status-badge pend"><i class="ti ti-device-mobile"></i> Só no aparelho</div>' : '<div class="hist-status-badge err"><i class="ti ti-circle-x"></i> Erro de envio</div>';
-    var aindaPendente=_historicoEstaNaFila_(item);
-    var recuperavel=_historicoRecuperavel_(item);
-    if(recuperavel){
-      status='<div class="hist-orphan"><i class="ti ti-history"></i> Histórico sem fila<br>recuperável</div>';
-    }
-    var retryHtml=aindaPendente
-      ? '<button type="button" class="hist-retry" data-retry-qid="'+item._qid+'" onclick="event.stopPropagation();reenviarPendenteIndividual(\''+item._qid+'\')"><i class="ti ti-upload"></i> Reenviar</button>'
-      : (recuperavel
-          ? '<button type="button" class="hist-recover" onclick="event.stopPropagation();recuperarEReenviarHistoricoItem_('+idx+')"><i class="ti ti-restore"></i> Recuperar</button>'
-          : '');
-    var erroHtml=item.erroEnvio
-      ? '<div class="hist-error"><b>Motivo:</b> '+String(item.erroEnvio).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})+'</div>'
-      : '';
+    var status = item.status === 'ok' ? '<i class="ti ti-circle-check"></i>' : item.status === 'pend' ? '<i class="ti ti-loader-2"></i>' : '<i class="ti ti-circle-x"></i>';
     var hora   = item.ts ? new Date(item.ts).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
     var tipo   = item.tipo ? ' • ' + item.tipo : '';
     var desc   = item.descricao ? '<div class="hist-desc">' + item.descricao + '</div>' : '';
@@ -3303,8 +2758,7 @@ function renderHistorico() {
       +   desc
       +   '<div class="hist-meta">' + emoji + ' ' + item.setor + '&nbsp;•&nbsp;<i class="ti ti-calendar"></i> ' + item.validade + '&nbsp;•&nbsp;' + qtdTxt + tipo + (hora ? '&nbsp;•&nbsp;' + hora : '') + '</div>'
       + '</div>'
-      + '<div class="hist-actions">' + status + retryHtml + '</div>'
-      + erroHtml
+      + '<div class="hist-status">' + status + '</div>'
       + '</div>';
   }).join('');
 }
@@ -3759,39 +3213,6 @@ function mostrarToast(msg, tipo) {
   _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 
-function auraDiagnosticoEnvio(){
-  var cfg=loadCfg();
-  var pend=loadPend();
-  var hist=loadHist();
-  var info={
-    build:'AURA Coleta Tablet v1.8',
-    api:cfg.url||'',
-    online:navigator.onLine,
-    pendentes:pend.length,
-    primeiroQid:pend[0]&&pend[0]._qid||'',
-    primeiroCodigo:pend[0]&&pend[0].codigo||'',
-    historico:hist.length,
-    historicoRecuperavel:contarHistoricoRecuperavel_(),
-    recoveryDiretoV17:true,
-    avataresTabletInstantaneosV18:true,
-    modoTablet:_modoTablet,
-    usuariosCarregados:COLABORADORES.length,
-    seletorAberto:!!(document.getElementById('tabletModal')&&document.getElementById('tabletModal').classList.contains('open')),
-    enviarTodosExiste:!!document.getElementById('histSendAllBtn'),
-    reenvioIndividual:typeof reenviarPendenteIndividual==='function'
-  };
-  console.table(info);
-  return info;
-}
-
-console.log('AURA COLETA TABLET v1.8 CARREGADO');
-setTimeout(function(){
-  try{
-    var d=auraDiagnosticoEnvio();
-    console.log('Pendentes locais:',d.pendentes,'| API:',d.api);
-  }catch(e){}
-},700);
-
 // ═══════════════════════════════════════════════════════════
 //  ONLINE / OFFLINE
 // ═══════════════════════════════════════════════════════════
@@ -4220,23 +3641,14 @@ function carregarColaboradores() {
       var ativos = todos.filter(function(c) { return c.ativo; });
       var inativos = todos.filter(function(c) { return !c.ativo; });
       COLABORADORES = ativos.concat(inativos);
-      if (typeof _tabletSalvarCacheUsuarios_ === 'function') {
-        _tabletSalvarCacheUsuarios_(COLABORADORES);
-      } else {
-        try { localStorage.setItem('colaboradoresCache', JSON.stringify(COLABORADORES)); } catch (e) {}
-      }
+      try { localStorage.setItem('colaboradoresCache', JSON.stringify(COLABORADORES)); } catch (e) {}
       return COLABORADORES;
     })
     .catch(function(err) {
       console.error('Erro ao carregar colaboradores do GAS:', err);
       try {
-        if (typeof _tabletLerCacheUsuarios_ === 'function') {
-          var listaCache = _tabletLerCacheUsuarios_();
-          if (listaCache.length) COLABORADORES = listaCache;
-        } else {
-          var cache = localStorage.getItem('colaboradoresCache');
-          if (cache) COLABORADORES = JSON.parse(cache);
-        }
+        var cache = localStorage.getItem('colaboradoresCache');
+        if (cache) COLABORADORES = JSON.parse(cache);
       } catch (e) {}
       return COLABORADORES;
     });
@@ -4450,381 +3862,35 @@ function pararConfete() {
   if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
-
 // ═══════════════════════════════════════════════════════════
-//  RETIRADAS — consulta dentro do app + PDF
+//  MODO TABLET — seletor de usuário
 // ═══════════════════════════════════════════════════════════
-var _retiradaItens=[];
-var _retiradaFotos=Object.create(null);
-var _retiradaToken=0;
-var _retiradaScannerEstavaAtivo=false;
-var _retiradaAberta=false;
-
-function retiradaHojeIso_(){
-  var d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function retiradaDataObj_(iso){
-  var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0,0):null;
-}
-function retiradaFmtData_(iso,comSemana){
-  var d=retiradaDataObj_(iso);
-  if(!d)return iso||'';
-  return d.toLocaleDateString('pt-BR',comSemana
-    ?{weekday:'long',day:'numeric',month:'long',year:'numeric'}
-    :{day:'2-digit',month:'2-digit',year:'numeric'});
-}
-function retiradaQtd_(v){
-  var n=Number(v);
-  return isFinite(n)?n:0;
-}
-function retiradaFmtQtd_(v,un){
-  var n=retiradaQtd_(v);
-  var txt=(Math.round(n*1000)/1000).toLocaleString('pt-BR',{maximumFractionDigits:3});
-  return un?(txt+' '+un):txt;
-}
-function retiradaEsc_(s){
-  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
-function retiradaMensagemData_(iso){
-  var alvo=retiradaDataObj_(iso),hoje=retiradaDataObj_(retiradaHojeIso_());
-  if(!alvo||!hoje)return 'Produtos da data selecionada';
-  var diff=Math.round((alvo-hoje)/86400000);
-  if(diff===0)return 'Produtos que vencem hoje';
-  if(diff<0)return 'Produtos que venceram em '+retiradaFmtData_(iso,false);
-  return 'Produtos que vencem em '+retiradaFmtData_(iso,false);
-}
-
-function abrirRetiradas(){
-  if(_retiradaAberta)return;
-  _retiradaAberta=true;
-  _retiradaScannerEstavaAtivo=!!scannerAtivo;
-  try{pararScanner();}catch(e){}
-
-  var view=document.getElementById('retiradaView');
-  if(view){
-    view.classList.add('open');
-    view.setAttribute('aria-hidden','false');
-    view.scrollTop=0;
-  }
-  document.body.classList.add('retirada-aberta');
-
-  var inp=document.getElementById('retiradaData');
-  if(inp&&!inp.value)inp.value=retiradaHojeIso_();
-  carregarRetiradas(false);
-}
-
-function fecharRetiradas(){
-  if(!_retiradaAberta)return;
-  _retiradaAberta=false;
-  _retiradaToken++;
-  var view=document.getElementById('retiradaView');
-  if(view){
-    view.classList.remove('open');
-    view.setAttribute('aria-hidden','true');
-  }
-  document.body.classList.remove('retirada-aberta');
-
-  if(_retiradaScannerEstavaAtivo){
-    setTimeout(function(){
-      if(!_retiradaAberta){
-        try{iniciarScanner();}catch(e){}
-      }
-    },120);
-  }
-  _retiradaScannerEstavaAtivo=false;
-}
-
-function retiradaAtalho(delta){
-  var d=new Date();
-  d.setDate(d.getDate()+Number(delta||0));
-  var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  var inp=document.getElementById('retiradaData');
-  if(inp)inp.value=iso;
-  carregarRetiradas(true);
-}
-
-async function carregarRetiradas(manual){
-  var cfg=loadCfg();
-  var inp=document.getElementById('retiradaData');
-  var iso=(inp&&inp.value)||retiradaHojeIso_();
-  var token=++_retiradaToken;
-  var lista=document.getElementById('retiradaLista');
-  var status=document.getElementById('retiradaStatus');
-  var pdf=document.getElementById('retiradaPdfBtn');
-
-  _retiradaItens=[];
-  _retiradaFotos=Object.create(null);
-  if(pdf)pdf.disabled=true;
-  if(status){
-    status.className='retirada-status show';
-    status.innerHTML='<i class="ti ti-loader-2"></i> Consultando a AURA para '+retiradaFmtData_(iso,false)+'…';
-  }
-  if(lista)lista.innerHTML='';
-  document.getElementById('retiradaTotalProdutos').textContent='—';
-  document.getElementById('retiradaTotalQtd').textContent='—';
-  var ctx=document.getElementById('retiradaContexto');
-  if(ctx)ctx.innerHTML='<i class="ti ti-calendar"></i><span>'+retiradaMensagemData_(iso)+'.</span>';
-
-  if(!cfg.url){
-    if(status)status.innerHTML='<i class="ti ti-alert-circle"></i> Configure a URL do Apps Script para consultar as retiradas.';
-    return;
-  }
-  if(!navigator.onLine){
-    if(status)status.innerHTML='<i class="ti ti-wifi-off"></i> É necessária conexão para consultar a lista atual de retiradas.';
-    return;
-  }
-
-  try{
-    var resp=await fetchComTimeout(
-      cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now(),
-      {method:'GET',cache:'no-store'},
-      25000
-    );
-    if(token!==_retiradaToken)return;
-    if(!resp.ok)throw new Error('HTTP '+resp.status);
-    var data=await resp.json();
-    if(token!==_retiradaToken)return;
-    if(!data||data.ok===false)throw new Error((data&&data.erro)||'Não foi possível carregar as retiradas.');
-
-    _retiradaItens=Array.isArray(data.itens)?data.itens:[];
-    renderRetiradas_(iso);
-
-    if(status){
-      status.className='retirada-status';
-      status.innerHTML='';
-    }
-    if(pdf)pdf.disabled=_retiradaItens.length===0;
-
-    // Fotos entram depois dos dados, em baixa concorrência, para não travar a lista.
-    retiradaCarregarFotos_(_retiradaItens,token);
-  }catch(e){
-    if(token!==_retiradaToken)return;
-    _retiradaItens=[];
-    renderRetiradas_(iso);
-    if(status){
-      status.className='retirada-status show';
-      status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(e&&e.message?e.message:e);
-    }
-  }
-}
-
-function renderRetiradas_(iso){
-  var itens=_retiradaItens||[];
-  var lista=document.getElementById('retiradaLista');
-  var totalQtd=itens.reduce(function(s,x){return s+retiradaQtd_(x.qtde);},0);
-  document.getElementById('retiradaTotalProdutos').textContent=itens.length;
-  document.getElementById('retiradaTotalQtd').textContent=(Math.round(totalQtd*1000)/1000).toLocaleString('pt-BR',{maximumFractionDigits:3});
-
-  if(!lista)return;
-  if(!itens.length){
-    var alvo=retiradaDataObj_(iso),hoje=retiradaDataObj_(retiradaHojeIso_());
-    var msg='Nenhum produto vence nessa data';
-    if(alvo&&hoje){
-      if(alvo.getTime()===hoje.getTime())msg='Nenhum produto vence hoje';
-      else if(alvo<hoje)msg='Nenhum produto venceu nesse dia';
-    }
-    lista.innerHTML='<div class="retirada-empty"><i class="ti ti-circle-check"></i><strong>'+msg+'</strong><span>Tudo dentro da validade para a data consultada.</span></div>';
-    return;
-  }
-
-  lista.innerHTML=itens.map(function(p,idx){
-    var cod=String(p.cod||'').replace(/\D/g,'');
-    var unidade=String(p.unidade||'').trim();
-    return '<div class="retirada-item">'
-      +'<div class="retirada-item-top">'
-      +  '<span class="retirada-qtd-badge">'+retiradaEsc_(retiradaFmtQtd_(p.qtde,''))+'</span>'
-      +  '<div class="retirada-item-name">'+retiradaEsc_(p.nome||('Produto '+cod))+'</div>'
-      +'</div>'
-      +'<div class="retirada-item-body">'
-      +  '<div class="retirada-foto" id="retiradaFoto_'+idx+'" data-cod="'+retiradaEsc_(cod)+'">'
-      +    (cod?'<span class="retirada-foto-spin"></span>':'<i class="ti ti-photo-off"></i>')
-      +  '</div>'
-      +  '<div class="retirada-grid">'
-      +    '<div><div class="retirada-info-label">Setor</div><div class="retirada-info-val">'+retiradaEsc_(p.setor||'--')+'</div></div>'
-      +    '<div><div class="retirada-info-label">Quantidade</div><div class="retirada-info-val">'+retiradaEsc_(retiradaFmtQtd_(p.qtde,unidade))+'</div></div>'
-      +    '<div><div class="retirada-info-label">Validade</div><div class="retirada-info-val">'+retiradaEsc_(retiradaFmtData_(p.validade||iso,false))+'</div></div>'
-      +    '<div><div class="retirada-info-label">Fornecedor</div><div class="retirada-info-val">'+retiradaEsc_(p.fornecedor||'--')+'</div></div>'
-      +    '<div class="retirada-info-wide"><div class="retirada-info-label">Código de Barras</div><div class="retirada-info-val" style="font-family:var(--mono)">'+retiradaEsc_(p.cod||'--')+'</div></div>'
-      +  '</div>'
-      +'</div>'
-      +'</div>';
-  }).join('');
-}
-
-async function retiradaCarregarFotos_(itens,token){
-  var fila=(Array.isArray(itens)?itens:[]).map(function(p,idx){return {p:p,idx:idx};})
-    .filter(function(x){return String(x.p.cod||'').replace(/\D/g,'');});
-  var pos=0;
-  async function worker(){
-    while(pos<fila.length){
-      var atual=fila[pos++];
-      if(token!==_retiradaToken||!_retiradaAberta)return;
-      var cod=String(atual.p.cod||'').replace(/\D/g,'');
-      var el=document.getElementById('retiradaFoto_'+atual.idx);
-      try{
-        var r=await resolverFotoCentral(cod,atual.p.nome||'');
-        if(token!==_retiradaToken||!_retiradaAberta)return;
-        if(r&&r.img&&r.img.src){
-          _retiradaFotos[cod]=r.img.src;
-          if(el)el.innerHTML='<img src="'+retiradaEsc_(r.img.src)+'" alt="">';
-        }else if(el){
-          el.innerHTML='<i class="ti ti-photo-off"></i>';
-        }
-      }catch(e){
-        if(el)el.innerHTML='<i class="ti ti-photo-off"></i>';
-      }
-    }
-  }
-  var qtdWorkers=Math.min(3,fila.length);
-  var ps=[];
-  for(var i=0;i<qtdWorkers;i++)ps.push(worker());
-  await Promise.all(ps);
-}
-
-function exportarRetiradasPDF(){
-  var itens=_retiradaItens||[];
-  if(!itens.length){
-    mostrarToast('Nenhum item para exportar nessa data','warn');
-    return;
-  }
-  var iso=(document.getElementById('retiradaData')||{}).value||retiradaHojeIso_();
-  var dataObj=retiradaDataObj_(iso)||new Date();
-  var hoje=retiradaDataObj_(retiradaHojeIso_());
-  var ehHoje=hoje&&dataObj.getTime()===hoje.getTime();
-  var ehPassado=hoje&&dataObj<hoje;
-  var totalQtd=itens.reduce(function(s,x){return s+retiradaQtd_(x.qtde);},0);
-
-  var cards=itens.map(function(p){
-    var cod=String(p.cod||'').replace(/\D/g,'');
-    var foto=_retiradaFotos[cod]||'';
-    var fotoHtml=foto
-      ?'<div class="foto"><img src="'+retiradaEsc_(foto)+'" alt=""></div>'
-      :'<div class="foto vazia"><i class="ti ti-photo-off"></i></div>';
-    return '<div class="item">'
-      +'<div class="item-top"><span class="qtd">'+retiradaEsc_(retiradaFmtQtd_(p.qtde,''))+'</span><strong>'+retiradaEsc_(p.nome||'Produto')+'</strong></div>'
-      +'<div class="item-body">'+fotoHtml
-      +'<div class="grid">'
-      +'<div><span>Setor</span><b>'+retiradaEsc_(p.setor||'--')+'</b></div>'
-      +'<div><span>Qtde</span><b>'+retiradaEsc_(retiradaFmtQtd_(p.qtde,p.unidade||''))+'</b></div>'
-      +'<div><span>Validade</span><b>'+retiradaEsc_(retiradaFmtData_(p.validade||iso,false))+'</b></div>'
-      +'<div><span>Fornecedor</span><b>'+retiradaEsc_(p.fornecedor||'--')+'</b></div>'
-      +'<div class="wide"><span>Código de Barras</span><b class="mono">'+retiradaEsc_(p.cod||'--')+'</b></div>'
-      +'</div></div></div>';
-  }).join('');
-
-  var titulo=ehHoje?'Vence Hoje':(ehPassado?'Venceu ':'Vence em ')+dataObj.toLocaleDateString('pt-BR',{weekday:'long'});
-  var html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
-    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
-    +'<title>Retirada '+retiradaFmtData_(iso,false)+'</title>'
-    +'<link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">'
-    +'<style>'
-    +'@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f2f2f7;color:#1c1c1e}'
-    +'.topo{background:linear-gradient(135deg,#b91c1c,#7f1d1d);color:#fff;padding:18px 16px 16px}.topline{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.lab{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;opacity:.75}.topo h1{margin:3px 0 0;font-size:21px;line-height:1.1}.date{font-size:11px;opacity:.82;margin-top:5px;text-transform:capitalize}.badge{border:1px solid #ffffff66;background:#ffffff22;border-radius:999px;padding:5px 11px;font-weight:900;font-size:12px}'
-    +'.summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:11px 0}.s{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px 12px}.s span{display:block;font-size:8px;text-transform:uppercase;color:#888}.s b{display:block;font-size:22px;color:#b91c1c;margin-top:3px}'
-    +'.item{background:#fff;border:1px solid #ddd;border-radius:11px;overflow:hidden;margin-bottom:8px;break-inside:avoid}.item-top{position:relative;background:linear-gradient(135deg,#92190c,#b91c1c);color:#fff;min-height:46px;padding:9px 10px 9px 49px;display:flex;align-items:center}.item-top strong{font-size:12px;line-height:1.2}.qtd{position:absolute;left:8px;top:50%;transform:translateY(-50%);min-width:31px;height:31px;border-radius:999px;padding:0 6px;background:#fff;color:#b91c1c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}.item-body{display:flex;gap:8px;padding:8px 10px 9px}.foto{width:52px;height:52px;flex-shrink:0;border:1px solid #ddd;border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}.foto img{width:100%;height:100%;object-fit:contain}.foto.vazia{color:#bbb}.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:5px 9px}.grid span{display:block;font-size:7px;text-transform:uppercase;color:#999;letter-spacing:.05em}.grid b{font-size:9px}.wide{grid-column:1/-1}.mono{font-family:monospace}.print{display:block;width:100%;border:0;border-radius:10px;background:#b91c1c;color:#fff;padding:13px;font-size:13px;font-weight:900;margin-top:10px}.foot{text-align:center;color:#aaa;font-size:8px;padding:10px 0 2px}@media print{body{background:#fff}.print{display:none}.topo{-webkit-print-color-adjust:exact;print-color-adjust:exact}.item-top{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
-    +'</style></head><body>'
-    +'<div class="topo"><div class="topline"><div><div class="lab">Boas Compras · Retirada</div><h1>🗑️ '+retiradaEsc_(titulo)+'</h1><div class="date">'+retiradaEsc_(retiradaFmtData_(iso,true))+'</div></div><div class="badge">'+itens.length+(itens.length===1?' item':' itens')+'</div></div></div>'
-    +'<div class="summary"><div class="s"><span>Produtos</span><b>'+itens.length+'</b></div><div class="s"><span>Quantidade</span><b>'+retiradaEsc_((Math.round(totalQtd*1000)/1000).toLocaleString('pt-BR',{maximumFractionDigits:3}))+'</b></div></div>'
-    +cards
-    +'<button class="print" onclick="window.print()">🖨️ Salvar como PDF</button>'
-    +'<div class="foot">AURA Vencimentos · Coleta de Validades · '+retiradaEsc_(new Date().toLocaleString('pt-BR'))+'</div>'
-    +'</body></html>';
-
-  var w=window.open('','_blank','width=460,height=860');
-  if(!w){
-    mostrarToast('Libere pop-ups para exportar o PDF','warn');
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-}
-
-
-// ═══════════════════════════════════════════════════════════
-//  MODO TABLET — seletor de usuário v1.8
-//  Tablet de uso comum: seleção SEMPRE é a tela inicial.
-// ═══════════════════════════════════════════════════════════
-var _modoTablet = window.location.search.indexOf('tablet') >= 0
-  || /tablet\.html$/i.test(window.location.pathname);
-
-var _tabletListaAtual = [];
-var _tabletSelecionandoUsuario = false;
-
-// Cache de usuários separado do restante dos dados operacionais.
-// O localStorage pode estar cheio; por isso também usamos sessionStorage.
-// A leitura do localStorage continua funcionando mesmo quando não há espaço
-// para novas gravações.
-function _tabletLerCacheUsuarios_() {
-  var fontes = [];
-  try { fontes.push(sessionStorage.getItem('colaboradoresCache')); } catch(e) {}
-  try { fontes.push(localStorage.getItem('colaboradoresCache')); } catch(e) {}
-
-  for (var i=0;i<fontes.length;i++) {
-    if (!fontes[i]) continue;
-    try {
-      var arr = JSON.parse(fontes[i]);
-      if (Array.isArray(arr) && arr.length) return arr;
-    } catch(e) {}
-  }
-  return [];
-}
-
-function _tabletSalvarCacheUsuarios_(lista) {
-  if (!Array.isArray(lista) || !lista.length) return;
-  var json = JSON.stringify(lista);
-  try { sessionStorage.setItem('colaboradoresCache', json); } catch(e) {}
-  try { localStorage.setItem('colaboradoresCache', json); } catch(e) {
-    console.warn('Tablet: localStorage cheio; cache de avatares mantido na sessão.');
-  }
-}
-
-function _tabletMostrarCarregando_() {
-  var grid = document.getElementById('tabletGrid');
-  if (!grid) return;
-  grid.innerHTML =
-    '<div class="tablet-grid-status">'
-    + '<i class="ti ti-users"></i>'
-    + '<strong>Carregando usuários…</strong>'
-    + 'A lista de avatares aparecerá aqui assim que o cadastro estiver disponível.'
-    + '</div>';
-}
+// Modo tablet é ativado por dois caminhos independentes:
+//  1) query string contendo "tablet" (ex: ?tablet) — mantido por
+//     compatibilidade com links/atalhos antigos;
+//  2) o próprio arquivo servido ser "tablet.html" — assim, mesmo que
+//     um app instalado (PWA) no Android abra sem preservar a query
+//     string, o modo tablet continua ativo por causa do nome do arquivo.
+var _modoTablet = true; // build dedicado para tablet
 
 function iniciarModoTablet() {
-  if (!_modoTablet) return;
-
-  _tabletSelecionandoUsuario = true;
-
-  // Tablet compartilhado: não deixa câmera/scanner rodando atrás da
-  // tela de escolha de usuário.
-  try {
-    if (typeof scannerAtivo !== 'undefined' && scannerAtivo) pararScanner();
-  } catch(e) {}
-
-  var modal = document.getElementById('tabletModal');
-  if (modal) modal.classList.add('open');
-
-  var busca = document.getElementById('tabletSearch');
-  if (busca) busca.value = '';
-
-  // 1) tenta memória/cache imediatamente
-  if (!COLABORADORES.length) {
-    var cache = _tabletLerCacheUsuarios_();
-    if (cache.length) COLABORADORES = cache;
-  }
-
-  // 2) renderiza instantaneamente se já houver cache; senão mantém a
-  // tela fixa visível com "Carregando usuários…".
-  if (COLABORADORES.length) renderGridTablet(COLABORADORES);
-  else _tabletMostrarCarregando_();
+  var grid = document.getElementById('tabletGrid');
+  var usuarios = COLABORADORES.filter(function(c) {
+    // inclui todos, mas marca quem não tem email
+    return true;
+  });
+  renderGridTablet(usuarios);
+  document.getElementById('tabletModal').classList.add('open');
 }
 
-// Nomes que colidem (mesmo primeiro nome) exibem também o sobrenome.
+// Lista filtrada atual (referenciada pelo índice no onclick)
+var _tabletListaAtual = [];
+
+// Nomes que colidem (mesmo primeiro nome) na lista exibida ficam
+// ambíguos como card ("Stefani" e "Stefani" sem diferença visual no
+// nome grande). Pra esses casos, mostra nome + sobrenome em vez de só
+// o primeiro nome, só nos que colidem — os demais continuam exibindo
+// apenas o primeiro nome, como antes.
 function _nomeExibicaoTablet_(c, contagemPrimeiroNome) {
   var primeiro = primeiroNome(c.nome);
   if (contagemPrimeiroNome[primeiro.toLowerCase()] > 1) {
@@ -4835,24 +3901,12 @@ function _nomeExibicaoTablet_(c, contagemPrimeiroNome) {
 }
 
 function renderGridTablet(lista) {
-  lista = Array.isArray(lista) ? lista : [];
   _tabletListaAtual = lista;
-
   var grid = document.getElementById('tabletGrid');
-  if (!grid) return;
-
-  if (!lista.length) {
-    grid.innerHTML =
-      '<div class="tablet-grid-status">'
-      + '<i class="ti ti-user-off"></i>'
-      + '<strong>Nenhum usuário disponível</strong>'
-      + 'Verifique o cadastro de colaboradores ou a conexão.'
-      + '</div>';
-    return;
-  }
-
   var cores = ['#E24B4A','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
 
+  // Conta quantas vezes cada primeiro nome aparece na lista atual,
+  // pra saber quem precisa do sobrenome pra se diferenciar.
   var contagemPrimeiroNome = {};
   lista.forEach(function(c) {
     var chave = primeiroNome(c.nome).toLowerCase();
@@ -4860,22 +3914,15 @@ function renderGridTablet(lista) {
   });
 
   grid.innerHTML = lista.map(function(c, i) {
-    var iniciais = String(c.nome||'')
-      .split(' ').filter(Boolean).slice(0,2)
-      .map(function(p){ return p[0]; }).join('').toUpperCase() || '?';
+    var iniciais = c.nome.split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
     var cor = cores[i % cores.length];
-
-    var emailInfo = c.ativo === false
+    var emailInfo = !c.ativo
       ? '<div class="tablet-no-email">inativo</div>'
       : (c.email
         ? '<div class="tablet-user-email">' + c.email.split('@')[0] + '</div>'
         : '<div class="tablet-no-email">sem email cadastrado</div>');
-
     var inativo = c.ativo === false;
-    var disabled = (!c.email || inativo)
-      ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"'
-      : '';
-
+    var disabled = (!c.email || inativo) ? 'style="opacity:' + (inativo ? '.35' : '.5') + ';filter:' + (inativo ? 'grayscale(60%);' : '') + 'pointer-events:none"' : '';
     return '<button class="tablet-user-btn" onclick="selecionarUsuarioTabletIdx(' + i + ')" ' + disabled + '>'
       + '<div class="tablet-user-avatar" style="background:' + cor + '">' + iniciais + '</div>'
       + '<div class="tablet-user-name">' + _nomeExibicaoTablet_(c, contagemPrimeiroNome) + '</div>'
@@ -4886,87 +3933,161 @@ function renderGridTablet(lista) {
 
 function selecionarUsuarioTabletIdx(i) {
   var c = _tabletListaAtual[i];
-  if (!c || !c.email || c.ativo === false) return;
+  if (!c || !c.email) return;
   selecionarUsuarioTablet(c.nome, c.email);
 }
 
 function filtrarUsuariosTablet(texto) {
-  var lower = String(texto||'').toLowerCase().trim();
+  var lower = texto.toLowerCase();
   var filtrados = COLABORADORES.filter(function(c) {
-    var nome = String(c.nome||'').toLowerCase();
-    var email = String(c.email||'').toLowerCase();
-    return !lower || nome.indexOf(lower) >= 0 || email.indexOf(lower) >= 0;
+    return c.nome.toLowerCase().indexOf(lower) >= 0;
   });
   renderGridTablet(filtrados);
 }
 
 function selecionarUsuarioTablet(nome, email) {
   if (!email) return;
-
+  // Salva na cfg apenas para esta sessão (não sobrescreve cfg permanente do tablet)
   var cfg = loadCfg();
   cfg.email = email.toLowerCase();
-  if (!cfg.url) cfg.url = DEFAULT_URL;
   saveCfg(cfg);
 
-  _tabletSelecionandoUsuario = false;
+  // Atualiza header
+  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
 
-  document.querySelector('.hdr-sub').innerHTML =
-    '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
+  // ✅ CORREÇÃO: fecha o modal do seletor de usuário
+  document.getElementById('tabletModal').classList.remove('open');
 
-  var modal = document.getElementById('tabletModal');
-  if (modal) modal.classList.remove('open');
-
+  // Mostra botão de trocar usuário no header
   var btn = document.getElementById('trocaUsuarioBtn');
   if (btn) btn.style.display = 'flex';
+  document.getElementById('tabletSearch').value = '';
 
-  var search = document.getElementById('tabletSearch');
-  if (search) search.value = '';
-
+  // Verifica aniversário e busca tarefas
   setTimeout(function() { verificarAniversario(email, nome); }, 400);
   setTimeout(function() { buscarTarefas(); }, 700);
 }
 
-// Ação explícita para tablet compartilhado.
-// Encerra a identidade atual antes de voltar para os avatares.
-function sairUsuarioTablet() {
-  if (!_modoTablet) {
-    iniciarModoTablet();
-    return;
-  }
 
-  try {
-    if (typeof scannerAtivo !== 'undefined' && scannerAtivo) pararScanner();
-  } catch(e) {}
 
-  // Limpa somente o usuário; mantém URL do Apps Script e demais
-  // configurações do aparelho.
-  var cfg = loadCfg();
-  cfg.email = '';
-  if (!cfg.url) cfg.url = DEFAULT_URL;
-  saveCfg(cfg);
+// ═══════════════════════════════════════════════════════════
+// RECEBIMENTO POR NF-e — conexão Coleta ↔ backend AURA v6.34
+// ═══════════════════════════════════════════════════════════
+var _nfeColetaNota = null;
+var _nfeModoScan = false;
+var _nfeOnScanProduto = onScanSuccess;
+var _nfeConfirmarManualProduto = confirmarManual;
 
-  document.querySelector('.hdr-sub').innerHTML =
-    '<i class="ti ti-users"></i> Tablet compartilhado — selecione um usuário';
-
-  var btn = document.getElementById('trocaUsuarioBtn');
-  if (btn) btn.style.display = 'none';
-
-  iniciarModoTablet();
+function nfeDigitos_(v){ return String(v||'').replace(/\D/g,''); }
+function nfeEsc_(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function nfeFmtQtd_(v){ var n=Number(v)||0; return Number.isInteger(n)?String(n):n.toLocaleString('pt-BR',{maximumFractionDigits:3}); }
+function nfeCfgUrl_(){ var c=loadCfg(); return c&&c.url?String(c.url).trim():''; }
+function nfeSetorOptions_(atual){
+  var vals=[]; var s=document.getElementById('fSetor');
+  if(s){ Array.prototype.forEach.call(s.options,function(o){ if(o.value) vals.push({v:o.value,t:o.textContent}); }); }
+  if(!vals.length){ vals=['Açougue','Bazar','Bebidas','Congelados','Frios','Horti','Laticínios','Limpeza','Outros','Padaria','Perfumaria','Pet','Pilhas/Baterias','Seca','Seca doce'].map(function(x){return {v:x,t:x};}); }
+  return vals.map(function(x){return '<option value="'+nfeEsc_(x.v)+'" '+(x.v===atual?'selected':'')+'>'+nfeEsc_(x.t)+'</option>';}).join('');
 }
-
-// Atualiza a grade quando a lista do servidor chegar, sem fechar a tela.
-function _tabletAtualizarUsuariosDepoisDaRede_() {
-  if (!_modoTablet) return;
-  if (COLABORADORES.length) {
-    _tabletSalvarCacheUsuarios_(COLABORADORES);
-    if (_tabletSelecionandoUsuario ||
-        document.getElementById('tabletModal').classList.contains('open')) {
-      renderGridTablet(COLABORADORES);
+async function nfePost_(dados){
+  var url=nfeCfgUrl_(); if(!url) throw new Error('Configure a URL da AURA nas configurações.');
+  var opts={method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(dados)};
+  var r=(typeof fetchComTimeout==='function')?await fetchComTimeout(url,opts,30000):await fetch(url,opts);
+  var txt=await r.text(); var j; try{j=JSON.parse(txt);}catch(e){throw new Error('Resposta inválida do servidor.');}
+  return j;
+}
+function nfeAbrir_(){ document.getElementById('nfeOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
+function nfeColetaFechar(){ document.getElementById('nfeOverlay').classList.remove('open'); document.body.style.overflow=''; _nfeModoScan=false; }
+function nfeColetaNova(){ _nfeColetaNota=null; nfeRenderEntradaChave_(); }
+function nfeRenderEntradaChave_(){
+  nfeAbrir_(); document.getElementById('nfeActions').style.display='none'; document.getElementById('nfeHeadSub').textContent='Chave de acesso → produtos → validades';
+  document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-key-row"><input id="nfeKeyInput" inputmode="numeric" maxlength="44" placeholder="Digite ou cole os 44 dígitos da NF-e" onkeydown="if(event.key===\'Enter\'){event.preventDefault();nfeColetaBuscarChave(this.value)}"><button onclick="nfeColetaBuscarChave(document.getElementById(\'nfeKeyInput\').value)">BUSCAR</button></div><div class="nfe-hint">Você também pode fechar esta tela e bipar a chave diretamente com a câmera. Chaves de 44 dígitos são reconhecidas automaticamente.</div><div class="nfe-xml-box"><b style="font-size:11px">XML ainda não chegou ao Drive?</b><div class="nfe-hint" style="margin:4px 0 8px">Importe o XML como contingência. Depois podemos automatizar isso pelo e-mail que recebe as notas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div></div>';
+  setTimeout(function(){var x=document.getElementById('nfeKeyInput');if(x)x.focus();},80);
+}
+function nfeColetaIniciarScan(){
+  nfeColetaFechar(); _nfeModoScan=true;
+  if(typeof resetCodigo==='function') resetCodigo();
+  mostrarToast('Modo NF-e: bipe a chave de acesso de 44 dígitos', 'ok');
+  iniciarScanner();
+}
+function nfeFeedbackLeitura_(){
+  pararScanner();
+  var flash=document.getElementById('scanFlash'); if(flash){flash.classList.add('show');setTimeout(function(){flash.classList.remove('show');},220);}
+  if(navigator.vibrate)navigator.vibrate([60,30,60]); try{tocarBip();}catch(e){}
+}
+onScanSuccess = function(code){
+  var dig=nfeDigitos_(code);
+  if(dig.length===44){ _nfeModoScan=false; nfeFeedbackLeitura_(); nfeColetaBuscarChave(dig); return; }
+  if(_nfeModoScan){ mostrarToast('Esse código não é uma chave de NF-e de 44 dígitos', 'err'); return; }
+  return _nfeOnScanProduto(code);
+};
+confirmarManual = function(){
+  var el=document.getElementById('manualInput'),v=el?String(el.value||'').trim():''; var dig=nfeDigitos_(v);
+  if(dig.length===44){ fecharManual(); nfeColetaBuscarChave(dig); return; }
+  return _nfeConfirmarManualProduto();
+};
+async function nfeColetaBuscarChave(chave){
+  chave=nfeDigitos_(chave); nfeAbrir_(); document.getElementById('nfeActions').style.display='none';
+  document.getElementById('nfeHeadSub').textContent=chave||'Buscando NF-e';
+  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
+  try{
+    var j=await nfePost_({action:'nfeBuscarChave',chave:chave});
+    if(!j||!j.ok){
+      var msg=(j&&j.erro)||'NF-e não localizada.';
+      document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';
+      return;
     }
-  } else if (_tabletSelecionandoUsuario) {
-    renderGridTablet([]);
-  }
+    _nfeColetaNota=j.nota; nfePrepararLotes_(_nfeColetaNota); nfeRenderNota_();
+  }catch(e){ document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(e.message||e)+'</div>'; }
 }
+function nfeColetaLerArquivoXml(file){
+  if(!file)return; var r=new FileReader();
+  r.onload=async function(){
+    nfeAbrir_(); document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i>Lendo XML…</div>';
+    try{var j=await nfePost_({action:'nfeLerXml',xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeRenderNota_();}catch(e){document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(e.message||e)+'</div>';}
+  }; r.readAsText(file);
+}
+function nfePrepararLotes_(nota){
+  (nota.itens||[]).forEach(function(it){
+    it.controlar = it.controlar!==false;
+    if(!it.setor) it.setor=it.setorSugerido||'Outros';
+    if(!Array.isArray(it.lotes)||!it.lotes.length) it.lotes=[{validade:'',quantidade:Number(it.qtdEstoque||it.qCom||0)||0,lote:''}];
+    else it.lotes=it.lotes.map(function(l){return {validade:String(l.validade||''),quantidade:Number(l.quantidade)||0,lote:String(l.lote||'')};});
+  });
+}
+function nfeRenderNota_(){
+  var n=_nfeColetaNota;if(!n)return nfeColetaNova();
+  document.getElementById('nfeHeadSub').textContent='NF '+(n.numero||'—')+' · '+(n.fornecedor||'Fornecedor');
+  var html='<div class="nfe-note"><div class="nfe-note-top"><div class="nfe-note-icon"><i class="ti ti-file-invoice"></i></div><div><div class="nfe-note-name">'+nfeEsc_(n.fornecedor||'Fornecedor não informado')+'</div><div class="nfe-note-meta">NF '+nfeEsc_(n.numero||'—')+' · Série '+nfeEsc_(n.serie||'—')+' · Emissão '+nfeEsc_(n.emissao||'—')+'<br>CNPJ '+nfeEsc_(n.cnpjFornecedor||'—')+' · Chave '+nfeEsc_(n.chave||'')+'</div></div></div><div class="nfe-note-kpis"><div class="nfe-note-kpi"><b>'+Number(n.totalItens||0)+'</b><span>Itens</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalEncontrados||0)+'</b><span>Reconhecidos</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalNaoEncontrados||0)+'</b><span>Vincular</span></div></div></div>';
+  if(n.jaProcessada)html+='<div class="nfe-warn danger"><b>Esta NF-e já foi concluída anteriormente.</b><br>Para evitar duplicidade, a AURA não fará novo lançamento por padrão.</div>';
+  html+='<div class="nfe-warn"><b>Conferência:</b> desmarque itens que não precisam de controle de validade. Para itens não reconhecidos, informe o EAN AURA apenas nesta primeira vez; o vínculo fica aprendido para as próximas notas do fornecedor.</div>';
+  (n.itens||[]).forEach(function(it,i){html+=nfeItemHtml_(it,i);});
+  document.getElementById('nfeBody').innerHTML=html;
+  document.getElementById('nfeActions').style.display='block';
+  var b=document.getElementById('nfeSaveBtn');if(b){b.disabled=!!n.jaProcessada;b.innerHTML=n.jaProcessada?'<i class="ti ti-lock"></i> NF-e JÁ PROCESSADA':'<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}
+}
+function nfeItemHtml_(it,i){
+  var ok=it.status==='encontrado'&&it.eanAura; var qtd=Number(it.qtdEstoque||it.qCom||0)||0;
+  var lotes=(it.lotes||[]).map(function(l,li){return '<div class="nfe-lote"><input type="date" value="'+nfeEsc_(l.validade||'')+'" onchange="nfeLoteCampo_('+i+','+li+',\'validade\',this.value)"><input type="number" step="0.001" min="0" value="'+nfeEsc_(l.quantidade||'')+'" onchange="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" title="Quantidade"><button class="nfe-lote-del" onclick="nfeRemoverLote_('+i+','+li+')"><i class="ti ti-x"></i></button></div>';}).join('');
+  return '<div class="nfe-item '+(it.controlar===false?'off':'')+'" id="nfeItem'+i+'"><div class="nfe-item-hd"><input class="nfe-check" type="checkbox" '+(it.controlar===false?'':'checked')+' onchange="nfeToggleItem_('+i+',this.checked)"><div class="nfe-item-main"><div class="nfe-item-name">'+nfeEsc_(it.nome||'Item da NF-e')+'</div><div class="nfe-item-sub">Cód. fornecedor '+nfeEsc_(it.cProd||'—')+' · '+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(it.uCom||'')+' · Estoque AURA: <b>'+nfeFmtQtd_(qtd)+' '+nfeEsc_(it.unidadeAura||it.uCom||'')+'</b></div></div><span class="nfe-badge '+(ok?'ok':'err')+'">'+(ok?'VINCULADO':'VINCULAR')+'</span></div><div class="nfe-item-body"><div class="nfe-grid2"><div class="nfe-field"><label>EAN AURA</label><div class="nfe-ean-row"><input inputmode="numeric" value="'+nfeEsc_(it.eanAura||'')+'" '+(ok?'':'placeholder="Bipe/digite o EAN"')+' onchange="nfeSetEan_('+i+',this.value)"><button class="nfe-mini-btn" onclick="nfeValidarEan_('+i+')">VALIDAR</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select></div></div><div class="nfe-lotes-title"><span>Validade(s) · total recebido '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div></div>';
+}
+function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);}
+function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it)it.setor=v;}
+function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual';}}
+function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.lotes[li])return;it.lotes[li][campo]=campo==='quantidade'?(Number(v)||0):v;}
+function nfeAdicionarLote_(i){var it=_nfeColetaNota.itens[i];if(!it)return;it.lotes.push({validade:'',quantidade:0,lote:''});nfeRenderNota_();}
+function nfeRemoverLote_(i,li){var it=_nfeColetaNota.itens[i];if(!it)return;if(it.lotes.length<=1){mostrarToast('Mantenha ao menos uma validade', 'warn');return;}it.lotes.splice(li,1);nfeRenderNota_();}
+async function nfeValidarEan_(i){
+  var it=_nfeColetaNota.itens[i];if(!it)return;var ean=nfeDigitos_(it.eanAura);if(!ean){mostrarToast('Informe o EAN AURA', 'err');return;}
+  var url=nfeCfgUrl_();if(!url){mostrarToast('Configure a URL da AURA', 'err');return;}
+  try{var sep=url.indexOf('?')>=0?'&':'?';var r=await fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(ean)+'&_='+Date.now(),{cache:'no-store'});var j=await r.json();if(!j||!j.ok)throw new Error('EAN não encontrado no Banco AURA');it.eanAura=ean;it.status='encontrado';it.origemVinculo='manual';it.nomeAura=j.descricao||'';it.unidadeAura=j.unidade||it.unidadeAura||it.uCom;it.fornecedorBanco=j.fornecedor||'';mostrarToast('EAN vinculado: '+(j.descricao||ean),'ok');nfeRenderNota_();}catch(e){mostrarToast(e.message||'EAN não encontrado','err');}
+}
+async function nfeColetaSalvar(){
+  var n=_nfeColetaNota;if(!n)return;var cfg=loadCfg(),email=cfg.email||'';if(!email){mostrarToast('Selecione/configure o colaborador antes de receber a NF-e','warn');return;}
+  var btn=document.getElementById('nfeSaveBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> GRAVANDO…';}
+  var itens=(n.itens||[]).map(function(it){return {controlar:it.controlar!==false,nItem:it.nItem,cProd:it.cProd,nome:it.nome,ean:it.eanAura||'',qCom:it.qCom,qtdEstoque:it.qtdEstoque,unidadeAura:it.unidadeAura||it.uCom,setor:it.setor||it.setorSugerido||'Outros',origemVinculo:it.origemVinculo||'',lotes:(it.lotes||[]).map(function(l){return {validade:l.validade,quantidade:Number(l.quantidade)||0,lote:l.lote||''};})};});
+  try{var j=await nfePost_({action:'nfeRegistrarValidades',chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',operador:email,itens:itens});if(!j||!j.ok){if(j&&Array.isArray(j.erros)&&j.erros.length)throw new Error(j.erros.slice(0,6).join(' · '));throw new Error((j&&j.erro)||'Falha ao gravar NF-e.');}mostrarToast('NF-e concluída: '+Number(j.gravados||0)+' lote(s) gravado(s)','ok');document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-circle-check" style="color:#1D9E75"></i><b>Recebimento concluído</b><div style="font-size:10px;margin-top:6px">'+Number(j.gravados||0)+' lote(s) gravado(s) na AURA'+(j.ignorados?' · '+Number(j.ignorados)+' já existentes':'')+'.</div><button class="nfe-mini-btn" style="margin-top:14px" onclick="nfeColetaFechar()">Voltar à coleta</button></div>';document.getElementById('nfeActions').style.display='none';}catch(e){mostrarToast(e.message||String(e),'err');if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}}
+}
+
 
 // ═══════════════════════════════════════════════════════════
 //  INIT
@@ -4974,34 +4095,25 @@ function _tabletAtualizarUsuariosDepoisDaRede_() {
 (async function init() {
   var cfg = loadCfg();
 
+  // Restaurar setor e tipo da última sessão
   if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
-
-  // TABLET COMPARTILHADO:
-  // a tela de avatares abre IMEDIATAMENTE, antes de qualquer chamada de rede.
-  // Se existir cache, os nomes já aparecem no primeiro frame.
-  if (_modoTablet) {
-    var cacheInicial = _tabletLerCacheUsuarios_();
-    if (cacheInicial.length) COLABORADORES = cacheInicial;
-
-    document.querySelector('.hdr-sub').innerHTML =
-      '<i class="ti ti-users"></i> Tablet compartilhado — selecione um usuário';
-
-    iniciarModoTablet();
-  } else if (cfg.email) {
-    document.querySelector('.hdr-sub').innerHTML =
-      '<i class="ti ti-user"></i> ' + cfg.email;
+  // Mostrar email no header se configurado
+  if (cfg.email) {
+    document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + cfg.email;
   }
 
   renderHistorico();
   atualizarPendUI();
 
-  // Atualiza colaboradores em segundo plano. No tablet a tela já está aberta,
-  // portanto não existe mais a espera visual que fazia os avatares "sumirem".
+  // Carrega a lista de colaboradores da planilha antes de qualquer coisa
+  // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
   await carregarColaboradores();
 
   if (_modoTablet) {
-    _tabletAtualizarUsuariosDepoisDaRede_();
+    // Modo tablet: sempre mostra o seletor de usuário
+    setTimeout(iniciarModoTablet, 100);
   } else {
+    // Modo pessoal: fluxo normal
     setTimeout(buscarTarefas, 200);
     if (cfg.email) {
       setTimeout(function() { verificarAniversario(cfg.email, null); }, 500);
