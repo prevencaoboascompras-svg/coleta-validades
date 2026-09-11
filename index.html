@@ -4115,7 +4115,7 @@ function nfeRemoverLote_(i,li){var it=_nfeColetaNota.itens[i];if(!it)return;if(i
 async function nfeValidarEan_(i){
   var it=_nfeColetaNota.itens[i];if(!it)return;var ean=nfeDigitos_(it.eanAura);if(!ean){mostrarToast('Informe o EAN AURA', 'err');return;}
   var url=nfeCfgUrl_();if(!url){mostrarToast('Configure a URL da AURA', 'err');return;}
-  try{var sep=url.indexOf('?')>=0?'&':'?';var r=await fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(ean)+'&_='+Date.now(),{cache:'no-store'});var j=await r.json();if(!j||!j.ok)throw new Error('EAN não encontrado no Banco AURA');it.eanAura=ean;it.status='encontrado';it.origemVinculo='manual';it.nomeAura=j.descricao||'';it.unidadeAura=j.unidade||it.unidadeAura||it.uCom;it.fornecedorBanco=j.fornecedor||'';it.fotoDataUrl='';it.fotoCarregando=false;mostrarToast('EAN vinculado: '+(j.descricao||ean),'ok');nfeRenderNota_();}catch(e){mostrarToast(e.message||'EAN não encontrado','err');}
+  try{var sep=url.indexOf('?')>=0?'&':'?';var r=await fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(ean)+'&_='+Date.now(),{cache:'no-store'});var j=await r.json();if(!j||!j.ok)throw new Error('EAN não encontrado no Banco AURA');it.eanAura=nfeDigitos_(j.ean||ean);it.status='encontrado';it.origemVinculo='manual';it.nomeAura=j.descricao||'';it.unidadeAura=j.unidade||it.unidadeAura||it.uCom;it.fornecedorBanco=j.fornecedor||'';it.fotoDataUrl='';it.fotoCarregando=false;mostrarToast('EAN vinculado: '+(j.descricao||ean),'ok');nfeRenderNota_();}catch(e){mostrarToast(e.message||'EAN não encontrado','err');}
 }
 
 async function nfeColetaSalvar(){
