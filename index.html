@@ -1000,7 +1000,7 @@ body{
 body.retirada-aberta{overflow:hidden}
 
 
-/* ── CENTRAL DE TAREFAS DO COLABORADOR — v6.48 ── */
+/* ── CENTRAL DE TAREFAS DO COLABORADOR — v6.49 ── */
 .tarefas-hist-view{display:none;position:fixed;inset:0;width:100%;max-width:480px;margin:0 auto;left:50%;transform:translateX(-50%);z-index:100120;background:var(--bg);overflow-y:auto;color:var(--tx)}
 .tarefas-hist-view.open{display:block}
 body.tarefas-hist-aberta{overflow:hidden}
@@ -1011,9 +1011,10 @@ body.tarefas-hist-aberta{overflow:hidden}
 .tarefas-hist-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
 .tarefas-hist-tab{border:1px solid var(--bd);background:var(--card);color:var(--tx2);border-radius:10px;padding:9px 5px;font-size:10px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tarefas-hist-tab b{font-size:17px;color:var(--tx)}.tarefas-hist-tab.active{border-color:#378ADD;background:rgba(55,138,221,.12);color:#378ADD}.tarefas-hist-tab.active b{color:#378ADD}
+.tarefas-hist-search{position:relative;margin:0 0 12px}.tarefas-hist-search i{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--tx2);pointer-events:none}.tarefas-hist-search input{width:100%;height:43px;border:1px solid var(--bd);border-radius:11px;background:var(--card);color:var(--tx);padding:0 42px 0 36px;font-size:12px;outline:none}.tarefas-hist-search input:focus{border-color:#378ADD;box-shadow:0 0 0 3px rgba(55,138,221,.12)}.tarefas-hist-search input::placeholder{color:var(--tx2)}.tarefas-hist-search-clear{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--tx2);display:none;align-items:center;justify-content:center;cursor:pointer}.tarefas-hist-search.has-value .tarefas-hist-search-clear{display:flex}.tarefas-hist-search-hint{font-size:9px;color:var(--tx2);margin:-6px 2px 10px;line-height:1.35}
 .tarefas-hist-status{display:none;margin-bottom:10px;padding:9px 11px;border:1px solid var(--bd);border-radius:9px;background:var(--card);font-size:11px;color:var(--tx2)}.tarefas-hist-status.show{display:block}.tarefas-hist-status.err{color:var(--accent);border-color:rgba(226,75,74,.35)}
 .tarefas-hist-list{display:flex;flex-direction:column;gap:10px}.tarefas-hist-card{border:1px solid var(--bd);border-radius:13px;background:var(--surf);padding:12px}.tarefas-hist-card-top{display:flex;gap:10px;align-items:flex-start}
-.tarefas-hist-card .tarefa-foto{width:96px;height:96px}.tarefas-hist-main{flex:1;min-width:0}.tarefas-hist-name{font-size:13px;font-weight:850;line-height:1.25}.tarefas-hist-meta{font-size:10px;color:var(--tx2);margin-top:3px;line-height:1.45}.tarefas-hist-desc{font-size:11px;color:var(--tx2);line-height:1.4;margin-top:7px}
+.tarefas-hist-card .tarefa-foto{width:96px;height:96px}.tarefas-hist-main{flex:1;min-width:0}.tarefas-hist-name{font-size:13px;font-weight:850;line-height:1.25}.tarefas-hist-meta{font-size:10px;color:var(--tx2);margin-top:3px;line-height:1.45}.tarefas-hist-desc{font-size:12px;color:var(--tx);line-height:1.45;margin-top:9px;padding:9px 10px;border-radius:9px;background:var(--card);border:1px solid var(--bd);border-left:3px solid #378ADD;white-space:pre-wrap;overflow-wrap:anywhere}.tarefas-hist-desc-label{display:flex;align-items:center;gap:5px;font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:900;color:#378ADD;margin-bottom:4px}
 .tarefas-hist-phase{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:99px;font-size:9px;font-weight:900;margin-bottom:7px}.tarefas-hist-phase.pendente{background:rgba(245,158,11,.14);color:var(--warn)}.tarefas-hist-phase.respondida{background:rgba(55,138,221,.14);color:#378ADD}.tarefas-hist-phase.concluida{background:rgba(16,185,129,.13);color:#0e9f6e}
 .tarefas-hist-answer{margin-top:10px;padding-top:9px;border-top:1px dashed var(--bd);font-size:11px;color:var(--tx2);line-height:1.5}.tarefas-hist-answer b{color:var(--tx)}
 .tarefas-hist-actions{display:flex;gap:7px;margin-top:10px}.tarefas-hist-action{flex:1;min-height:42px;border:1px solid var(--bd);border-radius:9px;background:var(--card);color:var(--tx);font-size:10px;font-weight:800;cursor:pointer;padding:6px}.tarefas-hist-action.primary{background:#378ADD;border-color:#378ADD;color:#fff}.tarefas-hist-action.ok{border-color:rgba(16,185,129,.45);color:#0e9f6e}.tarefas-hist-action.warn{border-color:rgba(226,75,74,.4);color:var(--accent)}
@@ -1325,7 +1326,7 @@ body.tarefas-hist-aberta{overflow:hidden}
 </section>
 
 
-<!-- CENTRAL DE TAREFAS DO COLABORADOR — v6.48 -->
+<!-- CENTRAL DE TAREFAS DO COLABORADOR — v6.49 -->
 <section class="tarefas-hist-view" id="tarefasHistView" aria-hidden="true">
   <div class="tarefas-hist-head">
     <button class="tarefas-hist-back" type="button" onclick="fecharCentralTarefas()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
@@ -1341,6 +1342,12 @@ body.tarefas-hist-aberta{overflow:hidden}
       <button class="tarefas-hist-tab" id="tarefasHistTab_respondida" onclick="filtrarTarefasHistorico('respondida')"><b id="tarefasHistCount_respondida">0</b><span>Respondidas</span></button>
       <button class="tarefas-hist-tab" id="tarefasHistTab_concluida" onclick="filtrarTarefasHistorico('concluida')"><b id="tarefasHistCount_concluida">0</b><span>Concluídas</span></button>
     </div>
+    <div class="tarefas-hist-search" id="tarefasHistSearchWrap">
+      <i class="ti ti-search"></i>
+      <input type="search" id="tarefasHistBusca" autocomplete="off" placeholder="Buscar produto, código, descrição ou data…" oninput="tarefasHistBuscar_(this.value)">
+      <button type="button" class="tarefas-hist-search-clear" onclick="tarefasHistLimparBusca_()" aria-label="Limpar pesquisa" title="Limpar pesquisa"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="tarefas-hist-search-hint">A pesquisa também encontra orientações da descrição, como preço para etiquetar ou informação de transferência.</div>
     <div class="tarefas-hist-status" id="tarefasHistStatus"></div>
     <div class="tarefas-hist-list" id="tarefasHistList"></div>
   </div>
@@ -3398,18 +3405,26 @@ function responderCarrinhoTarefa(idx, resposta) {
 // ═══════════════════════════════════════════════════════════
 var _tarefasHistorico=[];
 var _tarefasHistFiltro='pendente';
+var _tarefasHistBusca='';
 var _tarefasHistAberta=false;
 var _tarefasHistScannerEstavaAtivo=false;
 var _tarefasHistToken=0;
 function tarefasHistEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function tarefasHistJs_(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function tarefasHistData_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime()))return '';return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function tarefasHistNormBusca_(v){return String(v==null?'':v).normalize?String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase():String(v==null?'':v).toLowerCase();}
+function tarefasHistDataBusca_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime()))return String(v||'');var dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=d.getFullYear();return [dd+'/'+mm+'/'+yy,dd+'/'+mm,String(yy),yy+'-'+mm+'-'+dd,tarefasHistData_(v)].join(' ');}
+function tarefasHistTs_(t){var vals=[t&&t.criadoEm,t&&t.confirmadoEm,t&&t.carrinhoRespondidoEm];for(var i=0;i<vals.length;i++){var d=new Date(vals[i]||'');if(!isNaN(d.getTime()))return d.getTime();}return 0;}
+function tarefasHistTextoBusca_(t){return tarefasHistNormBusca_([t.produto||'',t.cod||'',t.descricao||'',t.validade||'',_fmtValidadeTarefaTexto_(t.validade||''),tarefasHistDataBusca_(t.criadoEm),tarefasHistDataBusca_(t.confirmadoEm),tarefasHistDataBusca_(t.carrinhoRespondidoEm)].join(' '));}
+function tarefasHistBuscar_(v){_tarefasHistBusca=String(v||'').trim();var w=document.getElementById('tarefasHistSearchWrap');if(w)w.classList.toggle('has-value',!!_tarefasHistBusca);renderTarefasHistorico();}
+function tarefasHistLimparBusca_(){_tarefasHistBusca='';var i=document.getElementById('tarefasHistBusca');if(i){i.value='';i.focus();}var w=document.getElementById('tarefasHistSearchWrap');if(w)w.classList.remove('has-value');renderTarefasHistorico();}
 function tarefasHistFaseLocal_(t){var st=String(t.status||'pendente').toLowerCase(),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,c=String(t.carrinhoStatus||t._carrinhoStatus||'').toLowerCase();if(st==='pendente')return 'pendente';if(st==='concluida'&&q!==null&&q>0&&!c)return 'respondida';return 'concluida';}
 function abrirCentralTarefas(){
   var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione/identifique o colaborador primeiro','warn');return;}
   fecharTarefasModal();
   _tarefasHistAberta=true;_tarefasHistScannerEstavaAtivo=!!scannerAtivo;try{pararScanner();}catch(e){}
   var v=document.getElementById('tarefasHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}
+  _tarefasHistBusca='';var bi=document.getElementById('tarefasHistBusca');if(bi)bi.value='';var bw=document.getElementById('tarefasHistSearchWrap');if(bw)bw.classList.remove('has-value');
   document.body.classList.add('tarefas-hist-aberta');
   var u=document.getElementById('tarefasHistUsuario');if(u)u.textContent=(nomeDoEmail(cfg.email)||cfg.email)+' · histórico de tarefas';
   carregarTarefasHistorico(false);
@@ -3429,7 +3444,7 @@ async function carregarTarefasHistorico(manual){
     var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},45000):null;
     var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
     var data=await resp.json();if(token!==_tarefasHistToken)return;if(!data||!data.ok)throw new Error((data&&data.erro)||'Não foi possível consultar as tarefas.');
-    _tarefasHistorico=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});
+    _tarefasHistorico=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});_tarefasHistorico.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});
     if(st){st.className='tarefas-hist-status';st.textContent='';}renderTarefasHistorico();
   }catch(e){
     if(token!==_tarefasHistToken)return;
@@ -3441,7 +3456,9 @@ function renderTarefasHistorico(){
   ['pendente','respondida','concluida'].forEach(function(f){var n=_tarefasHistorico.filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===f;}).length,el=document.getElementById('tarefasHistCount_'+f);if(el)el.textContent=n;});
   var lista=document.getElementById('tarefasHistList');if(!lista)return;
   var dados=_tarefasHistorico.filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===_tarefasHistFiltro;});
-  if(!dados.length){var msg=_tarefasHistFiltro==='pendente'?'Nenhuma tarefa pendente':(_tarefasHistFiltro==='respondida'?'Nenhuma tarefa aguardando finalização':'Nenhuma tarefa concluída');lista.innerHTML='<div class="tarefas-hist-empty"><i class="ti ti-clipboard-check"></i>'+msg+'</div>';return;}
+  dados.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});
+  if(_tarefasHistBusca){var termos=tarefasHistNormBusca_(_tarefasHistBusca).split(/\s+/).filter(Boolean);dados=dados.filter(function(t){var h=tarefasHistTextoBusca_(t);return termos.every(function(x){return h.indexOf(x)>=0;});});}
+  if(!dados.length){var msg=_tarefasHistBusca?'Nenhuma tarefa encontrada para “'+tarefasHistEsc_(_tarefasHistBusca)+'”':(_tarefasHistFiltro==='pendente'?'Nenhuma tarefa pendente':(_tarefasHistFiltro==='respondida'?'Nenhuma tarefa aguardando finalização':'Nenhuma tarefa concluída'));lista.innerHTML='<div class="tarefas-hist-empty"><i class="ti ti-clipboard-search"></i>'+msg+'</div>';return;}
   lista.innerHTML=dados.map(function(t,i){
     var fase=t.fase||tarefasHistFaseLocal_(t),icone=fase==='pendente'?'ti-clock':(fase==='respondida'?'ti-message-check':'ti-circle-check'),rotulo=fase==='pendente'?'Pendente':(fase==='respondida'?'Respondida':'Concluída');
     var idJs=tarefasHistJs_(t.id),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null;
@@ -3449,7 +3466,7 @@ function renderTarefasHistorico(){
     if(fase==='respondida')answer='<div class="tarefas-hist-answer"><b>Quantidade respondida:</b> '+(q||0)+' un.<br>Falta confirmar se o produto já foi para o carrinho com etiqueta de desconto.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-basket-check"></i> Sim, etiquetei</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-alert-triangle"></i> Ainda não</button></div>';
     else if(fase==='pendente')answer='<div class="tarefas-hist-actions"><button class="tarefas-hist-action primary" onclick="tarefasHistResponderPendente_(\''+idJs+'\')"><i class="ti ti-pencil-check"></i> Responder agora</button></div>';
     else {var res=q===0?'Sem estoque restante':(t.carrinhoStatus==='sim'?'Produto colocado no carrinho e etiquetado':(t.carrinhoStatus==='nao'?'Resposta final: ainda estava na prateleira':'Tarefa finalizada'));answer='<div class="tarefas-hist-answer"><b>Quantidade confirmada:</b> '+(q===null?'—':q+' un.')+'<br><b>Resultado:</b> '+tarefasHistEsc_(res)+(t.carrinhoRespondidoEm?'<br><b>Finalizada em:</b> '+tarefasHistEsc_(tarefasHistData_(t.carrinhoRespondidoEm)):'')+'</div>';}
-    return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_h'+i+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+'<div class="tarefas-hist-meta">Criada '+tarefasHistEsc_(tarefasHistData_(t.criadoEm)||'—')+'</div>'+(t.confirmadoEm?'<div class="tarefas-hist-meta">Respondida '+tarefasHistEsc_(tarefasHistData_(t.confirmadoEm))+'</div>':'')+(t.descricao?'<div class="tarefas-hist-desc">'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
+    return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_h'+i+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+'<div class="tarefas-hist-meta">Criada '+tarefasHistEsc_(tarefasHistData_(t.criadoEm)||'—')+'</div>'+(t.confirmadoEm?'<div class="tarefas-hist-meta">Respondida '+tarefasHistEsc_(tarefasHistData_(t.confirmadoEm))+'</div>':'')+(t.descricao?'<div class="tarefas-hist-desc"><div class="tarefas-hist-desc-label"><i class="ti ti-message-circle"></i> Orientação / descrição</div>'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
   }).join('');
   dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
 }
