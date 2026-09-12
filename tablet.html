@@ -4294,10 +4294,32 @@ function nfeSetorNotaHtml_(it){var s=String((it&&it.setor)||(it&&it.setorSugerid
 async function nfePost_(dados){
   var url=nfeCfgUrl_(); if(!url) throw new Error('Configure a URL da AURA nas configurações.');
   var opts={method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(dados)};
-  var timeoutNFe=(dados&&dados.action==='nfeBuscarChave')?90000:45000;
+  var action=String((dados&&dados.action)||'');
+  var timeoutNFe=action==='nfeBuscarChave'?90000:(action==='nfeRegistrarValidades'?180000:60000);
   var r=(typeof fetchComTimeout==='function')?await fetchComTimeout(url,opts,timeoutNFe):await fetch(url,opts);
   var txt=await r.text(); var j; try{j=JSON.parse(txt);}catch(e){throw new Error('Resposta inválida do servidor.');}
   return j;
+}
+async function nfeConsultarStatus_(chave){
+  chave=nfeDigitos_(chave); if(chave.length!==44)return null;
+  var url=nfeCfgUrl_(); if(!url)return null;
+  var sep=url.indexOf('?')>=0?'&':'?';
+  var full=url+sep+'action=nfeStatusRecebimento&chave='+encodeURIComponent(chave)+'&_='+Date.now();
+  try{
+    var r=(typeof fetchComTimeout==='function')?await fetchComTimeout(full,{cache:'no-store'},30000):await fetch(full,{cache:'no-store'});
+    var j=await r.json(); return j&&j.ok?j:null;
+  }catch(e){return null;}
+}
+function nfeConcluirRecebimento_(info,confirmado){
+  info=info||{};
+  var lotes=Number(info.gravados!=null?info.gravados:info.lotes)||0;
+  var ignorados=Number(info.ignorados||0)||0;
+  mostrarToast(confirmado?'NF-e confirmada no servidor e concluída':'NF-e concluída: '+lotes+' lote(s) gravado(s)','ok');
+  var body=document.getElementById('nfeBody');
+  if(body)body.innerHTML='<div class="nfe-state"><i class="ti ti-circle-check" style="color:#1D9E75"></i><b>Recebimento concluído</b><div style="font-size:10px;margin-top:6px">'+(confirmado?'O servidor confirmou que a NF-e foi gravada com sucesso.':lotes+' lote(s) gravado(s) na AURA'+(ignorados?' · '+ignorados+' já existentes':'')+'.')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
+  var actions=document.getElementById('nfeActions');if(actions)actions.style.display='none';
+  _nfeColetaNota=null;
+  setTimeout(function(){nfeColetaFechar();try{if(typeof resetCodigo==='function')resetCodigo();}catch(e){}},1200);
 }
 function nfeAbrir_(){ document.getElementById('nfeOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
 function nfeColetaFechar(){ document.getElementById('nfeOverlay').classList.remove('open'); document.body.style.overflow=''; _nfeModoScan=false; }
@@ -4454,7 +4476,29 @@ async function nfeColetaSalvar(){
   var n=_nfeColetaNota;if(!n)return;var cfg=loadCfg(),email=cfg.email||'';if(!email){mostrarToast('Selecione/configure o colaborador antes de receber a NF-e','warn');return;}
   var btn=document.getElementById('nfeSaveBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> GRAVANDO…';}
   var itens=(n.itens||[]).map(function(it){return {controlar:it.controlar!==false,nItem:it.nItem,cProd:it.cProd,nome:it.nome,ean:it.eanAura||'',qCom:it.qCom,qtdEstoque:it.qtdEstoque,fatorConversao:it.fatorConversao||1,unidadeNFe:it.uCom||'',unidadeAura:it.unidadeAura||it.uCom,setor:it.setor||it.setorSugerido||'Outros',origemVinculo:it.origemVinculo||'',lotes:(it.lotes||[]).map(function(l){return {validade:l.validade,quantidade:Number(l.quantidade)||0,lote:l.lote||''};})};});
-  try{var j=await nfePost_({action:'nfeRegistrarValidades',chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',operador:email,itens:itens});if(!j||!j.ok){if(j&&Array.isArray(j.erros)&&j.erros.length)throw new Error(j.erros.slice(0,6).join(' · '));throw new Error((j&&j.erro)||'Falha ao gravar NF-e.');}mostrarToast('NF-e concluída: '+Number(j.gravados||0)+' lote(s) gravado(s)','ok');document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-circle-check" style="color:#1D9E75"></i><b>Recebimento concluído</b><div style="font-size:10px;margin-top:6px">'+Number(j.gravados||0)+' lote(s) gravado(s) na AURA'+(j.ignorados?' · '+Number(j.ignorados)+' já existentes':'')+'.</div><button class="nfe-mini-btn" style="margin-top:14px" onclick="nfeColetaFechar()">Voltar à coleta</button></div>';document.getElementById('nfeActions').style.display='none';}catch(e){mostrarToast(e.message||String(e),'err');if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}}
+  try{
+    var j=await nfePost_({action:'nfeRegistrarValidades',chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',operador:email,itens:itens});
+    if(!j||!j.ok){
+      var msg=(j&&Array.isArray(j.erros)&&j.erros.length)?j.erros.slice(0,6).join(' · '):((j&&j.erro)||'Falha ao gravar NF-e.');
+      if(/j[aá] foi conclu[ií]da|already.*conclu/i.test(msg)){
+        var stJa=await nfeConsultarStatus_(n.chave);
+        if(stJa&&stJa.completa){nfeConcluirRecebimento_(stJa,true);return;}
+      }
+      throw new Error(msg);
+    }
+    nfeConcluirRecebimento_(j,false);
+  }catch(e){
+    var em=String(e&&e.message||e||'Falha ao gravar NF-e.');
+    var ambiguo=/abort|timeout|fetch|network|failed to fetch|load failed|conex[aã]o|demor/i.test(em);
+    if(ambiguo){
+      mostrarToast('A resposta demorou. Confirmando a gravação no servidor…','warn');
+      var st=await nfeConsultarStatus_(n.chave);
+      if(st&&st.completa){nfeConcluirRecebimento_(st,true);return;}
+      if(st&&st.parcial)em='A NF-e foi processada parcialmente. Revise a nota na AURA antes de tentar novamente.';
+    }
+    mostrarToast(em,'err');
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}
+  }
 }
 
 
