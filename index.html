@@ -4561,11 +4561,18 @@ async function carregarRetiradas(manual){
   }
 
   try{
-    var resp=await fetchComTimeout(
-      cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now(),
-      {method:'GET',cache:'no-store'},
-      25000
-    );
+    var retiradaUrl=cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now();
+    var resp;
+    try{
+      resp=await fetchComTimeout(retiradaUrl,{method:'GET',cache:'no-store'},60000);
+    }catch(e1){
+      var m1=String(e1&&e1.message||e1||'');
+      if(!/abort|timeout|timed out/i.test(m1))throw e1;
+      if(token!==_retiradaToken)return;
+      if(status)status.innerHTML='<i class="ti ti-refresh"></i> A consulta demorou. Tentando novamente…';
+      await new Promise(function(resolve){setTimeout(resolve,700);});
+      resp=await fetchComTimeout(retiradaUrl+'&retry=1',{method:'GET',cache:'no-store'},90000);
+    }
     if(token!==_retiradaToken)return;
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var data=await resp.json();
@@ -4589,7 +4596,9 @@ async function carregarRetiradas(manual){
     renderRetiradas_(iso);
     if(status){
       status.className='retirada-status show';
-      status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(e&&e.message?e.message:e);
+      var em=String(e&&e.message?e.message:e||'');
+      if(/abort|timeout|timed out/i.test(em))em='A AURA demorou além do esperado para consultar a planilha. Toque em Hoje ou escolha a data novamente para tentar de novo.';
+      status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(em);
     }
   }
 }
