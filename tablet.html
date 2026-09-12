@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="AURA">
+<!-- build v6.48 tarefas central -->
 <title>AURA</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -998,6 +999,27 @@ body{
 .retirada-launch-icon{color:var(--err)}
 body.retirada-aberta{overflow:hidden}
 
+
+/* ── CENTRAL DE TAREFAS DO COLABORADOR — v6.48 ── */
+.tarefas-hist-view{display:none;position:fixed;inset:0;width:100%;max-width:480px;margin:0 auto;left:50%;transform:translateX(-50%);z-index:100120;background:var(--bg);overflow-y:auto;color:var(--tx)}
+.tarefas-hist-view.open{display:block}
+body.tarefas-hist-aberta{overflow:hidden}
+.tarefas-hist-head{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border-bottom:1px solid var(--bd)}
+.tarefas-hist-back,.tarefas-hist-refresh{width:40px;height:40px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex:none}
+.tarefas-hist-head-info{flex:1;min-width:0}.tarefas-hist-title{font-size:16px;font-weight:850}.tarefas-hist-sub{font-size:10px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tarefas-hist-body{padding:12px 14px calc(30px + env(safe-area-inset-bottom,0px))}
+.tarefas-hist-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.tarefas-hist-tab{border:1px solid var(--bd);background:var(--card);color:var(--tx2);border-radius:10px;padding:9px 5px;font-size:10px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tarefas-hist-tab b{font-size:17px;color:var(--tx)}.tarefas-hist-tab.active{border-color:#378ADD;background:rgba(55,138,221,.12);color:#378ADD}.tarefas-hist-tab.active b{color:#378ADD}
+.tarefas-hist-status{display:none;margin-bottom:10px;padding:9px 11px;border:1px solid var(--bd);border-radius:9px;background:var(--card);font-size:11px;color:var(--tx2)}.tarefas-hist-status.show{display:block}.tarefas-hist-status.err{color:var(--accent);border-color:rgba(226,75,74,.35)}
+.tarefas-hist-list{display:flex;flex-direction:column;gap:10px}.tarefas-hist-card{border:1px solid var(--bd);border-radius:13px;background:var(--surf);padding:12px}.tarefas-hist-card-top{display:flex;gap:10px;align-items:flex-start}
+.tarefas-hist-card .tarefa-foto{width:96px;height:96px}.tarefas-hist-main{flex:1;min-width:0}.tarefas-hist-name{font-size:13px;font-weight:850;line-height:1.25}.tarefas-hist-meta{font-size:10px;color:var(--tx2);margin-top:3px;line-height:1.45}.tarefas-hist-desc{font-size:11px;color:var(--tx2);line-height:1.4;margin-top:7px}
+.tarefas-hist-phase{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:99px;font-size:9px;font-weight:900;margin-bottom:7px}.tarefas-hist-phase.pendente{background:rgba(245,158,11,.14);color:var(--warn)}.tarefas-hist-phase.respondida{background:rgba(55,138,221,.14);color:#378ADD}.tarefas-hist-phase.concluida{background:rgba(16,185,129,.13);color:#0e9f6e}
+.tarefas-hist-answer{margin-top:10px;padding-top:9px;border-top:1px dashed var(--bd);font-size:11px;color:var(--tx2);line-height:1.5}.tarefas-hist-answer b{color:var(--tx)}
+.tarefas-hist-actions{display:flex;gap:7px;margin-top:10px}.tarefas-hist-action{flex:1;min-height:42px;border:1px solid var(--bd);border-radius:9px;background:var(--card);color:var(--tx);font-size:10px;font-weight:800;cursor:pointer;padding:6px}.tarefas-hist-action.primary{background:#378ADD;border-color:#378ADD;color:#fff}.tarefas-hist-action.ok{border-color:rgba(16,185,129,.45);color:#0e9f6e}.tarefas-hist-action.warn{border-color:rgba(226,75,74,.4);color:var(--accent)}
+.tarefas-hist-empty{text-align:center;padding:46px 18px;color:var(--tx2);font-size:12px}.tarefas-hist-empty i{font-size:38px;display:block;margin-bottom:8px;opacity:.55}
+@media(max-width:370px){.tarefas-hist-card .tarefa-foto{width:82px;height:82px}.tarefas-hist-tab{font-size:9px}.tarefas-hist-tab b{font-size:15px}}
+
 </style>
 </head>
 <body>
@@ -1060,7 +1082,11 @@ body.retirada-aberta{overflow:hidden}
     <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
       <i class="ti ti-user-circle"></i>
     </button>
-        <button class="hdr-btn" onclick="abrirRetiradas()" title="Retiradas / produtos vencidos" aria-label="Abrir retiradas">
+    <button class="hdr-btn" onclick="abrirCentralTarefas()" title="Minhas tarefas" aria-label="Abrir minhas tarefas">
+      <i class="ti ti-clipboard-list"></i>
+      <span class="tarefa-badge" id="tarefaBadge">0</span>
+    </button>
+    <button class="hdr-btn" onclick="abrirRetiradas()" title="Retiradas / produtos vencidos" aria-label="Abrir retiradas">
       <i class="ti ti-package-export retirada-launch-icon"></i>
     </button>
 <button class="hdr-btn" onclick="toggleDebugPanel()" title="Diagnóstico (console)">
@@ -1069,7 +1095,6 @@ body.retirada-aberta{overflow:hidden}
     <button class="hdr-btn" onclick="abrirConfig()" title="Configurações">
       <i class="ti ti-settings"></i>
       <span class="pend-dot" id="pendDot"></span>
-      <span class="tarefa-badge" id="tarefaBadge">0</span>
     </button>
   </div>
 </header>
@@ -1296,6 +1321,28 @@ body.retirada-aberta{overflow:hidden}
 
     <div class="retirada-status" id="retiradaStatus"></div>
     <div id="retiradaLista"></div>
+  </div>
+</section>
+
+
+<!-- CENTRAL DE TAREFAS DO COLABORADOR — v6.48 -->
+<section class="tarefas-hist-view" id="tarefasHistView" aria-hidden="true">
+  <div class="tarefas-hist-head">
+    <button class="tarefas-hist-back" type="button" onclick="fecharCentralTarefas()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <div class="tarefas-hist-head-info">
+      <div class="tarefas-hist-title">Minhas tarefas</div>
+      <div class="tarefas-hist-sub" id="tarefasHistUsuario">Pendentes, respondidas e concluídas</div>
+    </div>
+    <button class="tarefas-hist-refresh" type="button" onclick="carregarTarefasHistorico(true)" title="Atualizar"><i class="ti ti-refresh"></i></button>
+  </div>
+  <div class="tarefas-hist-body">
+    <div class="tarefas-hist-tabs">
+      <button class="tarefas-hist-tab active" id="tarefasHistTab_pendente" onclick="filtrarTarefasHistorico('pendente')"><b id="tarefasHistCount_pendente">0</b><span>Pendentes</span></button>
+      <button class="tarefas-hist-tab" id="tarefasHistTab_respondida" onclick="filtrarTarefasHistorico('respondida')"><b id="tarefasHistCount_respondida">0</b><span>Respondidas</span></button>
+      <button class="tarefas-hist-tab" id="tarefasHistTab_concluida" onclick="filtrarTarefasHistorico('concluida')"><b id="tarefasHistCount_concluida">0</b><span>Concluídas</span></button>
+    </div>
+    <div class="tarefas-hist-status" id="tarefasHistStatus"></div>
+    <div class="tarefas-hist-list" id="tarefasHistList"></div>
   </div>
 </section>
 
@@ -3057,13 +3104,20 @@ async function buscarTarefas() {
     if (!resp.ok) return;
     var data = await resp.json();
     if (data.ok && data.tarefas) {
-      _tarefasPendentes = data.tarefas.filter(function(t) { return t.status === 'pendente'; });
+      _tarefasPendentes = data.tarefas.map(function(t) {
+        if ((t.fase || tarefasHistFaseLocal_(t)) === 'respondida') {
+          t._localConfirmada = true;
+          t._qtdeLocal = Number(t.quantidadeConfirmada) || 0;
+          t._carrinhoStatus = t.carrinhoStatus || '';
+        }
+        return t;
+      }).filter(function(t) { var f=t.fase||tarefasHistFaseLocal_(t); return f === 'pendente' || f === 'respondida'; });
     }
   } catch(e) {
     // Also check localStorage as fallback
     try {
       var locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]');
-      _tarefasPendentes = locais.filter(function(t) { return t.status === 'pendente' && t.email === cfg.email; });
+      _tarefasPendentes = locais.filter(function(t) { var f=tarefasHistFaseLocal_(t); return String(t.email||'').toLowerCase() === String(cfg.email||'').toLowerCase() && (f === 'pendente' || f === 'respondida'); }).map(function(t){ t=Object.assign({},t); if(tarefasHistFaseLocal_(t)==='respondida'){t._localConfirmada=true;t._qtdeLocal=Number(t.quantidadeConfirmada)||0;t._carrinhoStatus=t.carrinhoStatus||'';} return t; });
     } catch(e2) {
       _tarefasPendentes = [];
     }
@@ -3178,7 +3232,6 @@ async function _carregarFotoTarefa(id, ean, nomeProduto) {
 
 function carregarFotosTarefas(prefixo) {
   _tarefasPendentes.forEach(function(t, i) {
-    if (t._localConfirmada) return;
     _carregarFotoTarefa(prefixo + i, t.cod, t.produto);
   });
 }
@@ -3337,6 +3390,74 @@ function responderCarrinhoTarefa(idx, resposta) {
     _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
     renderTarefas();
   }, 3000);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  CENTRAL DE TAREFAS DO COLABORADOR — v6.48
+// ═══════════════════════════════════════════════════════════
+var _tarefasHistorico=[];
+var _tarefasHistFiltro='pendente';
+var _tarefasHistAberta=false;
+var _tarefasHistScannerEstavaAtivo=false;
+var _tarefasHistToken=0;
+function tarefasHistEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function tarefasHistJs_(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function tarefasHistData_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime()))return '';return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function tarefasHistFaseLocal_(t){var st=String(t.status||'pendente').toLowerCase(),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,c=String(t.carrinhoStatus||t._carrinhoStatus||'').toLowerCase();if(st==='pendente')return 'pendente';if(st==='concluida'&&q!==null&&q>0&&!c)return 'respondida';return 'concluida';}
+function abrirCentralTarefas(){
+  var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione/identifique o colaborador primeiro','warn');return;}
+  fecharTarefasModal();
+  _tarefasHistAberta=true;_tarefasHistScannerEstavaAtivo=!!scannerAtivo;try{pararScanner();}catch(e){}
+  var v=document.getElementById('tarefasHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}
+  document.body.classList.add('tarefas-hist-aberta');
+  var u=document.getElementById('tarefasHistUsuario');if(u)u.textContent=(nomeDoEmail(cfg.email)||cfg.email)+' · histórico de tarefas';
+  carregarTarefasHistorico(false);
+}
+function fecharCentralTarefas(){
+  if(!_tarefasHistAberta)return;_tarefasHistAberta=false;_tarefasHistToken++;
+  var v=document.getElementById('tarefasHistView');if(v){v.classList.remove('open');v.setAttribute('aria-hidden','true');}
+  document.body.classList.remove('tarefas-hist-aberta');
+  if(_tarefasHistScannerEstavaAtivo)setTimeout(function(){if(!_tarefasHistAberta){try{iniciarScanner();}catch(e){}}},120);
+  _tarefasHistScannerEstavaAtivo=false;
+}
+async function carregarTarefasHistorico(manual){
+  var cfg=loadCfg(),st=document.getElementById('tarefasHistStatus'),lista=document.getElementById('tarefasHistList');
+  if(!cfg.url||!cfg.email){if(st){st.className='tarefas-hist-status show err';st.textContent='Configuração ou colaborador não informado.';}return;}
+  var token=++_tarefasHistToken;if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> Atualizando tarefas…';}if(lista)lista.innerHTML='';
+  try{
+    var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},45000):null;
+    var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
+    var data=await resp.json();if(token!==_tarefasHistToken)return;if(!data||!data.ok)throw new Error((data&&data.erro)||'Não foi possível consultar as tarefas.');
+    _tarefasHistorico=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});
+    if(st){st.className='tarefas-hist-status';st.textContent='';}renderTarefasHistorico();
+  }catch(e){
+    if(token!==_tarefasHistToken)return;
+    try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');_tarefasHistorico=locais.filter(function(t){return String(t.email||'').toLowerCase()===String(cfg.email||'').toLowerCase();}).map(function(t){t=Object.assign({},t);t.fase=tarefasHistFaseLocal_(t);return t;});renderTarefasHistorico();if(st){st.className='tarefas-hist-status show';st.textContent='Sem conexão com a AURA — mostrando o histórico disponível neste aparelho.';}}catch(e2){if(st){st.className='tarefas-hist-status show err';st.textContent='Falha ao carregar tarefas: '+(e&&e.message?e.message:e);}}
+  }
+}
+function filtrarTarefasHistorico(f){_tarefasHistFiltro=f;['pendente','respondida','concluida'].forEach(function(x){var b=document.getElementById('tarefasHistTab_'+x);if(b)b.classList.toggle('active',x===f);});renderTarefasHistorico();}
+function renderTarefasHistorico(){
+  ['pendente','respondida','concluida'].forEach(function(f){var n=_tarefasHistorico.filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===f;}).length,el=document.getElementById('tarefasHistCount_'+f);if(el)el.textContent=n;});
+  var lista=document.getElementById('tarefasHistList');if(!lista)return;
+  var dados=_tarefasHistorico.filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===_tarefasHistFiltro;});
+  if(!dados.length){var msg=_tarefasHistFiltro==='pendente'?'Nenhuma tarefa pendente':(_tarefasHistFiltro==='respondida'?'Nenhuma tarefa aguardando finalização':'Nenhuma tarefa concluída');lista.innerHTML='<div class="tarefas-hist-empty"><i class="ti ti-clipboard-check"></i>'+msg+'</div>';return;}
+  lista.innerHTML=dados.map(function(t,i){
+    var fase=t.fase||tarefasHistFaseLocal_(t),icone=fase==='pendente'?'ti-clock':(fase==='respondida'?'ti-message-check':'ti-circle-check'),rotulo=fase==='pendente'?'Pendente':(fase==='respondida'?'Respondida':'Concluída');
+    var idJs=tarefasHistJs_(t.id),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null;
+    var answer='';
+    if(fase==='respondida')answer='<div class="tarefas-hist-answer"><b>Quantidade respondida:</b> '+(q||0)+' un.<br>Falta confirmar se o produto já foi para o carrinho com etiqueta de desconto.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-basket-check"></i> Sim, etiquetei</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-alert-triangle"></i> Ainda não</button></div>';
+    else if(fase==='pendente')answer='<div class="tarefas-hist-actions"><button class="tarefas-hist-action primary" onclick="tarefasHistResponderPendente_(\''+idJs+'\')"><i class="ti ti-pencil-check"></i> Responder agora</button></div>';
+    else {var res=q===0?'Sem estoque restante':(t.carrinhoStatus==='sim'?'Produto colocado no carrinho e etiquetado':(t.carrinhoStatus==='nao'?'Resposta final: ainda estava na prateleira':'Tarefa finalizada'));answer='<div class="tarefas-hist-answer"><b>Quantidade confirmada:</b> '+(q===null?'—':q+' un.')+'<br><b>Resultado:</b> '+tarefasHistEsc_(res)+(t.carrinhoRespondidoEm?'<br><b>Finalizada em:</b> '+tarefasHistEsc_(tarefasHistData_(t.carrinhoRespondidoEm)):'')+'</div>';}
+    return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_h'+i+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+'<div class="tarefas-hist-meta">Criada '+tarefasHistEsc_(tarefasHistData_(t.criadoEm)||'—')+'</div>'+(t.confirmadoEm?'<div class="tarefas-hist-meta">Respondida '+tarefasHistEsc_(tarefasHistData_(t.confirmadoEm))+'</div>':'')+(t.descricao?'<div class="tarefas-hist-desc">'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
+  }).join('');
+  dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
+}
+function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return String(v||'');var d=String(h).replace(/<[^>]+>/g,'').replace(/^\s*Validade:\s*/i,'').trim();return d||String(v||'');}
+function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
+async function tarefasHistFinalizar_(id,resposta){
+  var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return;var cfg=loadCfg();
+  try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t.quantidadeConfirmada)||0,email:cfg.email})});var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Não foi possível finalizar.');t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase='concluida';mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Resposta final registrada.','ok');renderTarefasHistorico();buscarTarefas();setTimeout(function(){carregarTarefasHistorico(true);},500);}catch(e){mostrarToast('Falha ao finalizar tarefa: '+(e&&e.message?e.message:e),'err');}
 }
 
 // ═══════════════════════════════════════════════════════════
