@@ -4147,6 +4147,28 @@ function pararConfete() {
 //     string, o modo tablet continua ativo por causa do nome do arquivo.
 var _modoTablet = true; // build dedicado para tablet
 
+var TABLET_SESSION_KEY='aura_tablet_sessao_usuario_v1';
+function _tabletSessaoLer_(){
+  try{return JSON.parse(sessionStorage.getItem(TABLET_SESSION_KEY)||'null');}catch(e){return null;}
+}
+function _tabletSessaoSalvar_(nome,email){
+  try{sessionStorage.setItem(TABLET_SESSION_KEY,JSON.stringify({nome:String(nome||''),email:String(email||'').toLowerCase(),ts:Date.now()}));}catch(e){}
+}
+function _tabletSessaoLimpar_(){try{sessionStorage.removeItem(TABLET_SESSION_KEY);}catch(e){}}
+function _tabletAplicarSessao_(sessao){
+  if(!sessao||!sessao.email)return false;
+  var email=String(sessao.email||'').toLowerCase();
+  var c=(COLABORADORES||[]).find(function(x){return String(x.email||'').toLowerCase()===email&&x.ativo!==false;});
+  if(!c)return false;
+  var cfg=loadCfg();cfg.email=email;saveCfg(cfg);
+  var sub=document.querySelector('.hdr-sub');if(sub)sub.innerHTML='<i class="ti ti-user"></i> '+primeiroNome(c.nome||sessao.nome||email)+' — '+email;
+  var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
+  var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
+  setTimeout(function(){verificarAniversario(email,c.nome||sessao.nome||'');},350);
+  setTimeout(function(){buscarTarefas();},650);
+  return true;
+}
+
 function iniciarModoTablet() {
   var grid = document.getElementById('tabletGrid');
   var usuarios = COLABORADORES.filter(function(c) {
@@ -4229,7 +4251,11 @@ function selecionarUsuarioTablet(nome, email) {
   // Atualiza header
   document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
 
-  // ✅ CORREÇÃO: fecha o modal do seletor de usuário
+  // Mantém o colaborador escolhido durante esta sessão do tablet.
+  // Se o navegador/PWA recarregar a página sozinho, não volta para os avatares.
+  _tabletSessaoSalvar_(nome,email);
+
+  // Fecha o modal do seletor de usuário
   document.getElementById('tabletModal').classList.remove('open');
 
   // Mostra botão de trocar usuário no header
@@ -4560,11 +4586,18 @@ async function carregarRetiradas(manual){
   }
 
   try{
-    var resp=await fetchComTimeout(
-      cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now(),
-      {method:'GET',cache:'no-store'},
-      25000
-    );
+    var retiradaUrl=cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now();
+    var resp;
+    try{
+      resp=await fetchComTimeout(retiradaUrl,{method:'GET',cache:'no-store'},60000);
+    }catch(e1){
+      var m1=String(e1&&e1.message||e1||'');
+      if(!/abort|timeout|timed out/i.test(m1))throw e1;
+      if(token!==_retiradaToken)return;
+      if(status)status.innerHTML='<i class="ti ti-refresh"></i> A consulta demorou. Tentando novamente…';
+      await new Promise(function(resolve){setTimeout(resolve,700);});
+      resp=await fetchComTimeout(retiradaUrl+'&retry=1',{method:'GET',cache:'no-store'},90000);
+    }
     if(token!==_retiradaToken)return;
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var data=await resp.json();
@@ -4588,7 +4621,9 @@ async function carregarRetiradas(manual){
     renderRetiradas_(iso);
     if(status){
       status.className='retirada-status show';
-      status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(e&&e.message?e.message:e);
+      var em=String(e&&e.message?e.message:e||'');
+      if(/abort|timeout|timed out/i.test(em))em='A AURA demorou além do esperado para consultar a planilha. Toque em Hoje ou escolha a data novamente para tentar de novo.';
+      status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(em);
     }
   }
 }
@@ -4747,8 +4782,12 @@ function exportarRetiradasPDF(){
   await carregarColaboradores();
 
   if (_modoTablet) {
-    // Modo tablet: sempre mostra o seletor de usuário
-    setTimeout(iniciarModoTablet, 100);
+    // Mantém o usuário escolhido durante a sessão. Um refresh/reload inesperado
+    // do navegador ou PWA não deve jogar o operador de volta aos avatares.
+    var sessaoTablet=_tabletSessaoLer_();
+    if(!_tabletAplicarSessao_(sessaoTablet)){
+      setTimeout(iniciarModoTablet,100);
+    }
   } else {
     // Modo pessoal: fluxo normal
     setTimeout(buscarTarefas, 200);
