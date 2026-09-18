@@ -5051,7 +5051,7 @@ async function nfeColetaSalvar(){
   var itens=(n.itens||[]).map(function(it){
     var decFinal=String(it.conversaoDecisao||'').toLowerCase();
     var qComFinal=Number(it.qCom)||0;
-    var fatorFinal=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
+    var fatorAplicado=Number(it.fatorConversao)||0,fatorSugerido=Number(it.fatorConversaoSugerido)||0;var fatorFinal=(decFinal==='converter'?(Math.abs(fatorAplicado-1)>0.000001&&fatorAplicado>0?fatorAplicado:(Math.abs(fatorSugerido-1)>0.000001&&fatorSugerido>0?fatorSugerido:(fatorSugerido>0?fatorSugerido:(fatorAplicado>0?fatorAplicado:1)))):(fatorSugerido>0?fatorSugerido:(fatorAplicado>0?fatorAplicado:1)));
     var qtdFinal=Number(it.qtdEstoque||it.qCom||0)||0;
     if(decFinal==='converter'&&qComFinal>0&&fatorFinal>0)qtdFinal=qComFinal*fatorFinal;
     else if(decFinal==='nao_converter'&&qComFinal>0)qtdFinal=qComFinal;
