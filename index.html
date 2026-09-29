@@ -122,12 +122,12 @@ body{
 
 /* v6.39 — modo NF-e otimizado para iPhone: mais área útil para enquadrar Code 128 longo */
 @media(max-width:480px){
-  body.nfe-fast-scan .scan-wrap{height:190px;min-height:190px;margin-top:12px;margin-bottom:12px}
+  body.nfe-fast-scan .scan-wrap{height:230px;min-height:230px;margin-top:12px;margin-bottom:12px}
   body.nfe-fast-scan .corner.tl,body.nfe-fast-scan .corner.bl{left:10px}
   body.nfe-fast-scan .corner.tr,body.nfe-fast-scan .corner.br{right:10px}
   body.nfe-fast-scan .laser{left:12px;right:12px}
   body.nfe-fast-scan .scan-wrap::after{
-    content:'NF-e: mantenha a chave inteira dentro da largura';
+    content:'NF-e: mantenha a chave inteira na largura — foco e zoom são ajustados automaticamente';
     position:absolute;left:12px;right:12px;bottom:8px;z-index:8;
     padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.58);color:#fff;
     font-size:9px;font-weight:800;text-align:center;letter-spacing:.01em;pointer-events:none
@@ -1676,6 +1676,7 @@ var _zxingReader = null;
 var _zxingControls = null; // objeto retornado por decodeFromStream — .stop() cancela o loop de verdade
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
+var _nfeIOSZoomInterval = null;
 
 // ── SESSÃO DE SCAN ────────────────────────────────────────
 // PROBLEMA: o ZXing (decodeFromStream) roda um loop assíncrono interno.
@@ -1695,6 +1696,24 @@ var _scannerIniciando = false;
 // Funciona em ambos os motores (native e ZXing)
 function _scannerModoNFe_(){
   return (typeof _nfeModoScan !== 'undefined') && !!_nfeModoScan;
+}
+
+function nfeIOSAjusteCamera_(stream){
+  if(!isIOS()||!_scannerModoNFe_()||!stream||!stream.getVideoTracks||!stream.getVideoTracks().length)return;
+  var track=stream.getVideoTracks()[0],caps={};try{caps=track.getCapabilities?track.getCapabilities():{};}catch(e){}
+  try{if('contentHint' in track)track.contentHint='text';}catch(e){}
+  var base={};
+  if(caps.focusMode&&caps.focusMode.indexOf&&caps.focusMode.indexOf('continuous')>=0)base.focusMode='continuous';
+  if(caps.exposureMode&&caps.exposureMode.indexOf&&caps.exposureMode.indexOf('continuous')>=0)base.exposureMode='continuous';
+  if(caps.whiteBalanceMode&&caps.whiteBalanceMode.indexOf&&caps.whiteBalanceMode.indexOf('continuous')>=0)base.whiteBalanceMode='continuous';
+  if(Object.keys(base).length)track.applyConstraints({advanced:[base]}).catch(function(){});
+  if(_nfeIOSZoomInterval)clearInterval(_nfeIOSZoomInterval);
+  if(caps.zoom&&caps.zoom.min!==undefined&&caps.zoom.max!==undefined){
+    var zmin=Number(caps.zoom.min)||1,zmax=Number(caps.zoom.max)||1,candidatos=[1,1.08,1.16,1.24].map(function(z){return Math.max(zmin,Math.min(zmax,z));});
+    candidatos=candidatos.filter(function(z,i,a){return i===0||Math.abs(z-a[i-1])>.001;});var zi=0;
+    var aplicar=function(){if(!_scannerModoNFe_()||!stream.getVideoTracks().length)return;var t=stream.getVideoTracks()[0];if(!t||t.readyState!=='live')return;var c={zoom:candidatos[zi%candidatos.length]};if(base.focusMode)c.focusMode=base.focusMode;t.applyConstraints({advanced:[c]}).catch(function(){});zi++;};
+    aplicar();_nfeIOSZoomInterval=setInterval(aplicar,1400);
+  }
 }
 
 function applyFocusConstraints(stream) {
@@ -2013,7 +2032,7 @@ async function iniciarScanner() {
     } else {
       _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
     }
-    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 45 : 150;
+    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 25 : 150;
 
     // ── Restringir formatos de leitura ──────────────────────
     // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
@@ -2046,9 +2065,10 @@ async function iniciarScanner() {
         // resolução horizontal suficiente para a chave Code 128 do DANFE.
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 60 },
+          resizeMode: { ideal: 'none' },
           aspectRatio: { ideal: 1.7777777778 }
         },
         audio: false
@@ -2069,6 +2089,7 @@ async function iniciarScanner() {
 
       // Aplicar foco continuo e zoom assim que o stream estiver pronto
       applyFocusConstraints(zxStream);
+      nfeIOSAjusteCamera_(zxStream);
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
       // decodeFromStream() retorna uma Promise que resolve num objeto de
@@ -2159,6 +2180,7 @@ function pararScanner() {
 
   // Limpar intervalo de foco
   if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval = null; }
+  if (_nfeIOSZoomInterval) { clearInterval(_nfeIOSZoomInterval); _nfeIOSZoomInterval = null; }
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
@@ -3759,6 +3781,9 @@ window.addEventListener('online', function() {
   // Tenta drenar a fila automaticamente, sem bloquear a coleta.
   var pend = loadPend();
   if (pend.length) processarFilaEnvio(false);
+  // Se havia uma NF-e sendo conferida offline, envia a versão mais recente
+  // ao rascunho compartilhado assim que a conexão voltar.
+  try { nfeAgendarSyncServidor_(true); } catch (e) {}
   // Atualizar tarefas
   buscarTarefas();
 });
@@ -4573,7 +4598,7 @@ var NFE_DRAFT_KEY='aura_nfe_draft_v650';
 var _nfeDraftTimer_=null;
 function nfeAutosaveAgora_(){
   if(_nfeDraftTimer_){clearTimeout(_nfeDraftTimer_);_nfeDraftTimer_=null;}
-  nfeSalvarRascunho_();
+  nfeSalvarRascunho_();nfeAgendarSyncServidor_(true);
 }
 function nfeAgendarRascunho_(){
   if(_nfeDraftTimer_)clearTimeout(_nfeDraftTimer_);
@@ -4649,21 +4674,53 @@ function nfeDraftEntradaHtml_(){
     +nfeEsc_(titulo)+'<br><b style="color:#1D9E75">'+nfeEsc_(resumo)+'</b><br><span style="font-size:9px;color:var(--tx2)">Último salvamento: '+nfeEsc_(nfeFmtRascunhoHora_(d.salvoEm))+'</span>'
     +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px"><button class="nfe-mini-btn" style="background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="nfeRestaurarRascunho_()"><i class="ti ti-player-play"></i> CONTINUAR NF-e</button><button class="nfe-mini-btn" onclick="nfeDescartarRascunho_()"><i class="ti ti-trash"></i> DESCARTAR</button></div></div>';
 }
+var _nfeServerSyncTimer_=null,_nfeServerSyncAtivo_=false,_nfeServerSyncPendente_=false;
+function nfeOperadorAtual_(){var c={};try{c=loadCfg()||{};}catch(e){}return String(c.email||'').trim().toLowerCase();}
+function nfeNotaLimpaSync_(nota){try{return JSON.parse(JSON.stringify(nota,function(k,v){if(k==='fotoDataUrl'||k==='fotoCarregando')return undefined;return v;}));}catch(e){return nota;}}
 function nfeSalvarRascunho_(){
   try{
     if(!_nfeColetaNota||!_nfeColetaNota.chave)return;
-    var copia=JSON.parse(JSON.stringify(_nfeColetaNota,function(k,v){
-      if(k==='fotoDataUrl'||k==='fotoCarregando')return undefined;
-      return v;
-    }));
-    var cfg={};try{cfg=loadCfg()||{};}catch(e){}
-    localStorage.setItem(NFE_DRAFT_KEY,JSON.stringify({salvoEm:new Date().toISOString(),operadorEmail:String(cfg.email||'').toLowerCase(),nota:copia}));
-    setTimeout(nfeAtualizarCardPendente_,0);
+    var copia=nfeNotaLimpaSync_(_nfeColetaNota),agora=new Date().toISOString(),ant=nfeLerRascunho_(),mesma=!!(ant&&ant.nota&&nfeDigitos_(ant.nota.chave)===nfeDigitos_(copia.chave));
+    var obj={salvoEm:agora,operadorEmail:nfeOperadorAtual_(),nota:copia,serverVersion:mesma?(Number(ant.serverVersion)||0):0,serverSalvoEm:mesma?(ant.serverSalvoEm||''):'',dirty:true};
+    localStorage.setItem(NFE_DRAFT_KEY,JSON.stringify(obj));
+    setTimeout(nfeAtualizarCardPendente_,0);nfeAgendarSyncServidor_(false);
   }catch(e){console.warn('Não foi possível salvar rascunho NF-e:',e);}
 }
-function nfeLerRascunho_(){
-  try{var s=localStorage.getItem(NFE_DRAFT_KEY);if(!s)return null;var d=JSON.parse(s);return d&&d.nota&&d.nota.chave?d:null;}catch(e){return null;}
+function nfeLerRascunho_(){try{var s=localStorage.getItem(NFE_DRAFT_KEY);if(!s)return null;var d=JSON.parse(s);return d&&d.nota&&d.nota.chave?d:null;}catch(e){return null;}}
+function nfeEscreverRascunhoLocal_(d){try{localStorage.setItem(NFE_DRAFT_KEY,JSON.stringify(d));setTimeout(nfeAtualizarCardPendente_,0);return true;}catch(e){return false;}}
+function nfeAgendarSyncServidor_(imediato){
+  if(_nfeServerSyncTimer_)clearTimeout(_nfeServerSyncTimer_);
+  if(typeof navigator!=='undefined'&&navigator.onLine===false)return;
+  _nfeServerSyncTimer_=setTimeout(function(){_nfeServerSyncTimer_=null;nfeSincronizarRascunhoServidor_();},imediato?20:1200);
 }
+async function nfeSincronizarRascunhoServidor_(){
+  if(_nfeServerSyncAtivo_){_nfeServerSyncPendente_=true;return null;}
+  var d=nfeLerRascunho_();if(!d||!d.nota||!d.dirty)return null;
+  if(typeof navigator!=='undefined'&&navigator.onLine===false)return null;
+  _nfeServerSyncAtivo_=true;var salvoLocal=String(d.salvoEm||''),ch=nfeDigitos_(d.nota.chave||'');
+  try{
+    var j=await nfePost_({action:'nfeSalvarRascunhoAtivo',nota:nfeNotaLimpaSync_(d.nota),chave:ch,operador:d.operadorEmail||nfeOperadorAtual_(),origemCliente:'individual',baseVersion:Number(d.serverVersion)||0,clientSalvoEm:salvoLocal});
+    var atual=nfeLerRascunho_();
+    if(j&&j.finalizada&&atual&&atual.nota&&nfeDigitos_(atual.nota.chave)===ch){
+      var stFinal=await nfeConsultarStatus_(ch);var ckFinal=(stFinal&&typeof nfeConfirmacaoCompleta_==='function')?nfeConfirmacaoCompleta_(stFinal,atual.nota):null;
+      if(ckFinal&&ckFinal.ok){nfeLimparRascunho_();if(_nfeColetaNota&&nfeDigitos_(_nfeColetaNota.chave)===ch)_nfeColetaNota=null;mostrarToast('NF-e já estava 100% confirmada na planilha. Rascunho local encerrado com segurança.','ok');}
+    }else if(j&&j.ok&&atual&&atual.nota&&nfeDigitos_(atual.nota.chave)===ch){
+      atual.serverVersion=Number(j.versao)||Number(atual.serverVersion)||0;atual.serverSalvoEm=j.salvoEm||atual.serverSalvoEm||'';atual.syncEm=new Date().toISOString();atual.serverConflict=false;
+      if(String(atual.salvoEm||'')===salvoLocal)atual.dirty=false;nfeEscreverRascunhoLocal_(atual);
+    }else if(j&&j.conflito&&atual&&atual.nota&&nfeDigitos_(atual.nota.chave)===ch){
+      atual.serverVersion=Math.max(Number(atual.serverVersion)||0,Number(j.versao)||0);atual.serverSalvoEm=j.salvoEm||atual.serverSalvoEm||'';atual.serverConflict=true;nfeEscreverRascunhoLocal_(atual);
+    }
+    return j;
+  }catch(e){console.warn('[AURA NF-e] Rascunho local preservado; sincronização com servidor falhou:',e);return null;}
+  finally{_nfeServerSyncAtivo_=false;if(_nfeServerSyncPendente_){_nfeServerSyncPendente_=false;nfeAgendarSyncServidor_(true);}}
+}
+async function nfeObterRascunhoServidor_(chave){try{var j=await nfePost_({action:'nfeRascunhoAtivo',chave:nfeDigitos_(chave)});return j&&j.ok?j:null;}catch(e){return null;}}
+function nfeAdotarRascunhoServidor_(r){
+  if(!r||!r.nota)return false;var cfg={};try{cfg=loadCfg()||{};}catch(e){}
+  var obj={salvoEm:r.salvoEm||new Date().toISOString(),operadorEmail:String(r.operador||cfg.email||'').toLowerCase(),nota:nfeNotaLimpaSync_(r.nota),serverVersion:Number(r.versao)||0,serverSalvoEm:r.salvoEm||'',syncEm:new Date().toISOString(),dirty:false,serverConflict:false};
+  nfeEscreverRascunhoLocal_(obj);_nfeColetaNota=obj.nota;nfePrepararLotes_(_nfeColetaNota);nfeAbrir_();nfeRenderNota_();return true;
+}
+function nfeExcluirRascunhoServidor_(chave){try{if(typeof navigator!=='undefined'&&navigator.onLine===false)return;nfePost_({action:'nfeExcluirRascunhoAtivo',chave:nfeDigitos_(chave)}).catch(function(){});}catch(e){}}
 function nfeLimparRascunho_(){try{localStorage.removeItem(NFE_DRAFT_KEY);}catch(e){}setTimeout(nfeAtualizarCardPendente_,0);}
 function nfeRestaurarRascunho_(){
   var d=nfeLerRascunho_();if(!d||!d.nota){mostrarToast('Nenhum rascunho de NF-e salvo','warn');return;}
@@ -4672,7 +4729,8 @@ function nfeRestaurarRascunho_(){
 }
 function nfeDescartarRascunho_(){
   if(!confirm('Descartar o rascunho salvo desta NF-e?'))return;
-  nfeLimparRascunho_();mostrarToast('Rascunho descartado','ok');nfeRenderEntradaChave_();
+  var d=nfeLerRascunho_(),ch=d&&d.nota?nfeDigitos_(d.nota.chave||''):'';if(ch)nfeExcluirRascunhoServidor_(ch);
+  nfeLimparRascunho_();mostrarToast('Rascunho descartado neste aparelho e sinalizado para remoção no servidor','ok');nfeRenderEntradaChave_();
 }
 
 window.addEventListener('pagehide',function(){try{nfeAutosaveAgora_();}catch(e){}});
@@ -4825,54 +4883,43 @@ confirmarManual = function(){
   return _nfeConfirmarManualProduto();
 };
 async function nfeColetaBuscarChave(chave){
-  chave=nfeDigitos_(chave);
-  if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
-
-  // v7.02 segurança: antes de consultar XML/servidor, procura a mesma NF-e no aparelho.
-  // Isso evita substituir uma conferência já iniciada por uma cópia nova da nota.
-  var local=nfeLerRascunho_();
-  if(local&&local.nota){
-    var chaveLocal=nfeDigitos_(local.nota.chave||'');
-    if(chaveLocal===chave){
-      nfeAbrir_();
-      if(!nfeRascunhoPertenceUsuarioAtual_(local)){
-        document.getElementById('nfeActions').style.display='none';
-        document.getElementById('nfeHeadSub').textContent='NF-e salva neste tablet';
-        document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-user-lock" style="color:#B76E00"></i><b>Esta NF-e já possui uma conferência salva neste tablet.</b><div style="font-size:10px;margin-top:7px">O rascunho pertence a outro colaborador. Selecione o usuário correto para continuar sem perder o que já foi conferido.</div></div>';
-        mostrarToast('NF-e encontrada na memória local, mas pertence a outro colaborador.','warn');
-        return;
-      }
-      _nfeColetaNota=local.nota;
-      nfePrepararLotes_(_nfeColetaNota);
-      nfeRenderNota_();
-      nfeAtualizarCardPendente_();
-      var rr=nfeDraftResumo_(_nfeColetaNota);
-      mostrarToast('NF-e encontrada na memória do aparelho: '+rr.conferidos+' conferido(s) e '+rr.pendentes+' pendente(s).','ok');
-      return;
-    }
-
-    // Há outro rascunho no único slot local. Bloqueia nova NF-e para não sobrescrevê-lo.
-    nfeAbrir_();
-    document.getElementById('nfeActions').style.display='none';
-    document.getElementById('nfeHeadSub').textContent='Há uma NF-e pendente no aparelho';
-    var nr=local.nota||{},rs=nfeDraftResumo_(nr);
-    document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-shield-lock" style="color:#B76E00"></i><b>Outra NF-e está salva neste aparelho.</b><div style="font-size:10px;margin-top:7px">NF '+nfeEsc_(nr.numero||'—')+(nr.fornecedor?' · '+nfeEsc_(nr.fornecedor):'')+'<br>'+rs.conferidos+' de '+rs.total+' conferidos · '+rs.pendentes+' pendente(s).<br><br>Para evitar perda de dados, a nova NF-e não será aberta enquanto este rascunho existir.</div><button class="nfe-mini-btn" style="margin-top:12px;background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="nfeRetomarPendenteLocal_()"><i class="ti ti-player-play"></i> CONTINUAR NF-e SALVA</button></div>';
-    mostrarToast('Existe outra NF-e pendente no aparelho. O rascunho foi protegido.','warn');
-    return;
+  chave=nfeDigitos_(chave);if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
+  var local=nfeLerRascunho_(),localMesma=!!(local&&local.nota&&nfeDigitos_(local.nota.chave||'')===chave);
+  if(localMesma&&!nfeRascunhoPertenceUsuarioAtual_(local)){
+    nfeAbrir_();document.getElementById('nfeActions').style.display='none';document.getElementById('nfeHeadSub').textContent='NF-e salva neste aparelho';
+    document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-user-lock" style="color:#B76E00"></i><b>Esta NF-e já possui uma conferência salva neste aparelho.</b><div style="font-size:10px;margin-top:7px">O rascunho pertence a outro colaborador. Selecione o usuário correto para continuar.</div></div>';return;
+  }
+  // Alteração local ainda não sincronizada sempre vence: abre imediatamente e tenta enviar ao servidor em seguida.
+  if(localMesma&&local.dirty&&!local.serverConflict){
+    _nfeColetaNota=local.nota;nfePrepararLotes_(_nfeColetaNota);nfeAbrir_();nfeRenderNota_();nfeAgendarSyncServidor_(true);
+    var lr=nfeDraftResumo_(_nfeColetaNota);mostrarToast('NF-e recuperada da memória local: '+lr.conferidos+' conferido(s) e '+lr.pendentes+' pendente(s).','ok');return;
+  }
+  // Se existe outro rascunho local ainda pendente, protege-o contra sobrescrita.
+  if(local&&local.nota&&!localMesma){
+    nfeAbrir_();document.getElementById('nfeActions').style.display='none';document.getElementById('nfeHeadSub').textContent='Há outra NF-e pendente no aparelho';
+    var nr=local.nota||{},rs=nfeDraftResumo_(nr);document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-shield-lock" style="color:#B76E00"></i><b>Outra NF-e está salva neste aparelho.</b><div style="font-size:10px;margin-top:7px">NF '+nfeEsc_(nr.numero||'—')+(nr.fornecedor?' · '+nfeEsc_(nr.fornecedor):'')+'<br>'+rs.conferidos+' de '+rs.total+' conferidos · '+rs.pendentes+' pendente(s).<br><br>Continue ou descarte essa conferência antes de abrir outra NF-e neste aparelho.</div><button class="nfe-mini-btn" style="margin-top:12px;background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="nfeRetomarPendenteLocal_()"><i class="ti ti-player-play"></i> CONTINUAR NF-e SALVA</button></div>';return;
   }
 
-  nfeAbrir_(); document.getElementById('nfeActions').style.display='none';
-  document.getElementById('nfeHeadSub').textContent=chave||'Buscando NF-e';
-  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Nenhum rascunho desta chave foi encontrado no aparelho. Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
+  nfeAbrir_();document.getElementById('nfeActions').style.display='none';document.getElementById('nfeHeadSub').textContent=chave;
+  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Procurando conferência salva…</b><div style="font-size:10px;margin-top:5px">Verificando este aparelho e o rascunho compartilhado da AURA.</div></div>';
+  var srv=await nfeObterRascunhoServidor_(chave);
+  if(srv&&srv.encontrado&&srv.nota){
+    var atual=nfeOperadorAtual_(),dono=String(srv.operador||'').trim().toLowerCase();
+    if(dono&&atual&&dono!==atual){document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-user-lock" style="color:#B76E00"></i><b>Conferência em andamento por outro colaborador.</b><div style="font-size:10px;margin-top:7px">Responsável: '+nfeEsc_(dono)+'. Selecione esse colaborador para continuar no tablet.</div></div>';return;}
+    if(localMesma&&local.serverConflict){
+      var usarServidor=confirm('Existe uma versão mais nova desta NF-e no servidor.\n\nOK = abrir a versão do servidor.\nCancelar = manter a versão deste aparelho e sincronizá-la por cima do servidor.');
+      if(!usarServidor){local.serverConflict=false;local.serverVersion=Number(srv.versao)||Number(local.serverVersion)||0;nfeEscreverRascunhoLocal_(local);_nfeColetaNota=local.nota;nfePrepararLotes_(_nfeColetaNota);nfeRenderNota_();nfeAgendarSyncServidor_(true);return;}
+    }else if(localMesma&&Number(local.serverVersion||0)>=Number(srv.versao||0)){_nfeColetaNota=local.nota;nfePrepararLotes_(_nfeColetaNota);nfeRenderNota_();return;}
+    nfeAdotarRascunhoServidor_(srv);var rr=nfeDraftResumo_(_nfeColetaNota);mostrarToast('Conferência recuperada do servidor: '+rr.conferidos+' conferido(s) e '+rr.pendentes+' pendente(s).','ok');return;
+  }
+  if(localMesma){_nfeColetaNota=local.nota;nfePrepararLotes_(_nfeColetaNota);nfeRenderNota_();return;}
+
+  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Nenhum rascunho foi encontrado. Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
   try{
     var j=await nfePost_({action:'nfeBuscarChave',chave:chave});
-    if(!j||!j.ok){
-      var msg=(j&&j.erro)||'NF-e não localizada.';
-      document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';
-      return;
-    }
-    _nfeColetaNota=j.nota; nfePrepararLotes_(_nfeColetaNota); nfeSalvarRascunho_(); nfeRenderNota_();
-  }catch(e){ var em=String(e&&e.message||e||'Erro'); if(/abort/i.test(em)) em='A busca da NF-e demorou além do esperado. Tente novamente; se persistir, importe o XML desta nota como contingência.'; document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(em)+'</div>'; }
+    if(!j||!j.ok){var msg=(j&&j.erro)||'NF-e não localizada.';document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';return;}
+    _nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();
+  }catch(e){var em=String(e&&e.message||e||'Erro');if(/abort/i.test(em))em='A busca da NF-e demorou além do esperado. Tente novamente; se persistir, importe o XML desta nota como contingência.';document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(em)+'</div>';}
 }
 function nfeColetaLerArquivoXml(file){
   if(!file)return; var r=new FileReader();
@@ -5968,7 +6015,7 @@ var _nfeHistNotas=[],_nfeHistBusca='',_nfeHistAberto=false,_nfeHistDetalhe=null,
 function nfeHistEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function nfeHistNorm_(v){v=String(v==null?'':v);try{v=v.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}return v.toLowerCase();}
 function nfeHistDataFmt_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime())){var m=String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);if(m)d=new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0));}return isNaN(d.getTime())?String(v):d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
-function nfeHistStatusClass_(s){s=String(s||'').toUpperCase();return s==='COMPLETA'?'ok':(['AGUARDANDO_CADASTRO','PENDENTE_ITENS','PARCIAL'].indexOf(s)>=0?'wait':'');}
+function nfeHistStatusClass_(s){s=String(s||'').toUpperCase();return s==='COMPLETA'?'ok':(['AGUARDANDO_CADASTRO','PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(s)>=0?'wait':'');}
 function abrirHistoricoNFe(){var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione o colaborador primeiro','warn');return;}try{fecharCentralTarefas();}catch(e){}try{fecharRetiradas();}catch(e){} _nfeHistAberto=true;_nfeHistScanner=!!scannerAtivo;try{pararScanner();}catch(e){}var v=document.getElementById('nfeHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}document.body.classList.add('nfe-hist-aberta');var u=document.getElementById('nfeHistUsuario');if(u)u.textContent=(nomeDoEmail(cfg.email)||cfg.email)+' · notas lançadas';_nfeHistDetalhe=null;nfeHistMostrarLista_();carregarHistoricoNFe(false);}
 function fecharHistoricoNFe(){if(!_nfeHistAberto)return;_nfeHistAberto=false;_nfeHistToken++;var v=document.getElementById('nfeHistView');if(v){v.classList.remove('open');v.setAttribute('aria-hidden','true');}document.body.classList.remove('nfe-hist-aberta');if(_nfeHistScanner)setTimeout(function(){if(!_nfeHistAberto){try{iniciarScanner();}catch(e){}}},120);_nfeHistScanner=false;}
 function nfeHistVoltar_(){if(_nfeHistDetalhe){_nfeHistDetalhe=null;nfeHistMostrarLista_();return;}fecharHistoricoNFe();}
@@ -5976,7 +6023,7 @@ function nfeHistMostrarLista_(){var w=document.getElementById('nfeHistListWrap')
 function nfeHistAtualizar_(){if(_nfeHistDetalhe)abrirDetalheNFe_(_nfeHistDetalhe.nota.chave,true);else carregarHistoricoNFe(true);}
 function nfeHistBuscar_(v){_nfeHistBusca=String(v||'').trim();renderHistoricoNFe_();}
 async function carregarHistoricoNFe(manual){var cfg=loadCfg(),st=document.getElementById('nfeHistStatus'),list=document.getElementById('nfeHistList');if(!cfg.url||!cfg.email)return;var token=++_nfeHistToken;if(st){st.className='nfe-hist-status show';st.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> Consultando histórico…';}if(list)list.innerHTML='';try{var ctrl=typeof AbortController!=='undefined'?new AbortController():null,t=ctrl?setTimeout(function(){ctrl.abort();},60000):null;var r=await fetch(cfg.url+'?action=nfeHistoricoUsuario&email='+encodeURIComponent(cfg.email)+'&limite=150&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(t)clearTimeout(t);var j=await r.json();if(token!==_nfeHistToken)return;if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao consultar histórico.');_nfeHistNotas=Array.isArray(j.notas)?j.notas:[];if(st){st.className='nfe-hist-status';st.textContent='';}renderHistoricoNFe_();}catch(e){if(token!==_nfeHistToken)return;if(st){st.className='nfe-hist-status show err';st.textContent='Falha ao carregar histórico: '+(e&&e.message?e.message:e);}}}
-function renderHistoricoNFe_(){var list=document.getElementById('nfeHistList');if(!list)return;var q=nfeHistNorm_(_nfeHistBusca),dados=_nfeHistNotas.filter(function(n){if(!q)return true;var h=nfeHistNorm_([n.numero,n.fornecedor,n.chave,n.status,n.emissao,n.processadaEm].join(' '));return q.split(/\s+/).filter(Boolean).every(function(x){return h.indexOf(x)>=0;});});if(!dados.length){list.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-file-search"></i>'+(q?'Nenhuma NF-e encontrada para esta pesquisa.':'Você ainda não lançou NF-e neste usuário.')+'</div>';return;}list.innerHTML=dados.map(function(n){var sc=nfeHistStatusClass_(n.status);return '<div class="nfe-hist-card" onclick="abrirDetalheNFe_(\''+nfeHistEsc_(n.chave)+'\')"><div class="nfe-hist-card-top"><div class="nfe-hist-card-icon"><i class="ti ti-file-invoice"></i></div><div class="nfe-hist-card-main"><div class="nfe-hist-forn">NF '+nfeHistEsc_(n.numero||'—')+' · '+nfeHistEsc_(n.fornecedor||'Fornecedor')+'</div><div class="nfe-hist-meta">'+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+' · '+nfeHistEsc_(n.itens||0)+' item(ns) · '+nfeHistEsc_(n.lotes||0)+' lote(s)<br><span style="font-family:var(--mono)">'+nfeHistEsc_(n.chave)+'</span></div><span class="nfe-hist-status-badge '+sc+'">'+nfeHistEsc_(n.status||'—')+'</span>'+((['PENDENTE_ITENS','PARCIAL'].indexOf(String(n.status||'').toUpperCase())>=0)?'<button type="button" class="nfe-hist-resume-chip" onclick="event.stopPropagation();nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave)+'\')"><i class="ti ti-player-play"></i> CONTINUAR</button>':'')+'</div><i class="ti ti-chevron-right" style="color:var(--tx2);margin-top:10px"></i></div></div>';}).join('');}
+function renderHistoricoNFe_(){var list=document.getElementById('nfeHistList');if(!list)return;var q=nfeHistNorm_(_nfeHistBusca),dados=_nfeHistNotas.filter(function(n){if(!q)return true;var h=nfeHistNorm_([n.numero,n.fornecedor,n.chave,n.status,n.emissao,n.processadaEm].join(' '));return q.split(/\s+/).filter(Boolean).every(function(x){return h.indexOf(x)>=0;});});if(!dados.length){list.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-file-search"></i>'+(q?'Nenhuma NF-e encontrada para esta pesquisa.':'Você ainda não lançou NF-e neste usuário.')+'</div>';return;}list.innerHTML=dados.map(function(n){var sc=nfeHistStatusClass_(n.status);return '<div class="nfe-hist-card" onclick="abrirDetalheNFe_(\''+nfeHistEsc_(n.chave)+'\')"><div class="nfe-hist-card-top"><div class="nfe-hist-card-icon"><i class="ti ti-file-invoice"></i></div><div class="nfe-hist-card-main"><div class="nfe-hist-forn">NF '+nfeHistEsc_(n.numero||'—')+' · '+nfeHistEsc_(n.fornecedor||'Fornecedor')+'</div><div class="nfe-hist-meta">'+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+' · '+nfeHistEsc_(n.itens||0)+' item(ns) · '+nfeHistEsc_(n.lotes||0)+' lote(s)<br><span style="font-family:var(--mono)">'+nfeHistEsc_(n.chave)+'</span></div><span class="nfe-hist-status-badge '+sc+'">'+nfeHistEsc_(n.status||'—')+'</span>'+((['PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(String(n.status||'').toUpperCase())>=0)?'<button type="button" class="nfe-hist-resume-chip" onclick="event.stopPropagation();nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave)+'\')"><i class="ti ti-player-play"></i> CONTINUAR</button>':'')+'</div><i class="ti ti-chevron-right" style="color:var(--tx2);margin-top:10px"></i></div></div>';}).join('');}
 async function abrirDetalheNFe_(chave,refresh){var cfg=loadCfg(),w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');if(w)w.classList.add('hide');if(d){d.classList.add('open');d.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-loader-2 nfe-spin"></i>Carregando itens da NF-e…</div>';}if(t)t.textContent='Detalhe da NF-e';try{var r=await fetch(cfg.url+'?action=nfeHistoricoDetalhe&chave='+encodeURIComponent(chave)+'&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'}),j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao carregar NF-e.');_nfeHistDetalhe=j;renderDetalheNFe_();}catch(e){if(d)d.innerHTML='<div class="nfe-hist-status show err">'+nfeHistEsc_(e&&e.message?e.message:e)+'</div>';}}
 function nfeHistSetoresOptions_(sel){var a=['Açougue','Bazar','Bebidas','Congelados','Frios','Horti','Laticínios','Limpeza','Outros','Padaria','Perfumaria','Pet','Pilhas/Baterias','Seca','Seca doce'];return a.map(function(x){return '<option value="'+nfeHistEsc_(x)+'" '+(x===sel?'selected':'')+'>'+nfeHistEsc_(x)+'</option>';}).join('');}
 function nfeHistThumbHtml_(x,idx){
@@ -6056,32 +6103,13 @@ function renderDetalheNFe_(){
 
 function nfeHistEhPendente_(n,itens){
   var st=String((n&&n.status)||'').toUpperCase();
-  if(st==='PENDENTE_ITENS'||st==='PARCIAL')return true;
+  if(st==='PENDENTE_ITENS'||st==='PARCIAL'||st==='RASCUNHO')return true;
   return Array.isArray(itens)&&itens.some(function(x){return x&&x.gravado===false;});
 }
 async function nfeHistRetomarPendente_(chave){
   chave=nfeDigitos_(chave);if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
-  var d=nfeLerRascunho_();
-  if(d&&d.nota&&nfeDigitos_(d.nota.chave)===chave&&nfeRascunhoPertenceUsuarioAtual_(d)){
-    try{fecharHistoricoNFe();}catch(e){}
-    _nfeColetaNota=d.nota;nfePrepararLotes_(_nfeColetaNota);nfeAbrir_();nfeRenderNota_();
-    var lr=nfeDraftResumo_(_nfeColetaNota);
-    mostrarToast('Conferência local restaurada: '+lr.pendentes+' item(ns) pendente(s).','ok');
-    return;
-  }
-  var cfg=loadCfg()||{};
-  mostrarToast('Restaurando conferência pendente do servidor…','warn');
-  try{
-    var j=await nfePost_({action:'nfeRetomarPendente',chave:chave,operador:cfg.email||'',email:cfg.email||''});
-    if(!j||!j.ok||!j.nota)throw new Error((j&&j.erro)||'O servidor não retornou a conferência pendente.');
-    _nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();
-    try{fecharHistoricoNFe();}catch(e){}
-    nfeAbrir_();nfeRenderNota_();
-    var r=nfeDraftResumo_(_nfeColetaNota);
-    mostrarToast('NF-e restaurada do servidor: '+r.pendentes+' item(ns) pendente(s).','ok');
-  }catch(e){
-    mostrarToast((e&&e.message)||'Não foi possível restaurar a NF-e pendente.','err');
-  }
+  try{fecharHistoricoNFe();}catch(e){}
+  await nfeColetaBuscarChave(chave);
 }
 
 function nfeHistAbrirEdicao_(idx){var e=document.getElementById('nfeHistEdit'+idx);if(e)e.classList.add('open');}
