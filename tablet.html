@@ -3,6 +3,7 @@
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
+<!-- v7.02 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4747,21 +4748,57 @@ async function nfeConsultarStatus_(chave){
     var j=await r.json(); return j&&j.ok?j:null;
   }catch(e){return null;}
 }
+function nfeLinhasEsperadasLocal_(nota){
+  var total=0;
+  ((nota&&Array.isArray(nota.itens))?nota.itens:[]).forEach(function(it){
+    if(!it||it.controlar===false)return;
+    (Array.isArray(it.lotes)?it.lotes:[]).forEach(function(l){
+      if(String(l&&l.validade||'').trim()&&(Number(l&&l.quantidade)||0)>0)total++;
+    });
+  });
+  return total;
+}
+function nfeConfirmacaoCompleta_(info,nota){
+  info=info||{};
+  var resumo=(typeof nfeConferenciaResumo_==='function')?nfeConferenciaResumo_(nota):nfeDraftResumo_(nota);
+  var esperadas=nfeLinhasEsperadasLocal_(nota);
+  var esperadasServidor=Number(info.lotesEsperados)||0;
+  if(esperadasServidor>esperadas)esperadas=esperadasServidor;
+  var fisicas=Number(info.linhasRespostas)||0;
+  var st=String(info.status||'').toUpperCase();
+  var statusFinal=['REGISTRADA','COMPLETA','AGUARDANDO_CADASTRO'].indexOf(st)>=0;
+  var parcial=info.parcial===true||['PARCIAL','PENDENTE_ITENS','PROCESSANDO'].indexOf(st)>=0;
+  var pendServidor=Array.isArray(info.pendentes)?info.pendentes.length:0;
+  var localCompleto=!!(resumo&&resumo.total>0&&Number(resumo.pendentes||0)===0);
+  var linhasCompletas=esperadas>0&&fisicas>=esperadas;
+  var confirmada=info.confirmacaoRespostas===true;
+  return {
+    ok:!!(confirmada&&linhasCompletas&&localCompleto&&statusFinal&&!parcial&&!pendServidor),
+    esperadas:esperadas,fisicas:fisicas,resumo:resumo||{total:0,conferidos:0,pendentes:0},status:st,
+    confirmada:confirmada,statusFinal:statusFinal,parcial:parcial,pendServidor:pendServidor
+  };
+}
 function nfeConcluirRecebimento_(info,confirmado){
   info=info||{};
-  var linhasFisicas=Number(info.linhasRespostas)||0;
-  if(info.confirmacaoRespostas!==true||linhasFisicas<=0){
+  var ck=nfeConfirmacaoCompleta_(info,_nfeColetaNota);
+  if(!ck.ok){
+    var motivos=[];
+    if(!ck.confirmada)motivos.push('o servidor ainda não confirmou a gravação em Respostas ao formulário 1');
+    if(ck.resumo&&Number(ck.resumo.pendentes||0)>0)motivos.push(ck.resumo.pendentes+' item(ns) ainda não estão conferidos no aparelho');
+    if(ck.esperadas>0&&ck.fisicas<ck.esperadas)motivos.push('foram localizadas '+ck.fisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados na planilha');
+    if(ck.parcial||!ck.statusFinal)motivos.push('status do servidor: '+(ck.status||'não concluído'));
+    if(ck.pendServidor)motivos.push(ck.pendServidor+' pendência(s) informada(s) pelo servidor');
     var diag=document.getElementById('nfeTabletDiag');
     if(diag){
       diag.className='nfe-tablet-diag show err';
-      diag.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> A NF-e NÃO foi encerrada.</span><br>O servidor ainda não confirmou linhas físicas <b>NFE:&lt;chave&gt;</b> em <b>Respostas ao formulário 1</b>. O rascunho foi preservado para nova tentativa.';
+      diag.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> <b>A NF-e NÃO foi encerrada.</b></span><br>'+nfeEsc_(motivos.join(' · ')||'A confirmação completa ainda não foi recebida.')+'<br><b>O rascunho local foi preservado.</b>';
     }
-    mostrarToast('Gravação ainda não confirmada em Respostas. Rascunho preservado.','err');
+    nfeSalvarRascunho_();
+    mostrarToast('NF-e ainda não está 100% confirmada. Rascunho preservado.','warn');
     return false;
   }
 
-  var lotes=Number(info.gravados!=null?info.gravados:info.lotes)||linhasFisicas;
-  var ignorados=Number(info.ignorados||0)||0;
+  var linhasFisicas=ck.fisicas;
   var aguard=Array.isArray(info.aguardandoCadastro)?info.aguardandoCadastro:[];
   var st=String(info.status||'').toUpperCase();
   var esperaTelecon=aguard.length>0||st==='AGUARDANDO_CADASTRO'||info.aguardandoCadastro===true;
@@ -4769,19 +4806,19 @@ function nfeConcluirRecebimento_(info,confirmado){
   var diag=document.getElementById('nfeTabletDiag');
   if(diag){
     diag.className='nfe-tablet-diag show ok';
-    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação física confirmada.</b> '+linhasFisicas+' linha(s) desta NF-e foram localizadas em Respostas ao formulário 1.</span>'
+    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados estão em Respostas ao formulário 1 e todos os itens locais estão conferidos.</span>'
       +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'');
   }
 
   mostrarToast(
     esperaTelecon
-      ?('NF-e registrada em Respostas. '+(aguard.length||'Produto(s)')+' aguardando cadastro Telecon.')
-      :(confirmado?'NF-e confirmada em Respostas e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)'),
+      ?('NF-e confirmada na planilha. '+(aguard.length||'Produto(s)')+' aguardando cadastro Telecon.')
+      :(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)'),
     esperaTelecon?'warn':'ok'
   );
 
   var body=document.getElementById('nfeBody');
-  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+(esperaTelecon?'ti-hourglass':'ti-circle-check')+'" style="color:'+(esperaTelecon?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades gravadas · aguardando Telecon':'Recebimento concluído')+'</b><div style="font-size:10px;margin-top:6px"><b>'+linhasFisicas+' linha(s)</b> desta NF-e foram confirmadas fisicamente em Respostas ao formulário 1.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
+  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+(esperaTelecon?'ti-hourglass':'ti-circle-check')+'" style="color:'+(esperaTelecon?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades confirmadas · aguardando Telecon':'Recebimento concluído')+'</b><div style="font-size:10px;margin-top:6px"><b>'+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s)</b> foram confirmados fisicamente em Respostas ao formulário 1. O rascunho local só será removido agora, após esta confirmação completa.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
   var actions=document.getElementById('nfeActions');if(actions)actions.style.display='none';
   nfeLimparRascunho_();
   _nfeColetaNota=null;
@@ -4822,9 +4859,45 @@ confirmarManual = function(){
   return _nfeConfirmarManualProduto();
 };
 async function nfeColetaBuscarChave(chave){
-  chave=nfeDigitos_(chave); nfeAbrir_(); document.getElementById('nfeActions').style.display='none';
+  chave=nfeDigitos_(chave);
+  if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
+
+  // v7.02 segurança: antes de consultar XML/servidor, procura a mesma NF-e no aparelho.
+  // Isso evita substituir uma conferência já iniciada por uma cópia nova da nota.
+  var local=nfeLerRascunho_();
+  if(local&&local.nota){
+    var chaveLocal=nfeDigitos_(local.nota.chave||'');
+    if(chaveLocal===chave){
+      nfeAbrir_();
+      if(!nfeRascunhoPertenceUsuarioAtual_(local)){
+        document.getElementById('nfeActions').style.display='none';
+        document.getElementById('nfeHeadSub').textContent='NF-e salva neste tablet';
+        document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-user-lock" style="color:#B76E00"></i><b>Esta NF-e já possui uma conferência salva neste tablet.</b><div style="font-size:10px;margin-top:7px">O rascunho pertence a outro colaborador. Selecione o usuário correto para continuar sem perder o que já foi conferido.</div></div>';
+        mostrarToast('NF-e encontrada na memória local, mas pertence a outro colaborador.','warn');
+        return;
+      }
+      _nfeColetaNota=local.nota;
+      nfePrepararLotes_(_nfeColetaNota);
+      nfeRenderNota_();
+      nfeAtualizarCardPendente_();
+      var rr=nfeDraftResumo_(_nfeColetaNota);
+      mostrarToast('NF-e encontrada na memória do aparelho: '+rr.conferidos+' conferido(s) e '+rr.pendentes+' pendente(s).','ok');
+      return;
+    }
+
+    // Há outro rascunho no único slot local. Bloqueia nova NF-e para não sobrescrevê-lo.
+    nfeAbrir_();
+    document.getElementById('nfeActions').style.display='none';
+    document.getElementById('nfeHeadSub').textContent='Há uma NF-e pendente no aparelho';
+    var nr=local.nota||{},rs=nfeDraftResumo_(nr);
+    document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-shield-lock" style="color:#B76E00"></i><b>Outra NF-e está salva neste aparelho.</b><div style="font-size:10px;margin-top:7px">NF '+nfeEsc_(nr.numero||'—')+(nr.fornecedor?' · '+nfeEsc_(nr.fornecedor):'')+'<br>'+rs.conferidos+' de '+rs.total+' conferidos · '+rs.pendentes+' pendente(s).<br><br>Para evitar perda de dados, a nova NF-e não será aberta enquanto este rascunho existir.</div><button class="nfe-mini-btn" style="margin-top:12px;background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="nfeRetomarPendenteLocal_()"><i class="ti ti-player-play"></i> CONTINUAR NF-e SALVA</button></div>';
+    mostrarToast('Existe outra NF-e pendente no aparelho. O rascunho foi protegido.','warn');
+    return;
+  }
+
+  nfeAbrir_(); document.getElementById('nfeActions').style.display='none';
   document.getElementById('nfeHeadSub').textContent=chave||'Buscando NF-e';
-  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
+  document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Nenhum rascunho desta chave foi encontrado no aparelho. Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
   try{
     var j=await nfePost_({action:'nfeBuscarChave',chave:chave});
     if(!j||!j.ok){
@@ -5443,6 +5516,10 @@ function nfeTabletColetarPayload_(){
       var ehNovo=String(it.status||'').toLowerCase()==='aguardando_cadastro'||String(it.origemVinculo||'')==='manual_novo';
       if(ehNovo)diag.novos++; else if(ean)diag.reconhecidos++;
 
+      if(typeof nfeConferenciaConfirmada_==='function'&&!nfeConferenciaConfirmada_(it)){
+        erros.push((it.nomeAura||it.nome||ean||'Item')+': marque CONFERIDO depois de revisar este item.');
+      }
+
       if(it.conversaoExigirDecisao===true&&['converter','nao_converter'].indexOf(decFinal)<0){
         diag.conversoesPendentes++;
         erros.push((it.nomeAura||it.nome||ean||'Item')+': escolha CONVERTER ou NÃO CONVERTER a embalagem.');
@@ -6048,7 +6125,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
 
 
 // ═══════════════════════════════════════════════════════════
-// v7.00 — PROTEÇÃO CONTRA REFRESH ACIDENTAL + RASCUNHO DO ITEM ATUAL
+// v7.02 — PROTEÇÃO CONTRA REFRESH + NF-e LOCAL PRIMEIRO + CONFIRMAÇÃO COMPLETA
 // ═══════════════════════════════════════════════════════════
 var COLETA_DRAFT_KEY='aura_coleta_item_draft_v700';
 var _coletaDraftLast_='';
