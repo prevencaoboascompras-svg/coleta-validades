@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta NF-e v6.98 — conferência visual por item com confirmação manual + aura azul -->
+<!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <html lang="pt-BR">
 <head>
@@ -4763,16 +4763,68 @@ function nfeColetaLerArquivoXml(file){
     try{var j=await nfePost_({action:'nfeLerXml',xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();}catch(e){document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(e.message||e)+'</div>';}
   }; r.readAsText(file);
 }
+// v6.99 — conversão universal de unidades XML + total manual
+function nfeNormUnidadeFront_(u){
+  return String(u||'').trim().toUpperCase().replace(/[.\s_-]+/g,'');
+}
+function nfeEhUnidadeBaseFront_(u){
+  u=nfeNormUnidadeFront_(u);
+  return ['UN','UND','UNID','UNIDADE','PC','PCA','PECA','KG','KGS','QUILO','QUILOGRAMA','G','GR','GRAMA','L','LT','LITRO','ML','M','MT','METRO','CM','MM','M2','M3','T','TON','TONELADA'].indexOf(u)>=0;
+}
 function nfeEhEmbalagemFront_(u){
-  u=String(u||'').trim().toUpperCase().replace(/\./g,'');
-  return ['FD','FARDO','CX','CAIXA','PCT','PAC','PACOTE','DP','DISPLAY','PK','PACK','FR','FARDETE','BDJ','BANDEJA','KIT','CJ','CONJ','CONJUNTO','EB','EMB','EMBALAGEM'].indexOf(u)>=0;
+  u=nfeNormUnidadeFront_(u);
+  return ['FD','FDO','FARDO','FRD','CX','CXA','CAIXA','PCT','PAC','PACOTE','DP','DSP','DISP','DISPLAY','DS','PK','PACK','FR','FARDETE','BDJ','BANDEJA','KIT','CJ','CONJ','CONJUNTO','EB','EMB','EMBALAGEM','SC','SAC','SACO','DZ','DUZIA','CART','CARTELA','EST','ESTOJO','BL','BALDE','GL','GALAO','ROLO'].indexOf(u)>=0;
+}
+function nfeDescricaoSugereEmbalagemFront_(desc){
+  var s=String(desc||'').toUpperCase().replace(/\s+/g,' ');
+  if(/\b(DISPLAY|DISP\.?|CAIXA|CX\.?|FARDO|FDO\.?|PACOTE|PCT\.?|PACK|FARDETE|BANDEJA|BDJ\.?|KIT|CONJUNTO|EMBALAGEM|SACO|CARTELA|ESTOJO)\b/.test(s))return true;
+  if(/(?:^|[^0-9])\d{1,3}\s*[X×]\s*\d+(?:[.,]\d+)?\s*(?:ML|L|G|GR|KG|UN|UND|PC|PÇ)(?:[^A-Z]|$)/.test(s))return true;
+  if(/(?:C\/|C\s*\/\s*)\d{1,3}(?:[^0-9]|$)/.test(s))return true;
+  return false;
+}
+function nfeQtdTribFront_(it){
+  return Number(it&&(it.qTrib!==undefined?it.qTrib:(it.qtdTrib!==undefined?it.qtdTrib:it.quantidadeTributavel)))||0;
+}
+function nfeUnTribFront_(it){
+  return String(it&&(it.uTrib||it.unTrib||it.unidadeTributavel)||'').trim();
+}
+function nfeFatorXmlFront_(it){
+  var qc=Number(it&&it.qCom)||0,qt=nfeQtdTribFront_(it);
+  if(!(qc>0&&qt>0))return 0;
+  var f=qt/qc;
+  if(!(f>0)||f>100000)return 0;
+  return f;
+}
+function nfePrecisaConversaoFront_(it){
+  if(!it)return false;
+  if(it.conversaoExigirDecisao)return true;
+  var unNF=nfeNormUnidadeFront_(it.uCom),unAura=nfeNormUnidadeFront_(it.unidadeAura||it.unidadeDestinoSugerida),unTrib=nfeNormUnidadeFront_(nfeUnTribFront_(it));
+  if(nfeEhEmbalagemFront_(unNF)||nfeDescricaoSugereEmbalagemFront_(it.nome||''))return true;
+  if(unNF&&unAura&&unNF!==unAura)return true;
+  var fXml=nfeFatorXmlFront_(it);
+  if(fXml>0&&Math.abs(fXml-1)>0.000001)return true;
+  if(unNF&&unTrib&&unNF!==unTrib)return true;
+  // Códigos de unidade não reconhecidos pelo AURA não são ignorados: abrimos a conversão.
+  if(unNF&&!nfeEhUnidadeBaseFront_(unNF))return true;
+  return false;
+}
+function nfeUnidadeDestinoFront_(it){
+  var unNF=String(it&&it.uCom||'').trim();
+  var ud=String(it&&(it.unidadeDestinoSugerida||it.unidadeAura)||'').trim();
+  var ut=nfeUnTribFront_(it);
+  if((!ud||nfeEhEmbalagemFront_(ud))&&ut&&nfeEhUnidadeBaseFront_(ut))ud=ut;
+  if(!ud||nfeEhEmbalagemFront_(ud)||(!nfeEhUnidadeBaseFront_(ud)&&nfeNormUnidadeFront_(ud)===nfeNormUnidadeFront_(unNF)))ud='UN';
+  return ud||'UN';
 }
 function nfeInferirFatorDescricaoFront_(desc){
   var s=String(desc||'').toUpperCase().replace(/\s+/g,' '),m,n;
-  m=s.match(/(?:^|[^0-9])(\d{1,3})\s*[X×]\s*1(?:[^0-9]|$)/);
-  if(m){n=Number(m[1])||0;if(n>1&&n<=200)return n;}
+  // 12X1, 12X350ML, 6X2L etc.
+  m=s.match(/(?:^|[^0-9])(\d{1,3})\s*[X×]\s*\d+(?:[.,]\d+)?\s*(?:ML|L|G|GR|KG|UN|UND|PC|PÇ)?(?:[^A-Z0-9]|$)/);
+  if(m){n=Number(m[1])||0;if(n>1&&n<=500)return n;}
   m=s.match(/(?:C\/|C\s*\/\s*)(\d{1,3})(?:[^0-9]|$)/);
-  if(m){n=Number(m[1])||0;if(n>1&&n<=200)return n;}
+  if(m){n=Number(m[1])||0;if(n>1&&n<=500)return n;}
+  m=s.match(/\b(?:DISPLAY|DISP\.?|CAIXA|CX\.?|FARDO|FDO\.?|PACOTE|PCT\.?|PACK|BANDEJA|BDJ\.?)\s*(?:C\/\s*)?(\d{1,3})(?:[^0-9]|$)/);
+  if(m){n=Number(m[1])||0;if(n>1&&n<=500)return n;}
   return 1;
 }
 function nfePrepararLotes_(nota){
@@ -4780,20 +4832,31 @@ function nfePrepararLotes_(nota){
     it.controlar = it.controlar!==false;
     if(!it.setor) it.setor=it.setorSugerido||'Outros';
 
-    var embalagem=!!it.conversaoExigirDecisao||nfeEhEmbalagemFront_(it.uCom);
+    var embalagem=nfePrecisaConversaoFront_(it);
     if(embalagem){
       it.conversaoExigirDecisao=true;
       if(it.conversaoDecisao!=='converter'&&it.conversaoDecisao!=='nao_converter')it.conversaoDecisao='';
-      it.fatorConversaoSugerido=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
-      if(!(it.fatorConversaoSugerido>1)){
-        var fDesc=nfeInferirFatorDescricaoFront_(it.nome||'');
-        if(fDesc>1){it.fatorConversaoSugerido=fDesc;it.conversaoOrigem=it.conversaoOrigem&&it.conversaoOrigem!=='unitario'?it.conversaoOrigem:'descricao_c';}
+
+      var fAtual=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
+      var fXml=nfeFatorXmlFront_(it);
+      if((!fAtual||Math.abs(fAtual-1)<0.000001)&&fXml>0&&Math.abs(fXml-1)>0.000001){
+        fAtual=fXml;
+        it.conversaoOrigem='xml_tributavel';
       }
-      it.qtdConversaoSugerida=(Number(it.qCom)||0)*it.fatorConversaoSugerido;
-      var ud=String(it.unidadeDestinoSugerida||it.unidadeAura||'').trim();
-      if(!ud||nfeEhEmbalagemFront_(ud))ud='UN';
+      if(!fAtual||Math.abs(fAtual-1)<0.000001){
+        var fDesc=nfeInferirFatorDescricaoFront_(it.nome||'');
+        if(fDesc>1){fAtual=fDesc;it.conversaoOrigem=it.conversaoOrigem&&it.conversaoOrigem!=='unitario'?it.conversaoOrigem:'descricao_c';}
+      }
+      if(!(fAtual>0))fAtual=1;
+      it.fatorConversaoSugerido=fAtual;
+      it.qtdConversaoSugerida=(Number(it.qCom)||0)*fAtual;
+      var ud=nfeUnidadeDestinoFront_(it);
       it.unidadeDestinoSugerida=ud;
-      if(!it.unidadeAura||nfeEhEmbalagemFront_(it.unidadeAura))it.unidadeAura=ud;
+      if(!it.unidadeAura||nfeEhEmbalagemFront_(it.unidadeAura)||nfeNormUnidadeFront_(it.unidadeAura)!==nfeNormUnidadeFront_(ud))it.unidadeAura=ud;
+      if(it.conversaoDecisao==='converter'){
+        it.fatorConversao=fAtual;
+        it.qtdEstoque=it.qtdConversaoSugerida;
+      }
     }else if(!it.conversaoDecisao){
       it.conversaoDecisao='nao_aplicavel';
     }
@@ -4942,35 +5005,36 @@ function nfeItemHtml_(it,i){
   var qtdNF=nfeFmtQtd_(it.qCom)+' '+nfeEsc_(it.uCom||'');
   var qtdAura=nfeFmtQtd_(qtd)+' '+nfeEsc_(it.unidadeAura||it.uCom||'');
 
-  var embalagem=!!it.conversaoExigirDecisao||nfeEhEmbalagemFront_(it.uCom);
+  var embalagem=nfePrecisaConversaoFront_(it);
   var fator=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
   var unNF=String(it.uCom||'');
-  var unDestino=String(it.unidadeDestinoSugerida||it.unidadeAura||'UN');
-  if(embalagem&&(!unDestino||nfeEhEmbalagemFront_(unDestino)))unDestino='UN';
+  var unDestino=nfeUnidadeDestinoFront_(it);
   var qtdSug=(Number(it.qCom)||0)*fator;
   var decisao=String(it.conversaoDecisao||'');
   var convOrig=String(it.conversaoOrigem||'');
   var origemTxt=convOrig.indexOf('descricao_')===0?'Sugestão encontrada na descrição da NF-e.':
-    (convOrig==='xml_tributavel'?'Sugestão informada pelo XML da NF-e.':
-    (convOrig==='vinculo_fornecedor'?'Sugestão aprendida para este fornecedor/produto.':'Informe o fator correto da embalagem.'));
+    (convOrig==='xml_tributavel'?'Sugestão calculada pela unidade tributável do XML da NF-e.':
+    (convOrig==='total_manual'?'Conversão calculada pela quantidade total informada.':
+    (convOrig==='vinculo_fornecedor'?'Sugestão aprendida para este fornecedor/produto.':'Informe o fator correto da embalagem ou a quantidade total.')));
 
   var convHtml='';
   if(embalagem){
     convHtml='<div class="nfe-conv-box '+(decisao?'decidida':'pendente')+'">'
-      +'<div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> CONVERSÃO DA EMBALAGEM — DECISÃO OBRIGATÓRIA</div>'
-      +'<div class="nfe-conv-source">A NF-e trouxe <b>'+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(unNF||'EMB')+'</b>. A AURA sugere trabalhar em <b>'+nfeEsc_(unDestino)+'</b>.</div>'
+      +'<div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> CONVERSÃO DE UNIDADE / EMBALAGEM</div>'
+      +'<div class="nfe-conv-source">A NF-e trouxe <b>'+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(unNF||'EMB')+'</b>. A AURA vai gravar em <b>'+nfeEsc_(unDestino)+'</b>.</div>'
       +'<div class="nfe-conv-row"><b>1 '+nfeEsc_(unNF||'emb.')+' =</b><input type="number" step="0.001" min="0.001" value="'+nfeEsc_(fator)+'" oninput="nfeAjustarConversaoLive_('+i+',this.value)" onchange="nfeAjustarConversao_('+i+',this.value)"><b>'+nfeEsc_(unDestino)+'</b></div>'
-      +'<div class="nfe-conv-result">Se converter: '+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(unNF)+' → <b>'+nfeFmtQtd_(qtdSug)+' '+nfeEsc_(unDestino)+'</b></div>'
+      +'<div class="nfe-conv-result">Pelo fator: '+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(unNF)+' → <b>'+nfeFmtQtd_(qtdSug)+' '+nfeEsc_(unDestino)+'</b></div>'
+      +'<div class="nfe-conv-row" style="margin-top:9px;padding-top:9px;border-top:1px dashed var(--bd)"><b>Total recebido em '+nfeEsc_(unDestino)+':</b><input type="number" step="0.001" min="0.001" style="width:96px" value="'+(decisao==='converter'?nfeEsc_(it.qtdEstoque||''):'')+'" placeholder="total" onchange="nfeDefinirTotalConversao_('+i+',this.value)"><span style="font-size:8.5px;color:var(--tx2)">informe o total e a AURA calcula o fator automaticamente</span></div>'
       +'<div class="nfe-conv-choices">'
-        +'<button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)"><i class="ti ti-check"></i> CONVERTER</button>'
+        +'<button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)"><i class="ti ti-check"></i> CONVERTER PELO FATOR</button>'
         +'<button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)"><i class="ti ti-x"></i> NÃO CONVERTER</button>'
       +'</div>'
       +'<div class="nfe-conv-decision">'+(decisao==='converter'
-        ?('Escolhido: <b>'+nfeFmtQtd_(it.qtdEstoque)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</b>.')
+        ?('Quantidade final: <b>'+nfeFmtQtd_(it.qtdEstoque)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</b> · fator '+nfeFmtQtd_(Number(it.fatorConversao||fator)||fator)+'.')
         :(decisao==='nao_converter'
           ?('Escolhido: manter a quantidade numérica da NF-e: <b>'+nfeFmtQtd_(it.qCom)+' '+nfeEsc_(unDestino)+'</b>.')
-          :'<b>Escolha uma das opções antes de gravar a NF-e.</b>'))+'</div>'
-      +'<div class="nfe-conv-note">'+origemTxt+' A escolha continua aparecendo em toda NF-e; nunca será aplicada silenciosamente.</div>'
+          :'<b>Informe o fator e clique em converter, ou digite diretamente a quantidade total.</b>'))+'</div>'
+      +'<div class="nfe-conv-note">'+origemTxt+' Quando o total é informado, a conversão é aplicada automaticamente.</div>'
       +'</div>';
   }
 
@@ -5004,7 +5068,7 @@ function nfeItemHtml_(it,i){
         +'</div>'
       +'</div>'
     +'</div>'
-    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
+    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
   +'</div>';
 }
 function nfeAtualizarThumb_(i){
@@ -5101,12 +5165,55 @@ function nfeAjustarConversao_(i,v){
   nfeSalvarRascunho_();
   nfeRenderNota_();
 }
+function nfeForcarConversao_(i){
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
+  it.conversaoExigirDecisao=true;
+  it.conversaoDecisao='';
+  if(!(Number(it.fatorConversaoSugerido)>0))it.fatorConversaoSugerido=1;
+  it.unidadeDestinoSugerida=nfeUnidadeDestinoFront_(it);
+  nfeSalvarRascunho_();
+  nfeRenderNota_();
+}
+function nfeDefinirTotalConversao_(i,v){
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
+  var total=Number(String(v||'').replace(',','.'));
+  var qNfe=Number(it.qCom)||0;
+  if(!(total>0)){mostrarToast('Informe a quantidade total maior que zero','err');nfeRenderNota_();return;}
+  if(!(qNfe>0)){mostrarToast('A quantidade da NF-e está zerada; não foi possível calcular o fator','err');nfeRenderNota_();return;}
+  var antiga=Number(it.qtdEstoque||it.qCom||0)||0;
+  var f=total/qNfe;
+  var destino=nfeUnidadeDestinoFront_(it);
+
+  if(Array.isArray(it.lotes)&&it.lotes.length){
+    var soma=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);
+    if(antiga>0&&soma>0&&Math.abs(soma-antiga)<0.001){
+      var razao=total/antiga;
+      it.lotes.forEach(function(l){l.quantidade=(Number(l.quantidade)||0)*razao;});
+    }else if(it.lotes.length===1&&(!(Number(it.lotes[0].quantidade)>0)||Math.abs((Number(it.lotes[0].quantidade)||0)-antiga)<0.001)){
+      it.lotes[0].quantidade=total;
+    }
+  }
+
+  it.conversaoExigirDecisao=true;
+  it.conversaoDecisao='converter';
+  it.fatorConversaoSugerido=f;
+  it.fatorConversao=f;
+  it.qtdConversaoSugerida=total;
+  it.qtdEstoque=total;
+  it.unidadeDestinoSugerida=destino;
+  it.unidadeAura=destino;
+  it.conversaoOrigem='total_manual';
+  it.conversaoSugerida=false;
+
+  mostrarToast('Total definido: '+nfeFmtQtd_(total)+' '+destino+' · fator calculado '+nfeFmtQtd_(f)+' por '+(it.uCom||'unidade da NF-e'),'ok');
+  nfeSalvarRascunho_();
+  nfeRenderNota_();
+}
 function nfeEscolherConversao_(i,aplicar){
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   var antiga=Number(it.qtdEstoque||it.qCom||0)||0;
   var f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
-  var destino=String(it.unidadeDestinoSugerida||it.unidadeAura||'UN');
-  if(!destino||nfeEhEmbalagemFront_(destino))destino='UN';
+  var destino=nfeUnidadeDestinoFront_(it);
   var nova=(Number(it.qCom)||0)*(aplicar?f:1);
 
   if(Array.isArray(it.lotes)&&it.lotes.length){
