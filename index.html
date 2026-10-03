@@ -6154,5 +6154,119 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous">
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
+
+<script id="auraSearchCoreV702">
+// ═══════════════════════════════════════════════════════════════
+// AURA SEARCH CORE v7.02
+// Padrão do ecossistema:
+// • EAN/GTIN completo -> índice O(1), sem varrer catálogo
+// • aliases UPC-12 <-> EAN-13 iniciado por zero
+// • busca textual pré-normalizada + índice de prefixos
+// • entrada digitada usa debounce curto; código completo não espera debounce
+// ═══════════════════════════════════════════════════════════════
+(function(g){
+  'use strict';
+  if(g.AURASearchCore&&g.AURASearchCore.version==='7.02')return;
+  function digits(v){return String(v==null?'':v).replace(/\D/g,'');}
+  function text(v){return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/(\d+)\s+(KG|G|GR|ML|L|LT|UN|UND|CX|PCT)\b/g,'$1$2').replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
+  function aliases(v){var d=digits(v),a=[];function add(x){if(x&&a.indexOf(x)<0)a.push(x);}add(d);if(d.length===12)add('0'+d);if(d.length===13&&d.charAt(0)==='0')add(d.substring(1));return a;}
+  function isFullCode(v){var d=digits(v),raw=String(v||'').replace(/\s/g,'');return /^\d{8,14}$/.test(d)&&d===raw;}
+  var C={version:'7.02',entries:[],byCode:Object.create(null),prefix:Object.create(null),codePrefix:Object.create(null),signature:'',ready:false};
+  function addList(map,k,i){if(!k)return;var a=map[k];if(!a)map[k]=[i];else if(a[a.length-1]!==i)a.push(i);}
+  function addAliases(entry,i){aliases(entry.ean).forEach(function(a){C.byCode[a]=entry;for(var n=2;n<=Math.min(a.length,14);n++)addList(C.codePrefix,a.slice(0,n),i);});}
+  C.build=function(records,signature){
+    records=Array.isArray(records)?records:[];
+    var sig=String(signature||records.length);
+    if(C.ready&&C.signature===sig)return C;
+    C.entries=[];C.byCode=Object.create(null);C.prefix=Object.create(null);C.codePrefix=Object.create(null);C.signature=sig;
+    var seen=Object.create(null);
+    records.forEach(function(r){
+      var ean='',descricao='',unidade='',preco='',custo='',fornecedor='',setor='';
+      if(Array.isArray(r)){ean=digits(r[0]);descricao=String(r[1]||'');unidade=String(r[2]||'');preco=r[3];custo=r[4];fornecedor=String(r[5]||'');setor=String(r[6]||'');}
+      else if(r){ean=digits(r.ean||r.cod||r.codigo||r.barras||'');descricao=String(r.descricao||r.nome||r.produto||'');unidade=String(r.unidade||r.un||'');preco=r.preco!=null?r.preco:r.precoNormal;custo=r.custo;fornecedor=String(r.fornecedor||'');setor=String(r.setor||'');}
+      if(!ean&&!descricao)return;
+      var key=ean||('N:'+text(descricao));if(seen[key])return;seen[key]=1;
+      var e={ean:ean,cod:ean,descricao:descricao,nome:descricao,unidade:unidade,preco:preco,custo:custo,fornecedor:fornecedor,setor:setor};
+      e._name=text(descricao);e._supplier=text(fornecedor);e._idx=C.entries.length;C.entries.push(e);addAliases(e,e._idx);
+      var toks=e._name.split(' ').filter(Boolean),tokSeen=Object.create(null);
+      toks.forEach(function(t){if(tokSeen[t])return;tokSeen[t]=1;for(var n=2;n<=Math.min(t.length,10);n++)addList(C.prefix,t.slice(0,n),e._idx);});
+    });
+    C.ready=true;return C;
+  };
+  C.lookup=function(v){var as=aliases(v);for(var i=0;i<as.length;i++){if(C.byCode[as[i]])return C.byCode[as[i]];}return null;};
+  C.search=function(q,limit){
+    q=String(q||'').trim();limit=Math.max(1,Number(limit)||20);if(!q)return[];
+    var d=digits(q),qn=text(q),codeOnly=/^[\d\s.\-\/]+$/.test(q);
+    if(codeOnly&&/^\d{8,14}$/.test(d)){var exact=C.lookup(d);if(exact)return[exact];}
+    var candidates=null;
+    if(codeOnly&&d.length>=2)candidates=C.codePrefix[d.slice(0,Math.min(d.length,14))]||[];
+    if(!codeOnly){
+      var qt=qn.split(' ').filter(Boolean),small=null;
+      qt.forEach(function(t){if(t.length<2)return;var a=C.prefix[t.slice(0,Math.min(t.length,10))]||[];if(small===null||a.length<small.length)small=a;});
+      candidates=small;
+    }
+    if(candidates===null)candidates=C.entries.map(function(_,i){return i;});
+    var qtoks=qn.split(' ').filter(Boolean),out=[];
+    for(var x=0;x<candidates.length;x++){
+      var e=C.entries[candidates[x]];if(!e)continue;var score=0;
+      if(codeOnly&&d){var ed=digits(e.ean);if(ed===d)score+=5000;else if(ed.indexOf(d)===0)score+=1800;else if(ed.indexOf(d)>0)score+=400;else continue;}
+      if(!codeOnly&&qn){var hay=e._name+' '+e._supplier;if(!qtoks.every(function(t){return hay.indexOf(t)>=0;}))continue;if(e._name===qn)score+=2400;else if(e._name.indexOf(qn)===0)score+=1700;else if(e._name.indexOf(qn)>=0)score+=1200;score+=qtoks.length*80;}
+      if(Number(e.preco)>0)score+=8;out.push({e:e,s:score});
+    }
+    out.sort(function(a,b){return b.s-a.s||String(a.e.descricao).localeCompare(String(b.e.descricao),'pt-BR');});
+    return out.slice(0,limit).map(function(x){return x.e;});
+  };
+  C.digits=digits;C.text=text;C.aliases=aliases;C.isFullCode=isFullCode;
+  g.AURASearchCore=C;
+  console.info('[AURA Search Core] v7.02 carregado');
+})(window);
+</script>
+
+<script id="auraMobileSearchCoreV702">
+(function(){
+  'use strict';
+  var core=window.AURASearchCore;if(!core)return;
+  var DB='AURA_Search_Core_v1',STORE='catalogos',KEY='produtos',syncing=false;
+  function dbOpen(){return new Promise(function(res,rej){if(!window.indexedDB){rej(new Error('IndexedDB indisponível'));return;}var r=indexedDB.open(DB,1);r.onupgradeneeded=function(){var d=r.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'key'});};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error||new Error('IndexedDB'));};});}
+  async function loadCache(){try{var d=await dbOpen();return await new Promise(function(res){var tx=d.transaction(STORE,'readonly'),rq=tx.objectStore(STORE).get(KEY);rq.onsuccess=function(){res(rq.result||null);};rq.onerror=function(){res(null);};});}catch(e){return null;}}
+  async function saveCache(obj){try{var d=await dbOpen();await new Promise(function(res,rej){var tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(obj);tx.oncomplete=function(){res();};tx.onerror=function(){rej(tx.error);};});}catch(e){}}
+  function build(c){if(c&&Array.isArray(c.produtos)){core.build(c.produtos,c.versao||String(c.produtos.length));return true;}return false;}
+  async function sync(force){if(syncing)return;syncing=true;try{var cached=await loadCache();if(cached)build(cached);var cfg=typeof loadCfg==='function'?loadCfg():{};if(!cfg.url||navigator.onLine===false)return;var ver=cached&&cached.versao?cached.versao:'';var sep=cfg.url.indexOf('?')>=0?'&':'?';var url=cfg.url+sep+'action=buscarIndiceProdutos&versaoCliente='+encodeURIComponent(force?'':ver)+'&_='+Date.now();var r=await fetchComTimeout(url,{cache:'no-store'},20000),j=await r.json();if(!j||!j.ok)return;if(j.alterado&&Array.isArray(j.produtos)){var obj={key:KEY,versao:j.versao||'',atualizadoEm:Date.now(),produtos:j.produtos};build(obj);saveCache(obj);console.info('[AURA Search Core] índice móvel atualizado:',j.total||j.produtos.length);}else if(!core.ready&&cached)build(cached);}catch(e){console.warn('[AURA Search Core] índice móvel indisponível; fallback servidor mantido:',e&&e.message||e);}finally{syncing=false;}}
+  window.auraSearchMobileSync_=sync;
+  window.auraSearchMobileLookup_=function(c){return core.lookup(c);};
+  window.auraSearchMobileSearch_=function(q,n){return core.search(q,n);};
+  loadCache().then(function(c){if(c)build(c);setTimeout(function(){sync(false);},120);});
+  window.addEventListener('online',function(){setTimeout(function(){sync(false);},80);});
+  console.info('[AURA Search Core] móvel v7.02 — IndexedDB + EAN local O(1) + fallback servidor');
+})();
+</script>
+
+<script id="auraMobileSearchOverridesV702">
+(function(){
+  'use strict';
+  var core=window.AURASearchCore;if(!core)return;
+  function hit(c){return core.ready?core.lookup(c):null;}
+  var buscarServidor=window.buscarDescricao;
+  window.buscarDescricao=async function(ean){
+    var p=hit(ean);if(!p){return buscarServidor(ean);}
+    var el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco');
+    if((codigoAtual||'')!==ean)return;
+    el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';elPreco.classList.remove('show');if(p.preco!==''&&p.preco!=null&&!isNaN(Number(p.preco))){elPreco.textContent='R$ '+Number(p.preco).toFixed(2).replace('.',',');elPreco.classList.add('show');}
+    // A tela responde já. Lotes/setor e eventual dado mais novo chegam depois.
+    setTimeout(function(){if((codigoAtual||'')===ean)buscarFotoCompleta(p.ean||ean,p.descricao||'');},0);
+    var cfg=loadCfg();if(!cfg.url)return;try{var r=await tentarBuscaCompleta(cfg.url,p.ean||ean);if((codigoAtual||'')!==ean)return;if(r&&r.suportado&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}if(r.preco!==undefined&&r.preco!==null&&r.preco!==''&&!isNaN(Number(r.preco))){elPreco.textContent='R$ '+Number(r.preco).toFixed(2).replace('.',',');elPreco.classList.add('show');}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(lotes.length){_loteEanAtual=p.ean||ean;_lotesEncontrados=lotes;abrirLoteModal();}}}catch(e){}
+  };
+
+  // NF-e: autocomplete local com 90ms; EAN completo é imediato.
+  window.nfeBuscaProdutoInput_=function(i,el){
+    var q=String(el&&el.value||'').trim(),box=document.getElementById('nfeAuto_'+i),it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(it){it._campoBusca=q;if(/^\d+$/.test(q)){it.eanAura=q;if(it.status==='encontrado')it.status='nao_encontrado';}nfeAgendarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}if(_nfeBuscaProdutoTimer_[i])clearTimeout(_nfeBuscaProdutoTimer_[i]);if(!box)return;if(!q||(!/^\d+$/.test(q)&&q.length<2)){nfeFecharSugestoes_(i);return;}var seq=(_nfeBuscaProdutoSeq_[i]||0)+1;_nfeBuscaProdutoSeq_[i]=seq;
+    var ms=core.isFullCode(q)?0:90;_nfeBuscaProdutoTimer_[i]=setTimeout(async function(){if(_nfeBuscaProdutoSeq_[i]!==seq)return;var arr=core.ready?core.search(q,8):[];if(!arr.length){try{var url=nfeCfgUrl_();if(url){var sep=url.indexOf('?')>=0?'&':'?';var rr=await fetch(url+sep+'action=buscarProdutosCompra&q='+encodeURIComponent(q)+'&limite=8&_='+Date.now(),{cache:'no-store'}),jj=await rr.json();arr=jj&&jj.ok&&Array.isArray(jj.resultados)?jj.resultados:[];}}catch(e){}}
+      if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco};});_nfeBuscaProdutoResultados_[i]=arr;if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');},ms);
+  };
+  var validarServidor=window.nfeValidarEan_;
+  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||'');var p=hit(ean);if(!it||!p){return validarServidor(i);}it.eanAura=p.ean;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
+  };
+})();
+</script>
 </body>
 </html>
