@@ -3309,8 +3309,10 @@ function _fmtValidadeTarefa(v) {
   return '<div style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(226,75,74,.1);color:' + cor + ';margin-bottom:6px"><i class="ti ti-calendar-exclamation"></i> Validade: ' + txt + '</div>';
 }
 
+function _tarefaAutoRefrigerada_(t){return String(t&&t.materialAcao||'').toUpperCase().indexOf('REFRIGERADO')>=0;}
 function _buildTarefaCards(prefixo) {
   return _tarefasPendentes.map(function(t, i) {
+    var ehRefrig=_tarefaAutoRefrigerada_(t);
     var jaConfirmada = t._localConfirmada || false;
     var id = prefixo + i;
     var bodyHtml = '';
@@ -3318,17 +3320,23 @@ function _buildTarefaCards(prefixo) {
       var qtd = t._qtdeLocal || 0;
       if (t._carrinhoStatus === 'sim') {
         bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
-          + '<div class="tarefa-resolved-sim"><i class="ti ti-basket-check"></i> Já está no carrinho com etiqueta de desconto</div>';
+          + '<div class="tarefa-resolved-sim"><i class="ti ti-basket-check"></i> '+(ehRefrig?'Etiquetado e mantido na frente do refrigerador/expositor':'Já está no carrinho com etiqueta de desconto')+'</div>';
+      } else if (t._carrinhoStatus === 'nao' && t.automatica && qtd > 0) {
+        bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
+          + '<div class="tarefa-resolved-nao"><i class="ti ti-alert-triangle"></i> '+(ehRefrig?'Ação ainda pendente: etiquetar e manter na frente':'Ação ainda pendente: levar ao carrinho e etiquetar')+'</div>'
+          + '<div class="tarefa-carrinho-ask"><div class="tarefa-carrinho-label">Quando concluir, confirme abaixo.</div><div class="tarefa-carrinho-btns">'
+          + '<button class="tarefa-carrinho-btn sim" onclick="responderCarrinhoTarefa(' + i + ',\'sim\')"><i class="ti ti-basket-check"></i> '+(ehRefrig?'Concluído:<br>etiquetado na frente':'Concluído:<br>carrinho + etiqueta')+'</button>'
+          + '<button class="tarefa-carrinho-btn nao" onclick="responderCarrinhoTarefa(' + i + ',\'nao\')"><i class="ti ti-clock"></i> Ainda<br>pendente</button></div></div>';
       } else if (t._carrinhoStatus === 'nao') {
         bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
-          + '<div class="tarefa-resolved-nao"><i class="ti ti-alert-triangle"></i> Ainda na prateleira, sem desconto</div>';
+          + '<div class="tarefa-resolved-nao"><i class="ti ti-alert-triangle"></i> '+(ehRefrig?'Ainda não foi etiquetado/reposicionado':'Ainda na prateleira, sem desconto')+'</div>';
       } else if (qtd > 0) {
         bodyHtml = '<div class="tarefa-done"><i class="ti ti-circle-check"></i> Confirmado — ' + qtd + ' un.</div>'
           + '<div class="tarefa-carrinho-ask">'
-          +   '<div class="tarefa-carrinho-label">Ainda restam <span class="tarefa-carrinho-qtd">' + qtd + ' unidade' + (qtd === 1 ? '' : 's') + '</span> na loja. Já colocou no carrinho com etiqueta de desconto?</div>'
+          +   '<div class="tarefa-carrinho-label">Ainda restam <span class="tarefa-carrinho-qtd">' + qtd + ' unidade' + (qtd === 1 ? '' : 's') + '</span> na loja. '+(ehRefrig?'Já etiquetou e deixou o produto na frente do refrigerador/expositor?':'Já colocou no carrinho com etiqueta de desconto?')+'</div>'
           +   '<div class="tarefa-carrinho-btns">'
-          +     '<button class="tarefa-carrinho-btn sim" onclick="responderCarrinhoTarefa(' + i + ',\'sim\')"><i class="ti ti-basket-check"></i> Sim, já<br>etiquetei</button>'
-          +     '<button class="tarefa-carrinho-btn nao" onclick="responderCarrinhoTarefa(' + i + ',\'nao\')"><i class="ti ti-alert-triangle"></i> Ainda não,<br>tá na prateleira</button>'
+          +     '<button class="tarefa-carrinho-btn sim" onclick="responderCarrinhoTarefa(' + i + ',\'sim\')"><i class="ti ti-basket-check"></i> '+(ehRefrig?'Sim, etiquetei<br>e deixei na frente':'Sim, já<br>etiquetei')+'</button>'
+          +     '<button class="tarefa-carrinho-btn nao" onclick="responderCarrinhoTarefa(' + i + ',\'nao\')"><i class="ti ti-alert-triangle"></i> '+(ehRefrig?'Ainda não<br>etiquetei':'Ainda não,<br>tá na prateleira')+'</button>'
           +   '</div>'
           + '</div>';
       } else {
@@ -3356,6 +3364,7 @@ function _buildTarefaCards(prefixo) {
       +     (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
       +     (_fmtValidadeTarefa(t.validade) || '')
       +     (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
+      +     (Number(t.precoAcao)>0 ? '<div style="margin-top:7px;display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:11px;font-weight:900;background:rgba(29,158,117,.14);color:#1D9E75;border-radius:7px;padding:4px 8px">Preço validade: R$ '+Number(t.precoAcao).toFixed(2).replace('.',',')+'</span>'+(Number(t.precoNormal)>0?'<span style="font-size:10px;color:var(--tx2)">normal R$ '+Number(t.precoNormal).toFixed(2).replace('.',',')+'</span>':'')+'</div>' : '')
       +   '</div>'
       + '</div>'
       + bodyHtml
@@ -3418,16 +3427,13 @@ function renderTarefas() {
     badge.classList.add('show');
   }
 
-  // Modal bloqueante — abre se ainda há pendentes não confirmadas
+  // O modal completo continua disponível sob demanda, mas não interrompe
+  // mais o fluxo de bipe ao entrar no app. O aviso-resumo v7.05/v7.04 cuida disso.
   if (modal && modalBody) {
-    if (pendentes.length > 0) {
-      modalCount.textContent = pendentes.length;
-      modalBody.innerHTML = _buildTarefaCards('m');
-      carregarFotosTarefas('m');
-      modal.classList.add('open');
-    } else {
-      modal.classList.remove('open');
-    }
+    modalCount.textContent = pendentes.length;
+    modalBody.innerHTML = _buildTarefaCards('m');
+    if (pendentes.length > 0) carregarFotosTarefas('m');
+    modal.classList.remove('open');
   }
 }
 
@@ -3490,8 +3496,8 @@ function confirmarTarefa(idx) {
   renderTarefas();
 
   if (qty > 0) {
-    // Ainda tem estoque: pergunta se já foi pro carrinho com etiqueta de desconto.
-    // A tarefa fica visível até o colaborador responder — não some sozinha.
+    // Ainda tem estoque: pergunta a ação final conforme o tipo do produto.
+    // Prateleira -> carrinho; refrigerado -> etiqueta + frente do expositor. A tarefa fica visível até responder.
     mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
   } else {
     mostrarToast('Tarefa confirmada! Sem estoque restante.', 'ok');
@@ -3533,13 +3539,15 @@ function responderCarrinhoTarefa(idx, resposta) {
   }
 
   renderTarefas();
+  var ehRefrig=_tarefaAutoRefrigerada_(t);
   mostrarToast(
-    resposta === 'sim' ? 'Beleza, já no carrinho com desconto! 🏷️' : 'Ok, produto segue na prateleira por enquanto',
+    resposta === 'sim' ? (ehRefrig?'Produto etiquetado e mantido na frente! 🏷️':'Beleza, já no carrinho com desconto! 🏷️') : (ehRefrig?'Ok, ação refrigerada ainda está pendente':'Ok, produto segue na prateleira por enquanto'),
     resposta === 'sim' ? 'ok' : 'warn'
   );
 
   setTimeout(function() {
-    _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
+    // Em tarefa automática, "ainda não" não encerra a obrigação: ela permanece pendente.
+    if (!(t.automatica && resposta === 'nao')) _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
     renderTarefas();
   }, 3000);
 }
@@ -3563,7 +3571,7 @@ function tarefasHistTs_(t){var vals=[t&&t.criadoEm,t&&t.confirmadoEm,t&&t.carrin
 function tarefasHistTextoBusca_(t){return tarefasHistNormBusca_([t.produto||'',t.cod||'',t.descricao||'',t.validade||'',_fmtValidadeTarefaTexto_(t.validade||''),tarefasHistDataBusca_(t.criadoEm),tarefasHistDataBusca_(t.confirmadoEm),tarefasHistDataBusca_(t.carrinhoRespondidoEm)].join(' '));}
 function tarefasHistBuscar_(v){_tarefasHistBusca=String(v||'').trim();var w=document.getElementById('tarefasHistSearchWrap');if(w)w.classList.toggle('has-value',!!_tarefasHistBusca);renderTarefasHistorico();}
 function tarefasHistLimparBusca_(){_tarefasHistBusca='';var i=document.getElementById('tarefasHistBusca');if(i){i.value='';i.focus();}var w=document.getElementById('tarefasHistSearchWrap');if(w)w.classList.remove('has-value');renderTarefasHistorico();}
-function tarefasHistFaseLocal_(t){var st=String(t.status||'pendente').toLowerCase(),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,c=String(t.carrinhoStatus||t._carrinhoStatus||'').toLowerCase();if(st==='pendente')return 'pendente';if(st==='concluida'&&q!==null&&q>0&&!c)return 'respondida';return 'concluida';}
+function tarefasHistFaseLocal_(t){var st=String(t.status||'pendente').toLowerCase(),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,c=String(t.carrinhoStatus||t._carrinhoStatus||'').toLowerCase(),auto=!!(t&&t.automatica);if(st==='pendente')return 'pendente';if(st==='concluida'&&q!==null&&q>0&&(!c||(auto&&c==='nao')))return 'respondida';return 'concluida';}
 function abrirCentralTarefas(){
   var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione/identifique o colaborador primeiro','warn');return;}
   fecharTarefasModal();
@@ -4015,6 +4023,7 @@ function abrirLoteModal() {
       +   '<div class="lote-card-info">'
       +     '<div class="lote-card-val"><i class="ti ti-calendar"></i> ' + l.validade + '</div>'
       +     '<div class="lote-card-qtd">Estoque atual: <b>' + qtdTxt + '</b></div>'
+      +     _auraPrecoValidadeLoteHtml_(l)
       +   '</div>'
       +   '<div class="lote-card-actions">'
       +     stepperHtml
@@ -6268,5 +6277,53 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
   };
 })();
 </script>
+
+<style id="auraTarefasAutoStyleV1">
+.aura-task-notice-back{position:fixed;inset:0;z-index:100500;background:rgba(0,0,0,.64);display:flex;align-items:center;justify-content:center;padding:18px}
+.aura-task-notice{width:min(520px,94vw);background:var(--surface,#fff);color:var(--tx,#222);border:1px solid var(--border,#ddd);border-radius:18px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.aura-task-notice h3{font-size:19px;margin:0 0 8px;font-weight:900} .aura-task-notice p{font-size:13px;line-height:1.55;color:var(--tx2,#666);margin:7px 0}
+.aura-task-notice .count{font-size:30px;font-weight:950;color:var(--warn,#d97706);margin-right:7px} .aura-task-notice-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.aura-task-notice button{border:1px solid var(--border,#ddd);border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer;background:var(--bg2,#f5f5f5);color:var(--tx,#222)} .aura-task-notice button.primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
+.aura-validade-price{margin-top:7px;padding:7px 9px;border-radius:8px;background:rgba(29,158,117,.11);border:1px solid rgba(29,158,117,.24);font-size:10.5px;line-height:1.35} .aura-validade-price b{font-size:13px;color:#1D9E75} .aura-validade-price.urgent{background:rgba(226,75,74,.10);border-color:rgba(226,75,74,.24)}
+</style>
+<script id="auraTarefasAutoV1">
+(function(){
+  'use strict';
+  var APP_KEY='coleta_individual', APP_LABEL='Coleta Individual';
+  function norm(v){return String(v||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
+  function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+  window._auraPrecoValidadeLoteHtml_=function(l){
+    if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
+    var d=Number(l.diasParaVencer),cls=d<=10?' urgent':'';
+    return '<div class="aura-validade-price'+cls+'"><div><b>'+fmtMoney(l.precoSugerido)+'</b> · preço sugerido por validade</div><div>'+d+' dia'+(d===1?'':'s')+' para vencer'+(Number(l.precoNormal)>0?' · venda normal '+fmtMoney(l.precoNormal):'')+'</div></div>';
+  };
+  function sessaoKey_(email){return 'aura_access_session_'+APP_KEY+'_'+String(email||'').toLowerCase();}
+  function getSessao_(email){try{var k=sessaoKey_(email),v=sessionStorage.getItem(k);if(v)return v;v=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);sessionStorage.setItem(k,v);return v;}catch(e){return APP_KEY+'-'+Date.now();}}
+  async function post_(body){var cfg=loadCfg();if(!cfg.url)return null;try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)});return await r.json();}catch(e){return null;}}
+  async function registrarAcesso_(cfg,nome){
+    var sess=getSessao_(cfg.email);if(window._auraAccessRegistered===sess)return sess;window._auraAccessRegistered=sess;
+    await post_({action:'registrarAcessoApp',sessao:sess,email:cfg.email,nome:nome||'',app:APP_LABEL});return sess;
+  }
+  function fecharAviso_(){var e=document.getElementById('auraTaskNotice');if(e)e.remove();}
+  async function registrarAviso_(sess,cfg,nome,qtd,acao,exibiu){await post_({action:'registrarVisualizacaoTarefas',sessao:sess,email:cfg.email,nome:nome||'',app:APP_LABEL,pendentes:qtd,acao:acao||'',exibiu:!!exibiu});}
+  window.auraTaskNoticeAction_=function(acao){var ctx=window._auraTaskNoticeCtx;if(!ctx)return;fecharAviso_();registrarAviso_(ctx.sess,ctx.cfg,ctx.nome,ctx.qtd,acao,true);if(acao==='ver_tarefas'){try{abrirCentralTarefas();}catch(e){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');}}};
+  async function avisoAposTarefas_(){
+    var cfg=loadCfg();if(!cfg.email)return;var nome='';try{nome=nomeDoEmail(cfg.email)||cfg.email.split('@')[0];}catch(e){nome=cfg.email.split('@')[0];}
+    var sess=await registrarAcesso_(cfg,nome),qtd=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;
+    if(gestorExcluido(nome,cfg.email)){await registrarAviso_(sess,cfg,nome,qtd,'gestor_sem_popup',false);return;}
+    var once='aura_notice_seen_'+sess;try{if(sessionStorage.getItem(once))return;sessionStorage.setItem(once,'1');}catch(e){}
+    if(!qtd){await registrarAviso_(sess,cfg,nome,0,'sem_pendencias',false);return;}
+    window._auraTaskNoticeCtx={sess:sess,cfg:cfg,nome:nome,qtd:qtd};
+    var back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';
+    back.innerHTML='<div class="aura-task-notice"><h3>'+nome+', há <span class="count">'+qtd+'</span> tarefa'+(qtd===1?'':'s')+' pendente'+(qtd===1?'':'s')+' para hoje</h3><p>Verifique os produtos. Se for de <b>prateleira</b>, leve para o carrinho de ofertas. Se for <b>refrigerado</b> — como refrigerante, cerveja, iogurte ou queijo — etiquete e mantenha o produto na frente.</p><p>Quando houver preço por validade, a AURA já mostra o valor sugerido com final comercial <b>,99</b>.</p><div class="aura-task-notice-actions"><button id="auraTaskContinueBtn">Continuar no app</button><button id="auraTaskOpenBtn" class="primary">Ver tarefas</button></div></div>';
+    document.body.appendChild(back);var bc=document.getElementById('auraTaskContinueBtn'),bv=document.getElementById('auraTaskOpenBtn');if(bc)bc.onclick=function(){auraTaskNoticeAction_('continuar');};if(bv)bv.onclick=function(){auraTaskNoticeAction_('ver_tarefas');};await registrarAviso_(sess,cfg,nome,qtd,'exibido',true);
+  }
+  var original=window.buscarTarefas;
+  if(typeof original==='function'){window.buscarTarefas=async function(){var r=await original.apply(this,arguments);try{await avisoAposTarefas_();}catch(e){console.warn('[AURA tarefas] aviso:',e);}return r;};}
+  console.info('[AURA] tarefas automáticas v1 — aviso não bloqueante + auditoria de acesso + preço por validade');
+})();
+</script>
+
 </body>
 </html>
