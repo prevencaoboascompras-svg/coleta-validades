@@ -1548,8 +1548,8 @@ html,body{overscroll-behavior-y:none!important;}
 <div class="venc-alert-bg" id="vencAlertBg">
   <div class="venc-alert-box">
     <div class="venc-alert-icon"><i class="ti ti-alert-triangle"></i></div>
-    <div class="venc-alert-title">Data já vencida</div>
-    <div class="venc-alert-msg">Você está informando a validade <b id="vencAlertData"></b>, que é anterior à data de hoje. Deseja corrigir a data ou continuar mesmo assim?</div>
+    <div class="venc-alert-title">Validade vencida</div>
+    <div class="venc-alert-msg">Você está informando a validade <b id="vencAlertData"></b>, que já ultrapassou o limite operacional de 21h da data informada. Deseja corrigir a data ou continuar mesmo assim?</div>
     <div class="venc-alert-btns">
       <button class="venc-alert-btn corrigir" onclick="vencAlertCorrigir()"><i class="ti ti-calendar"></i>&nbsp; Corrigir data</button>
       <button class="venc-alert-btn continuar" onclick="vencAlertContinuar()">Continuar mesmo assim</button>
@@ -3308,8 +3308,7 @@ function _fmtValidadeTarefa(v) {
 
   if (!d || isNaN(d.getTime())) return null;
 
-  var hoje = new Date(); hoje.setHours(0,0,0,0);
-  var dias = Math.floor((d - hoje) / 86400000);
+  var dias = auraDiasValidade21h_(s);
   var cor = dias <= 3 ? '#e24b4a' : (dias <= 7 ? '#f5a524' : 'var(--tx2)');
   var meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   var txt = ('0'+d.getDate()).slice(-2) + ' ' + meses[d.getMonth()] + '/' + d.getFullYear();
@@ -3920,19 +3919,25 @@ function drumBgClick(e) {
   if (e.target.id === 'drumModal') fecharDrum();
 }
 
+// REGRA AURA: a validade do rótulo vale até 21:00 do próprio dia.
+function auraValidadePartes21h_(v){
+  if(!v)return null;var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/),b=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m)return{y:+m[1],m:+m[2],d:+m[3]};if(b)return{y:+b[3],m:+b[2],d:+b[1]};return null;
+}
+function auraDiasValidade21h_(v){
+  var p=auraValidadePartes21h_(v);if(!p)return null;var agora=new Date(),diff=Math.round((Date.UTC(p.y,p.m-1,p.d)-Date.UTC(agora.getFullYear(),agora.getMonth(),agora.getDate()))/86400000);
+  if(diff===0&&agora.getTime()>new Date(p.y,p.m-1,p.d,21,0,0,0).getTime())return -1;return diff;
+}
+function auraValidadeVencida21h_(v){var d=auraDiasValidade21h_(v);return d!==null&&d<0;}
+
 function confirmarDrum() {
   var dd = String(_drumDia).padStart(2,'0');
   var mm = String(_drumMes).padStart(2,'0');
   var yy = _drumAno;
   var valFormatada = dd + '/' + mm + '/' + yy;
 
-  // Verifica se a data escolhida já está vencida (anterior a hoje)
-  var dataEscolhida = new Date(yy, _drumMes - 1, _drumDia);
-  var hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  dataEscolhida.setHours(0,0,0,0);
-
-  if (dataEscolhida < hoje) {
+  // Mesmo no dia da validade o produto continua válido até 21:00.
+  if (auraValidadeVencida21h_(valFormatada)) {
     // Não aplica ainda — abre popup pedindo confirmação
     _vencPendente = { dd: dd, mm: mm, yy: yy, valFormatada: valFormatada };
     document.getElementById('vencAlertData').textContent = valFormatada;
@@ -3951,11 +3956,8 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
   disp.textContent = dd + ' de ' + MESES_PT[mm-1] + '. de ' + yy;
   disp.classList.remove('empty');
 
-  var vencida = new Date(yy, mm - 1, dd);
-  var hoje = new Date(); hoje.setHours(0,0,0,0);
-  vencida.setHours(0,0,0,0);
   var drumTrigger = document.getElementById('drumTrigger');
-  if (vencida < hoje) {
+  if (auraValidadeVencida21h_(valFormatada)) {
     disp.classList.add('vencida');
     drumTrigger.classList.add('vencida');
   } else {
@@ -4467,7 +4469,7 @@ function _tabletAplicarSessao_(sessao){
   var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
   var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
   setTimeout(function(){verificarAniversario(email,c.nome||sessao.nome||'');},350);
-  setTimeout(function(){buscarTarefas();},650);
+  setTimeout(function(){if(!window._auraTarefasPrimeiraBuscaFeita)buscarTarefas();},25);
   setTimeout(function(){coletaDraftRestaurar_(false);},180);
   return true;
 }
@@ -4568,7 +4570,7 @@ function selecionarUsuarioTablet(nome, email) {
 
   // Verifica aniversário e busca tarefas
   setTimeout(function() { verificarAniversario(email, nome); }, 400);
-  setTimeout(function() { buscarTarefas(); }, 700);
+  setTimeout(function() { if(!window._auraTarefasPrimeiraBuscaFeita) buscarTarefas(); }, 25);
   setTimeout(nfeAtualizarCardPendente_, 80);
   setTimeout(function() { coletaDraftRestaurar_(false); }, 180);
 }
@@ -6423,52 +6425,194 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 })();
 </script>
 
-<style id="auraTarefasAutoStyleV1">
-.aura-task-notice-back{position:fixed;inset:0;z-index:100500;background:rgba(0,0,0,.64);display:flex;align-items:center;justify-content:center;padding:18px}
-.aura-task-notice{width:min(520px,94vw);background:var(--surface,#fff);color:var(--tx,#222);border:1px solid var(--border,#ddd);border-radius:18px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
-.aura-task-notice h3{font-size:19px;margin:0 0 8px;font-weight:900} .aura-task-notice p{font-size:13px;line-height:1.55;color:var(--tx2,#666);margin:7px 0}
-.aura-task-notice .count{font-size:30px;font-weight:950;color:var(--warn,#d97706);margin-right:7px} .aura-task-notice-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
-.aura-task-notice button{border:1px solid var(--border,#ddd);border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer;background:var(--bg2,#f5f5f5);color:var(--tx,#222)} .aura-task-notice button.primary{background:#1D9E75;color:#fff;border-color:#1D9E75}
-.aura-validade-price{margin-top:7px;padding:7px 9px;border-radius:8px;background:rgba(29,158,117,.11);border:1px solid rgba(29,158,117,.24);font-size:10.5px;line-height:1.35} .aura-validade-price b{font-size:13px;color:#1D9E75} .aura-validade-price.urgent{background:rgba(226,75,74,.10);border-color:rgba(226,75,74,.24)}
+<style id="auraTarefasAutoStyleV2">
+/* AURA tarefas v2 — aviso imediato, legível e sem lista inline atrás do popup */
+#tarefasSection{display:none!important}
+.aura-task-notice-back{position:fixed;inset:0;z-index:100500;background:rgba(0,0,0,.52);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+.aura-task-notice{width:min(520px,94vw);background:#fff!important;color:#171717!important;border:1px solid rgba(0,0,0,.10);border-radius:20px;padding:22px 22px 18px;box-shadow:0 24px 90px rgba(0,0,0,.42)}
+.aura-task-notice-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-bottom:5px}
+.aura-task-notice h3{font-size:21px;line-height:1.25;margin:0 0 12px;font-weight:900;color:#171717!important;letter-spacing:-.01em}
+.aura-task-notice .count{display:inline-block;min-width:44px;font-size:32px;line-height:1;font-weight:950;color:#B96F08!important;vertical-align:-2px;text-align:center;margin:0 3px}
+.aura-task-notice .count.loading{font-size:24px;color:#777!important}
+.aura-task-notice p{font-size:14.5px;line-height:1.55;color:#575757!important;margin:8px 0}
+.aura-task-notice p b{color:#222!important;font-weight:850}
+.aura-task-notice-price{margin-top:12px;padding:10px 11px;border-radius:10px;background:#F4F8F6;border:1px solid #DCEDE5;color:#3D554A!important;font-size:13.5px;line-height:1.45}
+.aura-task-notice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.aura-task-notice button{min-height:48px;border:1px solid #D6D6D6;border-radius:11px;padding:11px 13px;font-size:14px;font-weight:850;cursor:pointer;background:#F7F7F7!important;color:#252525!important}
+.aura-task-notice button.primary{background:#1D9E75!important;color:#fff!important;border-color:#1D9E75!important}
+.aura-task-notice button:disabled{opacity:.55;cursor:default}
+.aura-validade-price{margin-top:7px;padding:7px 9px;border-radius:8px;background:rgba(29,158,117,.11);border:1px solid rgba(29,158,117,.24);font-size:10.5px;line-height:1.35}.aura-validade-price b{font-size:13px;color:#1D9E75}.aura-validade-price.urgent{background:rgba(226,75,74,.10);border-color:rgba(226,75,74,.24)}
+@media(max-width:520px){.aura-task-notice-back{padding:14px}.aura-task-notice{padding:20px 18px 16px;border-radius:18px}.aura-task-notice h3{font-size:19px}.aura-task-notice p{font-size:14px}.aura-task-notice-actions{grid-template-columns:1fr}.aura-task-notice button{width:100%}}
 </style>
-<script id="auraTarefasAutoV1">
+<script id="auraTarefasAutoV2">
 (function(){
   'use strict';
   var APP_KEY='coleta_tablet', APP_LABEL='Coleta Tablet';
-  function norm(v){return String(v||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  var _taskPollTimer=null,_taskSilentBusy=false;
+  function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
     var d=Number(l.diasParaVencer),cls=d<=10?' urgent':'';
-    return '<div class="aura-validade-price'+cls+'"><div><b>'+fmtMoney(l.precoSugerido)+'</b> · preço sugerido por validade</div><div>'+d+' dia'+(d===1?'':'s')+' para vencer'+(Number(l.precoNormal)>0?' · venda normal '+fmtMoney(l.precoNormal):'')+'</div></div>';
+    return '<div class="aura-validade-price'+cls+'"><div><b>'+fmtMoney(l.precoSugerido)+'</b> · preço sugerido</div><div>'+d+' dia'+(d===1?'':'s')+' para vencer'+(Number(l.precoNormal)>0?' · venda normal '+fmtMoney(l.precoNormal):'')+'</div></div>';
   };
+  function nomeAtual_(cfg){try{if(APP_KEY==='coleta_tablet'&&typeof _tabletSessaoLer_==='function'){var st=_tabletSessaoLer_();if(st&&st.email&&String(st.email).toLowerCase()===String(cfg.email||'').toLowerCase()&&st.nome)return primeiroNome(st.nome);}return nomeDoEmail(cfg.email)||String(cfg.email||'').split('@')[0];}catch(e){return String(cfg.email||'').split('@')[0];}}
+  function hojeKey_(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function countKey_(email){return 'aura_task_count_'+hojeKey_()+'_'+String(email||'').toLowerCase();}
+  function cacheCountGet_(email){try{var v=localStorage.getItem(countKey_(email));return v===null?null:Math.max(0,Number(v)||0);}catch(e){return null;}}
+  function cacheCountSet_(email,q){try{localStorage.setItem(countKey_(email),String(Math.max(0,Number(q)||0)));}catch(e){}}
   function sessaoKey_(email){return 'aura_access_session_'+APP_KEY+'_'+String(email||'').toLowerCase();}
   function getSessao_(email){try{var k=sessaoKey_(email),v=sessionStorage.getItem(k);if(v)return v;v=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);sessionStorage.setItem(k,v);return v;}catch(e){return APP_KEY+'-'+Date.now();}}
-  async function post_(body){var cfg=loadCfg();if(!cfg.url)return null;try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)});return await r.json();}catch(e){return null;}}
-  async function registrarAcesso_(cfg,nome){
-    var sess=getSessao_(cfg.email);if(window._auraAccessRegistered===sess)return sess;window._auraAccessRegistered=sess;
-    await post_({action:'registrarAcessoApp',sessao:sess,email:cfg.email,nome:nome||'',app:APP_LABEL});return sess;
-  }
+  function post_(body){var cfg=loadCfg();if(!cfg.url)return Promise.resolve(null);return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)}).then(function(r){return r.json();}).catch(function(){return null;});}
+  function registrarAcessoBg_(ctx){if(!ctx||ctx.regAcesso)return;ctx.regAcesso=true;post_({action:'registrarAcessoApp',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,abertoEmCliente:new Date().toISOString()});}
+  function registrarAvisoBg_(ctx,acao,exibiu){if(!ctx)return;post_({action:'registrarVisualizacaoTarefas',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,pendentes:Math.max(0,Number(ctx.qtd)||0),acao:acao||'',exibiu:!!exibiu,exibidoEmCliente:new Date().toISOString()});}
   function fecharAviso_(){var e=document.getElementById('auraTaskNotice');if(e)e.remove();}
-  async function registrarAviso_(sess,cfg,nome,qtd,acao,exibiu){await post_({action:'registrarVisualizacaoTarefas',sessao:sess,email:cfg.email,nome:nome||'',app:APP_LABEL,pendentes:qtd,acao:acao||'',exibiu:!!exibiu});}
-  window.auraTaskNoticeAction_=function(acao){var ctx=window._auraTaskNoticeCtx;if(!ctx)return;fecharAviso_();registrarAviso_(ctx.sess,ctx.cfg,ctx.nome,ctx.qtd,acao,true);if(acao==='ver_tarefas'){try{abrirCentralTarefas();}catch(e){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');}}};
-  async function avisoAposTarefas_(){
-    var cfg=loadCfg();if(!cfg.email)return;var nome='';try{nome=nomeDoEmail(cfg.email)||cfg.email.split('@')[0];}catch(e){nome=cfg.email.split('@')[0];}
-    var sess=await registrarAcesso_(cfg,nome),qtd=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;
-    if(gestorExcluido(nome,cfg.email)){await registrarAviso_(sess,cfg,nome,qtd,'gestor_sem_popup',false);return;}
-    var once='aura_notice_seen_'+sess;try{if(sessionStorage.getItem(once))return;sessionStorage.setItem(once,'1');}catch(e){}
-    if(!qtd){await registrarAviso_(sess,cfg,nome,0,'sem_pendencias',false);return;}
-    window._auraTaskNoticeCtx={sess:sess,cfg:cfg,nome:nome,qtd:qtd};
-    var back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';
-    back.innerHTML='<div class="aura-task-notice"><h3>'+nome+', há <span class="count">'+qtd+'</span> tarefa'+(qtd===1?'':'s')+' pendente'+(qtd===1?'':'s')+' para hoje</h3><p>Verifique os produtos. Se for de <b>prateleira</b>, leve para o carrinho de ofertas. Se for <b>refrigerado</b> — como refrigerante, cerveja, iogurte ou queijo — etiquete e mantenha o produto na frente.</p><p>Quando houver preço por validade, a AURA já mostra o valor sugerido com final comercial <b>,99</b>.</p><div class="aura-task-notice-actions"><button id="auraTaskContinueBtn">Continuar no app</button><button id="auraTaskOpenBtn" class="primary">Ver tarefas</button></div></div>';
-    document.body.appendChild(back);var bc=document.getElementById('auraTaskContinueBtn'),bv=document.getElementById('auraTaskOpenBtn');if(bc)bc.onclick=function(){auraTaskNoticeAction_('continuar');};if(bv)bv.onclick=function(){auraTaskNoticeAction_('ver_tarefas');};await registrarAviso_(sess,cfg,nome,qtd,'exibido',true);
+  function atualizarBadge_(){var b=document.getElementById('tarefaBadge'),q=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;if(b){b.textContent=q;if(q)b.classList.add('show');else b.classList.remove('show');}var s=document.getElementById('tarefasSection');if(s){s.classList.remove('show');s.style.display='none';}return q;}
+  // Não renderiza mais a lista de tarefas atrás do app. Só badge.
+  window.renderTarefas=function(){return atualizarBadge_();};
+  window.auraRenderTarefasModal_=function(){
+    var modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(!modal||!body)return;
+    var pend=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});
+    if(cnt)cnt.textContent=pend.length;body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');if(pend.length)try{carregarFotosTarefas('m');}catch(e){}
+  };
+  window.tarefasHistResponderPendente_=function(id){
+    fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
+  };
+  function htmlAviso_(nome,cached){
+    var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
+    return '<div class="aura-task-notice"><div class="aura-task-notice-kicker">AURA · Tarefas do dia</div><h3><span id="auraTaskNome">'+nome+'</span>, há <span id="auraTaskCount" class="count'+(temCache?'':' loading')+'">'+numero+'</span><span id="auraTaskRotulo">'+rot+'</span></h3><p>Verifique os produtos pendentes. Se for de <b>prateleira</b>, leve para o carrinho de ofertas. Se for <b>refrigerado</b>, etiquete e mantenha na frente do expositor.</p><div class="aura-task-notice-price">Quando houver ação por validade, use o <b>preço sugerido</b> mostrado pela AURA.</div><div class="aura-task-notice-actions"><button id="auraTaskContinueBtn">Continuar no app</button><button id="auraTaskOpenBtn" class="primary">Ver tarefas</button></div></div>';
   }
-  var original=window.buscarTarefas;
-  if(typeof original==='function'){window.buscarTarefas=async function(){var r=await original.apply(this,arguments);try{await avisoAposTarefas_();}catch(e){console.warn('[AURA tarefas] aviso:',e);}return r;};}
-  console.info('[AURA] tarefas automáticas v1 — aviso não bloqueante + auditoria de acesso + preço por validade');
+  function prepararAvisoImediato_(){
+    var cfg=loadCfg();if(!cfg||!cfg.email)return null;var nome=nomeAtual_(cfg),sess=getSessao_(cfg.email),ctx={cfg:cfg,nome:nome,sess:sess,qtd:0,acao:'',fechado:false,regAcesso:false};
+    registrarAcessoBg_(ctx);
+    if(gestorExcluido(nome,cfg.email)){registrarAvisoBg_(ctx,'gestor_sem_popup',false);return null;}
+    var once='aura_notice_seen_'+sess;try{if(sessionStorage.getItem(once))return null;sessionStorage.setItem(once,'1');}catch(e){}
+    var cached=cacheCountGet_(cfg.email),back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';back.innerHTML=htmlAviso_(nome,cached);document.body.appendChild(back);ctx.el=back;window._auraTaskNoticeCtx=ctx;
+    var bc=document.getElementById('auraTaskContinueBtn'),bv=document.getElementById('auraTaskOpenBtn');
+    if(bc)bc.onclick=function(){ctx.acao='continuar';ctx.fechado=true;fecharAviso_();registrarAvisoBg_(ctx,'continuar',true);};
+    if(bv)bv.onclick=function(){ctx.acao='ver_tarefas';ctx.fechado=true;fecharAviso_();registrarAvisoBg_(ctx,'ver_tarefas',true);try{abrirCentralTarefas();}catch(e){}};
+    return ctx;
+  }
+  function aplicarQtdAviso_(ctx,qtd){
+    qtd=Math.max(0,Number(qtd)||0);cacheCountSet_(ctx&&ctx.cfg&&ctx.cfg.email,qtd);if(!ctx)return;ctx.qtd=qtd;
+    if(qtd<=0){if(!ctx.fechado){fecharAviso_();ctx.fechado=true;}registrarAvisoBg_(ctx,'sem_pendencias',false);return;}
+    if(ctx.fechado)return;var c=document.getElementById('auraTaskCount'),r=document.getElementById('auraTaskRotulo');if(c){c.textContent=String(qtd);c.classList.remove('loading');}if(r)r.textContent=' tarefa'+(qtd===1?'':'s')+' pendente'+(qtd===1?'':'s')+' para hoje';registrarAvisoBg_(ctx,'exibido',true);
+  }
+  var originalBuscar=window.buscarTarefas;
+  if(typeof originalBuscar==='function')window.buscarTarefas=async function(){
+    window._auraTarefasPrimeiraBuscaFeita=true;var ctx=prepararAvisoImediato_(),r=await originalBuscar.apply(this,arguments),q=atualizarBadge_();aplicarQtdAviso_(ctx,q);return r;
+  };
+  async function syncCentralSilencioso_(){
+    if(_taskSilentBusy||!window._tarefasHistAberta||document.visibilityState==='hidden')return;var cfg=loadCfg();if(!cfg.url||!cfg.email)return;_taskSilentBusy=true;
+    try{var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'}),data=await resp.json();if(!data||!data.ok)return;var nova=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});var sigAnt=JSON.stringify((_tarefasHistorico||[]).map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];})),sigNova=JSON.stringify(nova.map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];}));if(sigAnt!==sigNova){_tarefasHistorico=nova;_tarefasHistorico.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});renderTarefasHistorico();_tarefasPendentes=nova.filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});atualizarBadge_();}}
+    catch(e){}finally{_taskSilentBusy=false;}
+  }
+  _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
+  try{if(APP_KEY==='coleta_tablet'&&typeof _tabletSessaoLer_==='function'){var ss=_tabletSessaoLer_(),cc=loadCfg();if(ss&&ss.email&&cc&&cc.email&&String(ss.email).toLowerCase()===String(cc.email).toLowerCase())setTimeout(function(){if(!window._auraTarefasPrimeiraBuscaFeita)buscarTarefas();},0);}}catch(e){}
+  console.info('[AURA] tarefas automáticas v2 — popup imediato + app limpo ao fundo + sincronização compartilhada');
 })();
 </script>
 
+
+<style id="auraTaskGroupsV3Style">
+/* AURA tarefas v3 — central organizada por urgência + setor */
+.aura-task-filters{margin:0 0 12px;padding:11px;border:1px solid var(--bd);border-radius:13px;background:var(--card)}
+.aura-task-filter-title{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);margin-bottom:8px}
+.aura-task-urg-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}.aura-task-urg-chips::-webkit-scrollbar{display:none}
+.aura-task-urg-chip{border:1px solid var(--bd);background:var(--bg);color:var(--tx2);border-radius:999px;padding:7px 9px;font-size:9.5px;font-weight:900;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:5px}.aura-task-urg-chip b{font-size:10px;color:var(--tx)}.aura-task-urg-chip.active{border-color:#378ADD;background:rgba(55,138,221,.12);color:#378ADD}.aura-task-urg-chip.active b{color:#378ADD}
+.aura-task-sector-row{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:8px}.aura-task-sector-row select{width:100%;height:39px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);padding:0 9px;font-size:11px}.aura-task-clear-filter{height:39px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx2);padding:0 10px;font-size:10px;font-weight:850;cursor:pointer}
+.aura-task-groups{display:flex;flex-direction:column;gap:9px}.aura-task-group{border:1px solid var(--bd);border-radius:13px;background:var(--surf);overflow:hidden}.aura-task-group-hd{width:100%;border:0;background:var(--card);color:var(--tx);padding:11px 12px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;text-align:left;cursor:pointer}.aura-task-group-chevron{width:28px;height:28px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:15px}.aura-task-group.open .aura-task-group-chevron i{transform:rotate(90deg)}.aura-task-group-chevron i{transition:transform .16s ease}.aura-task-group-main{min-width:0}.aura-task-group-title{font-size:11.5px;font-weight:950;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.aura-task-group-sub{font-size:9px;color:var(--tx2);margin-top:3px}.aura-task-group-count{min-width:31px;height:27px;border-radius:999px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:950}.aura-task-group-body{display:none;padding:9px;gap:9px;flex-direction:column}.aura-task-group.open .aura-task-group-body{display:flex}
+.aura-task-urg-badge,.aura-task-sector-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 7px;font-size:8px;font-weight:950;letter-spacing:.02em;margin:0 5px 5px 0}.aura-task-urg-badge.critica{background:rgba(226,75,74,.14);color:#E24B4A}.aura-task-urg-badge.urgente{background:rgba(245,158,11,.16);color:#D87900}.aura-task-urg-badge.prioridade{background:rgba(186,117,23,.14);color:#BA7517}.aura-task-urg-badge.atencao{background:rgba(55,138,221,.13);color:#378ADD}.aura-task-urg-badge.normal{background:rgba(120,120,120,.11);color:var(--tx2)}.aura-task-sector-badge{background:rgba(29,158,117,.11);color:#1D9E75}
+.aura-task-group .tarefas-hist-card{margin:0}.aura-task-price-suggest{margin-top:7px;display:inline-flex;gap:5px;align-items:center;border:1px solid rgba(29,158,117,.25);background:rgba(29,158,117,.10);color:#1D9E75;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:900}.aura-task-days{font-size:9px;color:var(--tx2);margin-top:4px}.aura-task-empty-filter{text-align:center;padding:38px 15px;color:var(--tx2);font-size:11px}.aura-task-empty-filter i{display:block;font-size:34px;margin-bottom:7px;opacity:.55}
+@media(max-width:370px){.aura-task-filters{padding:9px}.aura-task-group-hd{padding:10px}.aura-task-group-title{font-size:10.5px}}
+</style>
+<script id="auraTaskGroupsV3">
+(function(){
+  'use strict';
+  var SETORES=['Açougue','Bazar','Bebidas','Congelados','Frios','Horti','Laticínios','Limpeza','Outros','Padaria','Perfumaria','Pet','Pilhas/Baterias','Seca','Seca doce'];
+  var SETOR_ORDEM={};SETORES.forEach(function(s,i){SETOR_ORDEM[s]=i;});
+  var URG=[
+    {id:'critica',label:'Crítica',min:-999,max:3,ord:0,icone:'ti-alert-hexagon'},
+    {id:'urgente',label:'Urgente',min:4,max:7,ord:1,icone:'ti-alert-triangle'},
+    {id:'prioridade',label:'Prioridade',min:8,max:10,ord:2,icone:'ti-clock-exclamation'},
+    {id:'atencao',label:'Atenção',min:11,max:15,ord:3,icone:'ti-clock'},
+    {id:'normal',label:'Outras',min:16,max:9999,ord:4,icone:'ti-list-check'}
+  ];
+  var UMAP={};URG.forEach(function(u){UMAP[u.id]=u;});
+  window._auraTaskUrgFilter='';window._auraTaskSetorFilter='';window._auraTaskOpenGroups={};
+  function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function setorValido(v){var n=norm(v);if(n==='fiambreria')return 'Frios';for(var i=0;i<SETORES.length;i++)if(norm(SETORES[i])===n)return SETORES[i];return '';}
+  function inferSetorNome(t){var n=' '+norm((t&&t.produto||'')+' '+(t&&t.descricao||''))+' ';
+    function tem(a){return a.some(function(x){return n.indexOf(' '+norm(x)+' ')>=0;});}
+    if(tem(['congelado','congelada','sorvete','picole','pizza congelada','lasanha congelada','nuggets']))return 'Congelados';
+    if(tem(['margarina','manteiga','iogurte','bebida lactea','leite fermentado','requeijao','cream cheese','nata']))return 'Laticínios';
+    if(tem(['presunto','mortadela','salame','peito de peru','apresuntado','queijo fatiado']))return 'Frios';
+    if(tem(['cerveja','refrigerante','refri','agua mineral','energetico','isotonico','suco','nectar','vinho','espumante','chopp']))return 'Bebidas';
+    if(tem(['picanha','alcatra','patinho','coxao','costela','maminha','fraldinha','linguica','carne bovina','carne suina','frango','coxa','sobrecoxa']))return 'Açougue';
+    if(tem(['banana','maca','laranja','bergamota','tomate','batata','cebola','cenoura','alface','uva','brocolis','couve','repolho','abacaxi','mamao','melancia','morango','pepino']))return 'Horti';
+    if(tem(['pao frances','pao sovado','cuca','bolo','sonho','croissant','torta confeitada']))return 'Padaria';
+    if(tem(['detergente','desinfetante','agua sanitaria','amaciante','sabao em po','sabao liquido','esponja','saco lixo','limpa vidro','alvejante']))return 'Limpeza';
+    if(tem(['shampoo','condicionador','sabonete','creme dental','pasta dental','desodorante','absorvente','fralda','papel higienico']))return 'Perfumaria';
+    if(tem(['racao cao','racao cachorro','racao gato','petisco pet','areia sanitaria gato']))return 'Pet';
+    if(tem(['pilha alcalina','pilha comum','bateria alcalina','bateria 9v']))return 'Pilhas/Baterias';
+    if(tem(['copo descartavel','prato descartavel','talher descartavel','papel aluminio','filme pvc','vela','fosforo']))return 'Bazar';
+    if(tem(['chocolate','bombom','bala','wafer','biscoito doce','bolacha doce','doce de leite','pacoca','pirulito','goma de mascar']))return 'Seca doce';
+    if(tem(['arroz','feijao','macarrao','massa seca','farinha','oleo soja','cafe','acucar','sal refinado','molho tomate','extrato tomate','enlatado']))return 'Seca';
+    return 'Outros';
+  }
+  function setorTarefa(t){var s=setorValido(t&&t.setor);if(s)return s;try{var c=window.AURASearchCore;if(c&&c.ready&&t&&t.cod){var p=c.lookup(t.cod);s=setorValido(p&&p.setor);if(s)return s;}}catch(e){}return inferSetorNome(t);}
+  function urgTarefa(t){var salvo=norm(t&&t.urgencia);if(salvo.indexOf('crit')===0)return UMAP.critica;if(salvo.indexOf('urgent')===0)return UMAP.urgente;if(salvo.indexOf('prior')===0)return UMAP.prioridade;if(salvo.indexOf('atenc')===0)return UMAP.atencao;var d=Number(t&&t.diasParaVencer);if(!isFinite(d))return UMAP.normal;for(var i=0;i<URG.length-1;i++)if(d>=URG[i].min&&d<=URG[i].max)return URG[i];return UMAP.normal;}
+  function diasTxt(t){var d=Number(t&&t.diasParaVencer);if(!isFinite(d))return '';if(d<0)return 'vencido';if(d===0)return 'vence hoje';if(d===1)return 'vence amanhã';return 'vence em '+d+' dias';}
+  function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+  function ensureControls(){
+    var body=document.querySelector('#tarefasHistView .tarefas-hist-body'),tabs=body&&body.querySelector('.tarefas-hist-tabs');if(!body||!tabs||document.getElementById('auraTaskFilters'))return;
+    var box=document.createElement('div');box.id='auraTaskFilters';box.className='aura-task-filters';
+    box.innerHTML='<div class="aura-task-filter-title"><i class="ti ti-adjustments-horizontal"></i> Organizar pendências</div><div class="aura-task-urg-chips" id="auraTaskUrgChips"></div><div class="aura-task-sector-row"><select id="auraTaskSectorSel" onchange="auraTaskSetorFilter_(this.value)"><option value="">Todos os setores</option>'+SETORES.map(function(s){return '<option value="'+tarefasHistEsc_(s)+'">'+tarefasHistEsc_(s)+'</option>';}).join('')+'</select><button class="aura-task-clear-filter" type="button" onclick="auraTaskClearFilters_()"><i class="ti ti-filter-off"></i></button></div>';
+    tabs.insertAdjacentElement('afterend',box);
+  }
+  window.auraTaskUrgFilter_=function(id){window._auraTaskUrgFilter=String(id||'');renderTarefasHistorico();};
+  window.auraTaskSetorFilter_=function(v){window._auraTaskSetorFilter=String(v||'');renderTarefasHistorico();};
+  window.auraTaskClearFilters_=function(){window._auraTaskUrgFilter='';window._auraTaskSetorFilter='';var s=document.getElementById('auraTaskSectorSel');if(s)s.value='';renderTarefasHistorico();};
+  window.auraTaskToggleGroup_=function(key){window._auraTaskOpenGroups[key]=!window._auraTaskOpenGroups[key];renderTarefasHistorico();};
+  function renderChips(base){var el=document.getElementById('auraTaskUrgChips');if(!el)return;var counts={};URG.forEach(function(u){counts[u.id]=0;});base.forEach(function(x){counts[urgTarefa(x.t).id]++;});el.innerHTML='<button type="button" class="aura-task-urg-chip'+(!window._auraTaskUrgFilter?' active':'')+'" onclick="auraTaskUrgFilter_(\'\')">Todas <b>'+base.length+'</b></button>'+URG.map(function(u){return '<button type="button" class="aura-task-urg-chip'+(window._auraTaskUrgFilter===u.id?' active':'')+'" onclick="auraTaskUrgFilter_(\''+u.id+'\')">'+u.label+' <b>'+counts[u.id]+'</b></button>';}).join('');}
+  function renderCard(t,idx){
+    var fase=t.fase||tarefasHistFaseLocal_(t),u=urgTarefa(t),setor=setorTarefa(t),icone=fase==='pendente'?'ti-clock':(fase==='respondida'?'ti-message-check':'ti-circle-check'),rotulo=fase==='pendente'?'Pendente':(fase==='respondida'?'Respondida':'Concluída'),idJs=tarefasHistJs_(t.id),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,answer='';
+    if(fase==='respondida')answer='<div class="tarefas-hist-answer"><b>Quantidade respondida:</b> '+(q||0)+' un.<br>Falta concluir a ação comercial indicada.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-circle-check"></i> Concluído</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-clock"></i> Ainda não</button></div>';
+    else if(fase==='pendente')answer='<div class="tarefas-hist-actions"><button class="tarefas-hist-action primary" onclick="tarefasHistResponderPendente_(\''+idJs+'\')"><i class="ti ti-player-play"></i> Executar tarefa</button></div>';
+    else {var res=q===0?'Sem estoque restante':(t.carrinhoStatus==='sim'?'Ação comercial concluída':(t.carrinhoStatus==='nao'?'Ação ainda não concluída':'Tarefa finalizada'));answer='<div class="tarefas-hist-answer"><b>Quantidade confirmada:</b> '+(q===null?'—':q+' un.')+'<br><b>Resultado:</b> '+tarefasHistEsc_(res)+(t.carrinhoRespondidoEm?'<br><b>Finalizada em:</b> '+tarefasHistEsc_(tarefasHistData_(t.carrinhoRespondidoEm)):'')+'</div>';}
+    var preco=Number(t.precoAcao)>0?'<div class="aura-task-price-suggest"><i class="ti ti-tag"></i> Preço sugerido '+fmtMoney(t.precoAcao)+'</div>':'';
+    return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_g'+idx+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div><span class="aura-task-urg-badge '+u.id+'"><i class="ti '+u.icone+'"></i> '+u.label+'</span><span class="aura-task-sector-badge"><i class="ti ti-building-store"></i> '+tarefasHistEsc_(setor)+'</span></div><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+(diasTxt(t)?'<div class="aura-task-days">'+tarefasHistEsc_(diasTxt(t))+'</div>':'')+preco+(t.descricao?'<div class="tarefas-hist-desc"><div class="tarefas-hist-desc-label"><i class="ti ti-message-circle"></i> Orientação</div>'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
+  }
+  var originalAbrir=window.abrirCentralTarefas;
+  window.abrirCentralTarefas=function(){ensureControls();return originalAbrir.apply(this,arguments);};
+  window.renderTarefasHistorico=function(){
+    ensureControls();
+    ['pendente','respondida','concluida'].forEach(function(f){var n=(_tarefasHistorico||[]).filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===f;}).length,el=document.getElementById('tarefasHistCount_'+f);if(el)el.textContent=n;});
+    var lista=document.getElementById('tarefasHistList');if(!lista)return;
+    var base=(_tarefasHistorico||[]).map(function(t,idx){return {t:t,idx:idx};}).filter(function(x){return (x.t.fase||tarefasHistFaseLocal_(x.t))===_tarefasHistFiltro;});
+    if(_tarefasHistBusca){var termos=tarefasHistNormBusca_(_tarefasHistBusca).split(/\s+/).filter(Boolean);base=base.filter(function(x){var h=tarefasHistTextoBusca_(x.t)+' '+tarefasHistNormBusca_(setorTarefa(x.t)+' '+urgTarefa(x.t).label);return termos.every(function(z){return h.indexOf(z)>=0;});});}
+    renderChips(base);
+    var sel=document.getElementById('auraTaskSectorSel');if(sel&&sel.value!==window._auraTaskSetorFilter)sel.value=window._auraTaskSetorFilter;
+    var dados=base.filter(function(x){var u=urgTarefa(x.t),s=setorTarefa(x.t);return (!window._auraTaskUrgFilter||u.id===window._auraTaskUrgFilter)&&(!window._auraTaskSetorFilter||s===window._auraTaskSetorFilter);});
+    if(!dados.length){lista.innerHTML='<div class="aura-task-empty-filter"><i class="ti ti-filter-search"></i>Nenhuma tarefa encontrada com estes filtros.</div>';return;}
+    var grupos={};dados.forEach(function(x){var u=urgTarefa(x.t),s=setorTarefa(x.t),key=u.id+'|'+s;if(!grupos[key])grupos[key]={key:key,u:u,setor:s,itens:[]};grupos[key].itens.push(x);});
+    var arr=Object.keys(grupos).map(function(k){return grupos[k];});arr.sort(function(a,b){return a.u.ord-b.u.ord||((SETOR_ORDEM[a.setor]??99)-(SETOR_ORDEM[b.setor]??99))||a.setor.localeCompare(b.setor,'pt-BR');});
+    if(arr.length===1&&window._auraTaskOpenGroups[arr[0].key]===undefined)window._auraTaskOpenGroups[arr[0].key]=true;
+    else if(arr.length&&Object.keys(window._auraTaskOpenGroups).length===0)window._auraTaskOpenGroups[arr[0].key]=true;
+    var fotos=[];
+    lista.innerHTML='<div class="aura-task-groups">'+arr.map(function(g){var open=!!window._auraTaskOpenGroups[g.key],minDias=null;g.itens.forEach(function(x){var d=Number(x.t.diasParaVencer);if(isFinite(d)&&(minDias===null||d<minDias))minDias=d;});var subt=(minDias===null?'':(minDias<0?'há vencidos':minDias===0?'há produto vencendo hoje':'mais próximo vence em '+minDias+' dia'+(minDias===1?'':'s')));var body='';if(open){body=g.itens.map(function(x){fotos.push(x);return renderCard(x.t,x.idx);}).join('');}return '<section class="aura-task-group'+(open?' open':'')+'"><button type="button" class="aura-task-group-hd" onclick="auraTaskToggleGroup_(\''+tarefasHistJs_(g.key)+'\')"><span class="aura-task-group-chevron"><i class="ti ti-chevron-right"></i></span><span class="aura-task-group-main"><span class="aura-task-group-title">'+g.u.label.toUpperCase()+' · '+tarefasHistEsc_(g.setor).toUpperCase()+'</span><span class="aura-task-group-sub">'+tarefasHistEsc_(subt||'tarefas do setor')+'</span></span><span class="aura-task-group-count">'+g.itens.length+'</span></button><div class="aura-task-group-body">'+body+'</div></section>';}).join('')+'</div>';
+    fotos.forEach(function(x){_carregarFotoTarefa('g'+x.idx,x.t.cod,x.t.produto);});
+  };
+  // Ao executar uma tarefa pela lista agrupada, abre somente aquela tarefa.
+  window.tarefasHistResponderPendente_=function(id){
+    fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
+  };
+  console.info('[AURA] tarefas v3 — agrupamento por urgência e setor + renderização sob demanda');
+})();
+</script>
+
+
+<script>console.info('[AURA Mobile] Tablet v7.08 — validade válida até 21:00 do dia impresso');</script>
 </body>
 </html>
