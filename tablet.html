@@ -729,7 +729,7 @@ body{
 
 /* ── TABLET: SELETOR DE USUÁRIO ── */
 .tablet-modal{
-  position:fixed;inset:0;background:var(--bg3);z-index:700;
+  position:fixed;inset:0;background:var(--bg3);z-index:200000;
   display:none;flex-direction:column;align-items:center;
   overflow-y:auto;padding:32px 20px 48px;
 }
@@ -751,6 +751,7 @@ body{
 .tablet-search:focus{border-color:var(--accent)}
 .tablet-search::placeholder{color:var(--tx2)}
 .tablet-grid{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tablet-loading{grid-column:1/-1;min-height:120px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--tx2);font-size:12px;font-weight:700}.tablet-loading i{font-size:18px;animation:spin .9s linear infinite}
 .tablet-user-btn{
   background:var(--surf);border:1.5px solid var(--bd);border-radius:14px;
   padding:16px 12px;cursor:pointer;text-align:center;
@@ -1118,13 +1119,13 @@ html,body{overscroll-behavior-y:none!important;}
 </div>
 
 <!-- TABLET: SELETOR DE USUÁRIO -->
-<div class="tablet-modal" id="tabletModal">
+<div class="tablet-modal open" id="tabletModal">
   <div class="tablet-logo"><i class="ti ti-shopping-cart"></i></div>
   <div class="tablet-title">Coleta de <span>Validades</span></div>
   <div class="tablet-sub">Quem está coletando agora?<br>Toque no seu nome para começar.</div>
   <input type="search" class="tablet-search" id="tabletSearch"
     placeholder="🔍 Buscar nome…" oninput="filtrarUsuariosTablet(this.value)">
-  <div class="tablet-grid" id="tabletGrid"></div>
+  <div class="tablet-grid" id="tabletGrid"><div class="tablet-loading"><i class="ti ti-loader-2"></i> Carregando colaboradores…</div></div>
 </div>
 
 <!-- MODAL BLOQUEANTE DE TAREFAS -->
@@ -1160,7 +1161,7 @@ html,body{overscroll-behavior-y:none!important;}
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
+    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet(true)" title="Trocar usuário" style="display:none">
       <i class="ti ti-user-circle"></i>
     </button>
     <button class="hdr-btn" onclick="abrirCentralTarefas()" title="Minhas tarefas" aria-label="Abrir minhas tarefas">
@@ -1914,6 +1915,8 @@ function initAudioContext() {
 }
 
 async function iniciarScanner() {
+  // v7.11: identidade vem antes da câmera no tablet.
+  if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de usar a câmera','warn');}catch(e){}return;}
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
   
@@ -4454,6 +4457,9 @@ function pararConfete() {
 //     um app instalado (PWA) no Android abra sem preservar a query
 //     string, o modo tablet continua ativo por causa do nome do arquivo.
 var _modoTablet = true; // build dedicado para tablet
+// v7.11 — gate de identidade: o tablet sempre começa no seletor de usuário.
+var _tabletUsuarioSelecionado=false;
+var _tabletEntradaInicial=true;
 
 var TABLET_SESSION_KEY='aura_tablet_sessao_usuario_v1';
 function _tabletSessaoLer_(){
@@ -4464,28 +4470,25 @@ function _tabletSessaoSalvar_(nome,email){
 }
 function _tabletSessaoLimpar_(){try{sessionStorage.removeItem(TABLET_SESSION_KEY);}catch(e){}}
 function _tabletAplicarSessao_(sessao){
-  if(!sessao||!sessao.email)return false;
-  var email=String(sessao.email||'').toLowerCase();
-  var c=(COLABORADORES||[]).find(function(x){return String(x.email||'').toLowerCase()===email&&x.ativo!==false;});
-  if(!c)return false;
-  var cfg=loadCfg();cfg.email=email;saveCfg(cfg);
-  var sub=document.querySelector('.hdr-sub');if(sub)sub.innerHTML='<i class="ti ti-user"></i> '+primeiroNome(c.nome||sessao.nome||email)+' — '+email;
-  var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
-  var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
-  setTimeout(function(){verificarAniversario(email,c.nome||sessao.nome||'');},350);
-  setTimeout(function(){if(!window._auraTarefasPrimeiraBuscaFeita)buscarTarefas();},25);
-  setTimeout(function(){coletaDraftRestaurar_(false);},180);
+  // v7.11: sessão anterior nunca libera uma nova entrada automaticamente.
+  if(!_tabletUsuarioSelecionado||!sessao||!sessao.email)return false;
   return true;
 }
 
-function iniciarModoTablet() {
-  var grid = document.getElementById('tabletGrid');
-  var usuarios = COLABORADORES.filter(function(c) {
-    // inclui todos, mas marca quem não tem email
-    return true;
-  });
-  renderGridTablet(usuarios);
-  document.getElementById('tabletModal').classList.add('open');
+function iniciarModoTablet(forcarTroca) {
+  // Uma chamada atrasada/automática não pode interromper câmera, coleta ou NF-e.
+  // Só o botão "Trocar usuário" usa forcarTroca=true.
+  if(_tabletUsuarioSelecionado && !forcarTroca)return;
+  if(forcarTroca){
+    _tabletUsuarioSelecionado=false;
+    try{pararScanner();}catch(e){}
+    try{var av=document.getElementById('auraTaskNotice');if(av)av.remove();}catch(e){}
+  }
+  var grid=document.getElementById('tabletGrid');
+  var usuarios=(COLABORADORES||[]).filter(function(){return true;});
+  if(usuarios.length)renderGridTablet(usuarios);
+  else if(grid)grid.innerHTML='<div class="tablet-loading"><i class="ti ti-loader-2"></i> Carregando colaboradores…</div>';
+  var modal=document.getElementById('tabletModal');if(modal)modal.classList.add('open');
 }
 
 // Lista filtrada atual (referenciada pelo índice no onclick)
@@ -4552,31 +4555,26 @@ function filtrarUsuariosTablet(texto) {
 
 function selecionarUsuarioTablet(nome, email) {
   if (!email) return;
-  // Salva na cfg apenas para esta sessão (não sobrescreve cfg permanente do tablet)
-  var cfg = loadCfg();
-  cfg.email = email.toLowerCase();
+  // v7.11: a escolha do avatar é o único ponto que libera o tablet nesta entrada.
+  _tabletUsuarioSelecionado=true;
+  _tabletEntradaInicial=false;
+  var cfg=loadCfg();
+  cfg.email=email.toLowerCase();
   saveCfg(cfg);
 
-  // Atualiza header
-  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
+  document.querySelector('.hdr-sub').innerHTML='<i class="ti ti-user"></i> '+primeiroNome(nome)+' — '+email;
+  _tabletSessaoSalvar_(nome,email); // só contexto da entrada atual; não restaura no próximo carregamento.
 
-  // Mantém o colaborador escolhido durante esta sessão do tablet.
-  // Se o navegador/PWA recarregar a página sozinho, não volta para os avatares.
-  _tabletSessaoSalvar_(nome,email);
+  var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
+  var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
+  var busca=document.getElementById('tabletSearch');if(busca)busca.value='';
 
-  // Fecha o modal do seletor de usuário
-  document.getElementById('tabletModal').classList.remove('open');
-
-  // Mostra botão de trocar usuário no header
-  var btn = document.getElementById('trocaUsuarioBtn');
-  if (btn) btn.style.display = 'flex';
-  document.getElementById('tabletSearch').value = '';
-
-  // Verifica aniversário e busca tarefas
-  setTimeout(function() { verificarAniversario(email, nome); }, 400);
-  setTimeout(function() { if(!window._auraTarefasPrimeiraBuscaFeita) buscarTarefas(); }, 25);
-  setTimeout(nfeAtualizarCardPendente_, 80);
-  setTimeout(function() { coletaDraftRestaurar_(false); }, 180);
+  // Cada seleção explícita é uma nova entrada para popup/auditoria.
+  try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
+  setTimeout(function(){verificarAniversario(email,nome);},250);
+  setTimeout(function(){buscarTarefas();},0);
+  setTimeout(nfeAtualizarCardPendente_,80);
+  setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
 
 
@@ -4608,6 +4606,7 @@ function nfeReabrirConferencia_(){
   if(_nfeColetaNota)nfeRenderNota_();
 }
 function nfeEscanearEan_(i){
+  if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de vincular produto na NF-e','warn');}catch(e){}return;}
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   _nfeVinculoScanIndex=i;
   _nfeModoScan=false; // produto: aceitar EAN/UPC/GTIN, não restringir a Code 128 da chave da NF-e
@@ -6277,37 +6276,35 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 //  INIT
 // ═══════════════════════════════════════════════════════════
 (async function init() {
-  var cfg = loadCfg();
+  var cfg=loadCfg();
+  if(cfg.lastSetor)document.getElementById('fSetor').value=cfg.lastSetor;
 
-  // Restaurar setor e tipo da última sessão
-  if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
-  // Mostrar email no header se configurado
-  if (cfg.email) {
-    document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + cfg.email;
+  if(_modoTablet){
+    // v7.11: o seletor já nasce aberto no HTML, antes de qualquer resposta de rede.
+    // Nunca considera o email salvo da entrada anterior como usuário ativo.
+    _tabletUsuarioSelecionado=false;
+    _tabletSessaoLimpar_();
+    var sub=document.querySelector('.hdr-sub');if(sub)sub.innerHTML='<i class="ti ti-user"></i> Selecione o colaborador';
+    var modal=document.getElementById('tabletModal');if(modal)modal.classList.add('open');
+    var troca=document.getElementById('trocaUsuarioBtn');if(troca)troca.style.display='none';
+  }else if(cfg.email){
+    document.querySelector('.hdr-sub').innerHTML='<i class="ti ti-user"></i> '+cfg.email;
   }
 
   renderHistorico();
   atualizarPendUI();
-  setTimeout(nfeAtualizarCardPendente_, 120);
+  setTimeout(nfeAtualizarCardPendente_,120);
 
-  // Carrega a lista de colaboradores da planilha antes de qualquer coisa
-  // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
   await carregarColaboradores();
 
-  if (_modoTablet) {
-    // Mantém o usuário escolhido durante a sessão. Um refresh/reload inesperado
-    // do navegador ou PWA não deve jogar o operador de volta aos avatares.
-    var sessaoTablet=_tabletSessaoLer_();
-    if(!_tabletAplicarSessao_(sessaoTablet)){
-      setTimeout(iniciarModoTablet,100);
-    }
-  } else {
-    // Modo pessoal: fluxo normal
-    setTimeout(buscarTarefas, 200);
-    if (cfg.email) {
-      setTimeout(function() { verificarAniversario(cfg.email, null); }, 500);
-    }
-    setTimeout(verificarPrimeiroUso, 150);
+  if(_modoTablet){
+    // Só preenche os avatares. NÃO agenda abertura futura do modal.
+    // Isso elimina o popup de avatares aparecendo no meio de uma câmera/coleta/NF-e.
+    if(!_tabletUsuarioSelecionado)renderGridTablet((COLABORADORES||[]).slice());
+  }else{
+    setTimeout(buscarTarefas,200);
+    if(cfg.email)setTimeout(function(){verificarAniversario(cfg.email,null);},500);
+    setTimeout(verificarPrimeiroUso,150);
   }
 })();
 </script>
@@ -6315,6 +6312,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
+<script>window.AURA_TABLET_BUILD='v7.11-entrada-usuario-segura';console.info('[AURA] Coleta Tablet v7.11 — usuário primeiro; câmera/coleta/NF-e depois');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6467,6 +6465,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function cacheCountGet_(email){try{var v=localStorage.getItem(countKey_(email));return v===null?null:Math.max(0,Number(v)||0);}catch(e){return null;}}
   function cacheCountSet_(email,q){try{localStorage.setItem(countKey_(email),String(Math.max(0,Number(q)||0)));}catch(e){}}
   var _auraEntradaSessao_='',_auraEntradaEmail_='',_auraEntradaPopupEmail_='';
+  window.auraTarefasNovaEntrada_=function(){_auraEntradaSessao_='';_auraEntradaEmail_='';_auraEntradaPopupEmail_='';window._auraTarefasPrimeiraBuscaFeita=false;try{var e=document.getElementById('auraTaskNotice');if(e)e.remove();}catch(_e){}};
   function getSessao_(email){var e=String(email||'').toLowerCase();if(!_auraEntradaSessao_||_auraEntradaEmail_!==e){_auraEntradaEmail_=e;_auraEntradaSessao_=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);}return _auraEntradaSessao_;}
   function post_(body){var cfg=loadCfg();if(!cfg.url)return Promise.resolve(null);return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)}).then(function(r){return r.json();}).catch(function(){return null;});}
   function registrarAcessoBg_(ctx){if(!ctx||ctx.regAcesso)return;ctx.regAcesso=true;post_({action:'registrarAcessoApp',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,abertoEmCliente:new Date().toISOString()});}
@@ -6514,8 +6513,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     catch(e){}finally{_taskSilentBusy=false;}
   }
   _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
-  try{if(APP_KEY==='coleta_tablet'&&typeof _tabletSessaoLer_==='function'){var ss=_tabletSessaoLer_(),cc=loadCfg();if(ss&&ss.email&&cc&&cc.email&&String(ss.email).toLowerCase()===String(cc.email).toLowerCase())setTimeout(function(){if(!window._auraTarefasPrimeiraBuscaFeita)buscarTarefas();},0);}}catch(e){}
-  console.info('[AURA] tarefas automáticas v3 — popup em toda entrada + decisão/execução auditáveis');
+  console.info('[AURA] tarefas automáticas v3.1 — identidade tablet obrigatória antes do popup');
 })();
 </script>
 
