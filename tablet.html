@@ -3494,7 +3494,9 @@ function confirmarTarefa(idx) {
         action: 'confirmarTarefa',
         tarefaId: t.id,
         quantidade: qty,
-        email: cfg.email
+        email: cfg.email,
+        sessao: window._auraTaskCurrentSession || '',
+        app: window._auraTaskAppLabel || 'Coleta'
       })
     }).catch(function() {});
   }
@@ -3539,7 +3541,9 @@ function responderCarrinhoTarefa(idx, resposta) {
         tarefaId: t.id,
         carrinho: resposta === 'sim',
         quantidade: t._qtdeLocal,
-        email: cfg.email
+        email: cfg.email,
+        sessao: window._auraTaskCurrentSession || '',
+        app: window._auraTaskAppLabel || 'Coleta'
       })
     }).catch(function() {});
   }
@@ -3633,7 +3637,7 @@ function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return St
 function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
 async function tarefasHistFinalizar_(id,resposta){
   var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return;var cfg=loadCfg();
-  try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t.quantidadeConfirmada)||0,email:cfg.email})});var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Não foi possível finalizar.');t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase='concluida';mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Resposta final registrada.','ok');renderTarefasHistorico();buscarTarefas();setTimeout(function(){carregarTarefasHistorico(true);},500);}catch(e){mostrarToast('Falha ao finalizar tarefa: '+(e&&e.message?e.message:e),'err');}
+  try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Não foi possível finalizar.');t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase='concluida';mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Resposta final registrada.','ok');renderTarefasHistorico();buscarTarefas();setTimeout(function(){carregarTarefasHistorico(true);},500);}catch(e){mostrarToast('Falha ao finalizar tarefa: '+(e&&e.message?e.message:e),'err');}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6462,8 +6466,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function countKey_(email){return 'aura_task_count_'+hojeKey_()+'_'+String(email||'').toLowerCase();}
   function cacheCountGet_(email){try{var v=localStorage.getItem(countKey_(email));return v===null?null:Math.max(0,Number(v)||0);}catch(e){return null;}}
   function cacheCountSet_(email,q){try{localStorage.setItem(countKey_(email),String(Math.max(0,Number(q)||0)));}catch(e){}}
-  function sessaoKey_(email){return 'aura_access_session_'+APP_KEY+'_'+String(email||'').toLowerCase();}
-  function getSessao_(email){try{var k=sessaoKey_(email),v=sessionStorage.getItem(k);if(v)return v;v=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);sessionStorage.setItem(k,v);return v;}catch(e){return APP_KEY+'-'+Date.now();}}
+  var _auraEntradaSessao_='',_auraEntradaEmail_='',_auraEntradaPopupEmail_='';
+  function getSessao_(email){var e=String(email||'').toLowerCase();if(!_auraEntradaSessao_||_auraEntradaEmail_!==e){_auraEntradaEmail_=e;_auraEntradaSessao_=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);}return _auraEntradaSessao_;}
   function post_(body){var cfg=loadCfg();if(!cfg.url)return Promise.resolve(null);return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)}).then(function(r){return r.json();}).catch(function(){return null;});}
   function registrarAcessoBg_(ctx){if(!ctx||ctx.regAcesso)return;ctx.regAcesso=true;post_({action:'registrarAcessoApp',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,abertoEmCliente:new Date().toISOString()});}
   function registrarAvisoBg_(ctx,acao,exibiu){if(!ctx)return;post_({action:'registrarVisualizacaoTarefas',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,pendentes:Math.max(0,Number(ctx.qtd)||0),acao:acao||'',exibiu:!!exibiu,exibidoEmCliente:new Date().toISOString()});}
@@ -6487,7 +6491,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     var cfg=loadCfg();if(!cfg||!cfg.email)return null;var nome=nomeAtual_(cfg),sess=getSessao_(cfg.email),ctx={cfg:cfg,nome:nome,sess:sess,qtd:0,acao:'',fechado:false,regAcesso:false};
     registrarAcessoBg_(ctx);
     if(gestorExcluido(nome,cfg.email)){registrarAvisoBg_(ctx,'gestor_sem_popup',false);return null;}
-    var once='aura_notice_seen_'+sess;try{if(sessionStorage.getItem(once))return null;sessionStorage.setItem(once,'1');}catch(e){}
+    var emailEntrada=String(cfg.email||'').toLowerCase();if(_auraEntradaPopupEmail_===emailEntrada)return null;_auraEntradaPopupEmail_=emailEntrada;
+    window._auraTaskCurrentSession=sess;window._auraTaskAppLabel=APP_LABEL;
     var cached=cacheCountGet_(cfg.email),back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';back.innerHTML=htmlAviso_(nome,cached);document.body.appendChild(back);ctx.el=back;window._auraTaskNoticeCtx=ctx;
     var bc=document.getElementById('auraTaskContinueBtn'),bv=document.getElementById('auraTaskOpenBtn');
     if(bc)bc.onclick=function(){ctx.acao='continuar';ctx.fechado=true;fecharAviso_();registrarAvisoBg_(ctx,'continuar',true);};
@@ -6510,7 +6515,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   }
   _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
   try{if(APP_KEY==='coleta_tablet'&&typeof _tabletSessaoLer_==='function'){var ss=_tabletSessaoLer_(),cc=loadCfg();if(ss&&ss.email&&cc&&cc.email&&String(ss.email).toLowerCase()===String(cc.email).toLowerCase())setTimeout(function(){if(!window._auraTarefasPrimeiraBuscaFeita)buscarTarefas();},0);}}catch(e){}
-  console.info('[AURA] tarefas automáticas v2 — popup imediato + app limpo ao fundo + sincronização compartilhada');
+  console.info('[AURA] tarefas automáticas v3 — popup em toda entrada + decisão/execução auditáveis');
 })();
 </script>
 
@@ -6604,5 +6609,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 
 
 <script>console.info('[AURA Mobile] Tablet v7.09 — tarefas por setor + dias para vencer; validade até 21:00');</script>
+
+<script>console.info('[AURA Mobile] Tablet v7.10 — popup a cada entrada + feedback gerencial de execução');</script>
 </body>
 </html>
