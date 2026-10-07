@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
-<!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
+<!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
+<!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
+<!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
-<!-- v7.01 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
+<!-- v7.02 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -20,7 +21,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
-<link rel="manifest" href="site.webmanifest">
+<link rel="manifest" href="site-tablet.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap">
 <style>
@@ -728,7 +729,7 @@ body{
 
 /* ── TABLET: SELETOR DE USUÁRIO ── */
 .tablet-modal{
-  position:fixed;inset:0;background:var(--bg3);z-index:700;
+  position:fixed;inset:0;background:var(--bg3);z-index:200000;
   display:none;flex-direction:column;align-items:center;
   overflow-y:auto;padding:32px 20px 48px;
 }
@@ -750,6 +751,7 @@ body{
 .tablet-search:focus{border-color:var(--accent)}
 .tablet-search::placeholder{color:var(--tx2)}
 .tablet-grid{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tablet-loading{grid-column:1/-1;min-height:120px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--tx2);font-size:12px;font-weight:700}.tablet-loading i{font-size:18px;animation:spin .9s linear infinite}
 .tablet-user-btn{
   background:var(--surf);border:1.5px solid var(--bd);border-radius:14px;
   padding:16px 12px;cursor:pointer;text-align:center;
@@ -869,7 +871,7 @@ body{
 .nfe-lote{grid-template-columns:minmax(0,1fr) 86px 36px;gap:7px}.nfe-lote input.nfe-validade-input{padding:0 10px!important}.nfe-review-row.nfe-review-bottom{margin:14px 0 0;min-height:48px;padding:9px 11px}
 @media(min-width:700px){.nfe-date-picker{align-items:center}.nfe-date-panel{border-radius:20px}.nfe-date-pick{min-height:278px}.nfe-date-year{height:44px}}
 @media(max-width:390px){.nfe-date-picker{padding:8px}.nfe-date-panel{padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}.nfe-date-pick{grid-template-columns:minmax(0,1fr) 72px;gap:7px}.nfe-date-month{min-height:54px;font-size:13px}.nfe-date-days{gap:3px}.nfe-date-day{font-size:13px;border-radius:9px}.nfe-lote{grid-template-columns:minmax(0,1fr) 74px 34px}}
-.nfe-xml-box{margin-top:12px;border:1px dashed var(--bds);border-radius:12px;padding:13px}.nfe-xml-box input{max-width:100%;font-size:11px}.nfe-actions{position:fixed;left:0;right:0;bottom:0;z-index:100001;background:var(--bg);border-top:1px solid var(--bd);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none}.nfe-overlay.open .nfe-actions{display:block}.nfe-save{display:block;width:min(732px,100%);margin:0 auto;border:none;border-radius:11px;background:#1D9E75;color:#fff;font-size:12px;font-weight:900;padding:13px 14px;cursor:pointer}.nfe-save:disabled{opacity:.5}.nfe-ind-diag{display:none;width:min(732px,100%);margin:0 auto 8px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--surf);font-size:10px;line-height:1.4;color:var(--tx2)}.nfe-ind-diag.show{display:block}.nfe-ind-diag.ok{border-color:rgba(29,158,117,.35);background:rgba(29,158,117,.08)}.nfe-ind-diag.err{border-color:rgba(226,75,74,.4);background:rgba(226,75,74,.08)}.nfe-ind-diag.warn{border-color:rgba(186,117,23,.4);background:rgba(186,117,23,.08)}.nfe-ind-diag .oktxt{color:#1D9E75;font-weight:800}.nfe-ind-diag .new{color:#B76E00;font-weight:800}.nfe-ind-diag .bad{color:var(--err);font-weight:850}.nfe-keybox{padding:20px 14px}.nfe-key-row{display:flex;gap:7px}.nfe-key-row input{flex:1;min-width:0;height:42px;border:1px solid var(--bds);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:10px}.nfe-key-row button{border:none;border-radius:10px;background:#378ADD;color:#fff;font-weight:900;padding:0 13px}.nfe-hint{font-size:10px;color:var(--tx2);line-height:1.45;margin-top:9px}
+.nfe-xml-box{margin-top:12px;border:1px dashed var(--bds);border-radius:12px;padding:13px}.nfe-xml-box input{max-width:100%;font-size:11px}.nfe-actions{position:fixed;left:0;right:0;bottom:0;z-index:100001;background:var(--bg);border-top:1px solid var(--bd);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none}.nfe-overlay.open .nfe-actions{display:block}.nfe-save{display:block;width:min(732px,100%);margin:0 auto;border:none;border-radius:11px;background:#1D9E75;color:#fff;font-size:12px;font-weight:900;padding:13px 14px;cursor:pointer}.nfe-save:disabled{opacity:.5}.nfe-tablet-diag{display:none;width:min(732px,100%);margin:0 auto 8px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--surf);font-size:10px;line-height:1.4;color:var(--tx2)}.nfe-tablet-diag.show{display:block}.nfe-tablet-diag.ok{border-color:rgba(29,158,117,.35);background:rgba(29,158,117,.08)}.nfe-tablet-diag.err{border-color:rgba(226,75,74,.4);background:rgba(226,75,74,.08)}.nfe-tablet-diag.warn{border-color:rgba(186,117,23,.4);background:rgba(186,117,23,.08)}.nfe-tablet-diag .oktxt{color:#1D9E75;font-weight:800}.nfe-tablet-diag .new{color:#B76E00;font-weight:800}.nfe-tablet-diag .bad{color:var(--err);font-weight:850}.nfe-keybox{padding:20px 14px}.nfe-key-row{display:flex;gap:7px}.nfe-key-row input{flex:1;min-width:0;height:42px;border:1px solid var(--bds);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:10px}.nfe-key-row button{border:none;border-radius:10px;background:#378ADD;color:#fff;font-weight:900;padding:0 13px}.nfe-hint{font-size:10px;color:var(--tx2);line-height:1.45;margin-top:9px}
 @media(max-width:480px){.nfe-grid2{grid-template-columns:1fr}.nfe-note-kpis{grid-template-columns:repeat(3,1fr)}.nfe-lote{grid-template-columns:1fr 78px 28px}.nfe-entry{margin-left:12px;margin-right:12px}.nfe-entry-sub{font-size:9px}}
 
 
@@ -1108,6 +1110,10 @@ body.tarefas-hist-aberta{overflow:hidden}
 .nfe-conv-decision{margin-top:7px;font-size:9px;line-height:1.4;color:var(--tx)}
 @media(max-width:520px){.nfe-conv-choices{grid-template-columns:1fr}.nfe-conv-choice{min-height:42px}}
 
+
+/* v7.00 — proteção contra pull-to-refresh do Android/PWA */
+html,body{overscroll-behavior-y:none!important;}
+.nfe-overlay,.tablet-modal,.tarefas-modal,.modal-bg,.drum-modal,.venc-alert-bg{overscroll-behavior-y:contain;}
 </style>
 </head>
 <body>
@@ -1125,13 +1131,13 @@ body.tarefas-hist-aberta{overflow:hidden}
 </div>
 
 <!-- TABLET: SELETOR DE USUÁRIO -->
-<div class="tablet-modal" id="tabletModal">
+<div class="tablet-modal open" id="tabletModal">
   <div class="tablet-logo"><i class="ti ti-shopping-cart"></i></div>
   <div class="tablet-title">Coleta de <span>Validades</span></div>
   <div class="tablet-sub">Quem está coletando agora?<br>Toque no seu nome para começar.</div>
   <input type="search" class="tablet-search" id="tabletSearch"
     placeholder="🔍 Buscar nome…" oninput="filtrarUsuariosTablet(this.value)">
-  <div class="tablet-grid" id="tabletGrid"></div>
+  <div class="tablet-grid" id="tabletGrid"><div class="tablet-loading"><i class="ti ti-loader-2"></i> Carregando colaboradores…</div></div>
 </div>
 
 <!-- MODAL BLOQUEANTE DE TAREFAS -->
@@ -1167,7 +1173,7 @@ body.tarefas-hist-aberta{overflow:hidden}
     <div class="hdr-sub">Bipagem de produtos</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet()" title="Trocar usuário" style="display:none">
+    <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet(true)" title="Trocar usuário" style="display:none">
       <i class="ti ti-user-circle"></i>
     </button>
     <button class="hdr-btn" onclick="abrirCentralTarefas()" title="Minhas tarefas" aria-label="Abrir minhas tarefas">
@@ -1499,7 +1505,7 @@ body.tarefas-hist-aberta{overflow:hidden}
     <div class="nfe-body" id="nfeBody"></div>
   </div>
   <div class="nfe-actions" id="nfeActions">
-    <div class="nfe-ind-diag" id="nfeIndDiag"></div>
+    <div class="nfe-tablet-diag" id="nfeTabletDiag"></div>
     <button class="nfe-save" id="nfeSaveBtn" onclick="nfeColetaSalvar()"><i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e</button>
   </div>
 </div>
@@ -1922,6 +1928,8 @@ function initAudioContext() {
 }
 
 async function iniciarScanner() {
+  // v7.11: identidade vem antes da câmera no tablet.
+  if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de usar a câmera','warn');}catch(e){}return;}
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
   
@@ -3042,6 +3050,8 @@ async function enviar(dados) {
 }
 
 function resetAposEnvio() {
+  coletaDraftLimpar_();
+  _coletaDraftRestaurado_=false;
   resetCodigo();
   descricaoAtual = '';
   document.getElementById('fQty').value = '1';
@@ -3139,8 +3149,8 @@ async function processarFilaEnvio(modoManual) {
 
 async function reenviarPendentes() {
   var arr = loadPend();
-  if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return; }
-  if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return; }
+  if (!arr.length) { mostrarToast('Nenhum registro pendente', 'ok'); return {ok:false,error:'Nenhum registro pendente para enviar.'}; }
+  if (!navigator.onLine) { mostrarToast('Ainda sem conexão', 'err'); return {ok:false,error:'Ainda sem conexão.'}; }
 
   var bannerBtn = document.getElementById('pendBannerBtn');
   var settingsBtn = document.getElementById('resendBtn');
@@ -3159,6 +3169,7 @@ async function reenviarPendentes() {
   [bannerBtn, settingsBtn].forEach(function(b) { if (b) b.disabled = false; });
   if (bannerBtn) bannerBtn.innerHTML = '<i class="ti ti-upload"></i> Reenviar';
   atualizarPendUI();
+  return depois?{ok:false,error:enviados?'Ainda há registros pendentes de envio.':'Não foi possível enviar os registros pendentes.'}:{ok:true,enviados:enviados};
 }
 
 function atualizarPendUI() {
@@ -3260,35 +3271,34 @@ function limparHistorico() {
 // ═══════════════════════════════════════════════════════════
 var _tarefasPendentes = [];
 
-async function buscarTarefas() {
-  var cfg = loadCfg();
-  if (!cfg.url || !cfg.email) return;
-  
+async function buscarTarefas(mostrarFeedback) {
+  var cfg=loadCfg(),ticket=mostrarFeedback&&window.AuraLoader?window.AuraLoader.start({message:'Carregando as tarefas pendentes do colaborador…',complete:'Tarefas pendentes carregadas'}):0;
+  if(!cfg.url||!cfg.email){var semCfg='Selecione o colaborador e configure a conexão com a AURA para consultar as tarefas.';if(ticket)window.AuraLoader.fail(semCfg);return {ok:false,error:semCfg};}
   try {
-    var resp = await fetch(cfg.url + '?action=buscarTarefas&email=' + encodeURIComponent(cfg.email));
-    if (!resp.ok) return;
-    var data = await resp.json();
-    if (data.ok && data.tarefas) {
-      _tarefasPendentes = data.tarefas.map(function(t) {
-        if ((t.fase || tarefasHistFaseLocal_(t)) === 'respondida') {
-          t._localConfirmada = true;
-          t._qtdeLocal = Number(t.quantidadeConfirmada) || 0;
-          t._carrinhoStatus = t.carrinhoStatus || '';
-        }
-        return t;
-      }).filter(function(t) { var f=t.fase||tarefasHistFaseLocal_(t); return f === 'pendente' || f === 'respondida'; });
-    }
-  } catch(e) {
-    // Also check localStorage as fallback
-    try {
-      var locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]');
-      _tarefasPendentes = locais.filter(function(t) { var f=tarefasHistFaseLocal_(t); return String(t.email||'').toLowerCase() === String(cfg.email||'').toLowerCase() && (f === 'pendente' || f === 'respondida'); }).map(function(t){ t=Object.assign({},t); if(tarefasHistFaseLocal_(t)==='respondida'){t._localConfirmada=true;t._qtdeLocal=Number(t.quantidadeConfirmada)||0;t._carrinhoStatus=t.carrinhoStatus||'';} return t; });
-    } catch(e2) {
-      _tarefasPendentes = [];
-    }
+    var resp=await fetch(cfg.url+'?action=buscarTarefas&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'});
+    if(!resp.ok)throw new Error('HTTP '+resp.status+' ao consultar as tarefas.');
+    var data=await resp.json();
+    if(!data||!data.ok||!Array.isArray(data.tarefas))throw new Error((data&&data.erro)||'A AURA não retornou a lista de tarefas.');
+    _tarefasPendentes=data.tarefas.map(function(t){
+      if((t.fase||tarefasHistFaseLocal_(t))==='respondida'){t._localConfirmada=true;t._qtdeLocal=Number(t.quantidadeConfirmada)||0;t._carrinhoStatus=t.carrinhoStatus||'';}
+      return t;
+    }).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});
+    renderTarefas();
+    if(ticket)window.AuraLoader.done('Tarefas do colaborador carregadas');
+    return {ok:true,source:'server',total:_tarefasPendentes.length};
+  }catch(e){
+    var fallback=false;
+    try{
+      var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');
+      if(!Array.isArray(locais))throw new Error('Cache de tarefas inválido.');
+      _tarefasPendentes=locais.filter(function(t){var f=tarefasHistFaseLocal_(t);return String(t.email||'').toLowerCase()===String(cfg.email||'').toLowerCase()&&(f==='pendente'||f==='respondida');}).map(function(t){t=Object.assign({},t);if(tarefasHistFaseLocal_(t)==='respondida'){t._localConfirmada=true;t._qtdeLocal=Number(t.quantidadeConfirmada)||0;t._carrinhoStatus=t.carrinhoStatus||'';}return t;});
+      fallback=true;
+    }catch(e2){_tarefasPendentes=[];}
+    renderTarefas();
+    var erro=String(e&&e.message||e||'Falha ao carregar tarefas.');
+    if(ticket){if(fallback)window.AuraLoader.done('Tarefas locais exibidas; a AURA está indisponível');else window.AuraLoader.fail(erro);}
+    return fallback?{ok:true,source:'local',warning:erro,total:_tarefasPendentes.length}:{ok:false,error:erro};
   }
-  
-  renderTarefas();
 }
 
 function _fmtValidadeTarefa(v) {
@@ -3461,113 +3471,42 @@ function alterarTarefaQty(id, delta) {
   el.value = Math.max(0, Math.min(999, v + delta));
 }
 
-function confirmarTarefa(idx) {
-  var t = _tarefasPendentes[idx];
-  if (!t) return;
-
-  // Tenta ler qty do modal primeiro, depois do card inline
-  var elModal  = document.getElementById('tarefaQty_m' + idx);
-  var elInline = document.getElementById('tarefaQty_s' + idx);
-  var qty = parseInt((elModal || elInline || {}).value) || 0;
-  
-  t._localConfirmada = true;
-  t._qtdeLocal = qty;
-  
-  var locais = [];
-  try { locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]'); } catch(e) {}
-  var existente = locais.find(function(lt) { return lt.id === t.id; });
-  if (existente) {
-    existente.status = 'concluida';
-    existente.quantidadeConfirmada = qty;
-    existente.confirmadoEm = new Date().toISOString();
-  } else {
-    locais.push(Object.assign({}, t, {
-      status: 'concluida',
-      quantidadeConfirmada: qty,
-      confirmadoEm: new Date().toISOString(),
-      _localConfirmada: true,
-      _qtdeLocal: qty
-    }));
-  }
-  localStorage.setItem('coleta_tarefas', JSON.stringify(locais));
-  
-  var cfg = loadCfg();
-  if (cfg.url) {
-    fetch(cfg.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        action: 'confirmarTarefa',
-        tarefaId: t.id,
-        quantidade: qty,
-        email: cfg.email,
-        sessao: window._auraTaskCurrentSession || '',
-        app: window._auraTaskAppLabel || 'Coleta'
-      })
-    }).catch(function() {});
-  }
-  
-  renderTarefas();
-
-  if (qty > 0) {
-    // Ainda tem estoque: pergunta a ação final conforme o tipo do produto.
-    // Prateleira -> carrinho; refrigerado -> etiqueta + frente do expositor. A tarefa fica visível até responder.
-    mostrarToast('Tarefa confirmada! Qtde: ' + qty, 'ok');
-  } else {
-    mostrarToast('Tarefa confirmada! Sem estoque restante.', 'ok');
-    setTimeout(function() {
-      _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
-      renderTarefas();
-    }, 3000);
-  }
+async function confirmarTarefa(idx) {
+  var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
+  if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo confirmada.'};
+  var elModal=document.getElementById('tarefaQty_m'+idx),elInline=document.getElementById('tarefaQty_s'+idx),qty=parseInt((elModal||elInline||{}).value)||0;
+  var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta tarefa.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
+  t._auraTaskSaving=true;
+  try{
+    var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarTarefa',tarefaId:t.id,quantidade:qty,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da tarefa.');
+  }catch(e){var err=String(e&&e.message||e||'Falha ao confirmar a tarefa.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a tarefa: '+err,'err');return {ok:false,error:err};}
+  t._localConfirmada=true;t._qtdeLocal=qty;t.quantidadeConfirmada=qty;t.status='concluida';t.confirmadoEm=new Date().toISOString();t.email=cfg.email;
+  try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{status:'concluida',quantidadeConfirmada:qty,confirmadoEm:t.confirmadoEm,email:cfg.email,_localConfirmada:true,_qtdeLocal:qty});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Confirmação gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
+  t._auraTaskSaving=false;renderTarefas();
+  if(qty>0)mostrarToast('Tarefa confirmada! Qtde: '+qty,'ok');
+  else{mostrarToast('Tarefa confirmada! Sem estoque restante.','ok');setTimeout(function(){_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});renderTarefas();},3000);}
+  return {ok:true};
 }
 
-function responderCarrinhoTarefa(idx, resposta) {
-  var t = _tarefasPendentes[idx];
-  if (!t) return;
-
-  t._carrinhoStatus = resposta;
-
-  var locais = [];
-  try { locais = JSON.parse(localStorage.getItem('coleta_tarefas') || '[]'); } catch(e) {}
-  var existente = locais.find(function(lt) { return lt.id === t.id; });
-  if (existente) {
-    existente.carrinhoStatus = resposta;
-    existente.carrinhoRespondidoEm = new Date().toISOString();
-  }
-  localStorage.setItem('coleta_tarefas', JSON.stringify(locais));
-
-  var cfg = loadCfg();
-  if (cfg.url) {
-    fetch(cfg.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        action: 'confirmarCarrinhoTarefa',
-        tarefaId: t.id,
-        carrinho: resposta === 'sim',
-        quantidade: t._qtdeLocal,
-        email: cfg.email,
-        sessao: window._auraTaskCurrentSession || '',
-        app: window._auraTaskAppLabel || 'Coleta'
-      })
-    }).catch(function() {});
-  }
-
-  renderTarefas();
-  var ehRefrig=_tarefaAutoRefrigerada_(t);
-  mostrarToast(
-    resposta === 'sim' ? (ehRefrig?'Produto etiquetado e mantido na frente! 🏷️':'Beleza, já no carrinho com desconto! 🏷️') : (ehRefrig?'Ok, ação refrigerada ainda está pendente':'Ok, produto segue na prateleira por enquanto'),
-    resposta === 'sim' ? 'ok' : 'warn'
-  );
-
-  setTimeout(function() {
-    // Em tarefa automática, "ainda não" não encerra a obrigação: ela permanece pendente.
-    if (!(t.automatica && resposta === 'nao')) _tarefasPendentes = _tarefasPendentes.filter(function(x) { return x.id !== t.id; });
-    renderTarefas();
-  }, 3000);
+async function responderCarrinhoTarefa(idx, resposta) {
+  var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
+  if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo atualizada.'};
+  var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta resposta.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
+  t._auraTaskSaving=true;
+  try{
+    var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t._qtdeLocal||t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da resposta.');
+  }catch(e){var err=String(e&&e.message||e||'Falha ao registrar a resposta.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a resposta: '+err,'err');return {ok:false,error:err};}
+  t._carrinhoStatus=resposta;t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t._auraTaskSaving=false;
+  try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{carrinhoStatus:resposta,carrinhoRespondidoEm:t.carrinhoRespondidoEm,email:cfg.email});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Resposta gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
+  renderTarefas();var ehRefrig=_tarefaAutoRefrigerada_(t);
+  mostrarToast(resposta==='sim'?(ehRefrig?'Produto etiquetado e mantido na frente! 🏷️':'Beleza, já no carrinho com desconto! 🏷️'):(ehRefrig?'Ok, ação refrigerada ainda está pendente':'Ok, produto segue na prateleira por enquanto'),resposta==='sim'?'ok':'warn');
+  setTimeout(function(){if(!(t.automatica&&resposta==='nao'))_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});renderTarefas();},3000);
+  return {ok:true};
 }
-
 
 // ═══════════════════════════════════════════════════════════
 //  CENTRAL DE TAREFAS DO COLABORADOR — v6.48
@@ -3607,19 +3546,23 @@ function fecharCentralTarefas(){
 }
 async function carregarTarefasHistorico(manual){
   var cfg=loadCfg(),st=document.getElementById('tarefasHistStatus'),lista=document.getElementById('tarefasHistList');
-  if(!cfg.url||!cfg.email){if(st){st.className='tarefas-hist-status show err';st.textContent='Configuração ou colaborador não informado.';}return;}
-  var token=++_tarefasHistToken;if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> Atualizando tarefas…';}if(lista)lista.innerHTML='';
+  if(!cfg.url||!cfg.email){var semCfg='Configuração ou colaborador não informado.';if(st){st.className='tarefas-hist-status show err';st.textContent=semCfg;}return {ok:false,error:semCfg};}
+  var token=++_tarefasHistToken;if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> Consultando o histórico de tarefas…';}if(lista)lista.innerHTML='';
   try{
     var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},45000):null;
     var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
-    var data=await resp.json();if(token!==_tarefasHistToken)return;if(!data||!data.ok)throw new Error((data&&data.erro)||'Não foi possível consultar as tarefas.');
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    var data=await resp.json();if(token!==_tarefasHistToken)return {ok:true,cancelled:true};if(!data||!data.ok)throw new Error((data&&data.erro)||'Não foi possível consultar as tarefas.');
     _tarefasHistorico=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});_tarefasHistorico.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});
-    if(st){st.className='tarefas-hist-status';st.textContent='';}renderTarefasHistorico();
+    if(st){st.className='tarefas-hist-status';st.textContent='';}renderTarefasHistorico();return {ok:true,total:_tarefasHistorico.length};
   }catch(e){
-    if(token!==_tarefasHistToken)return;
-    try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');_tarefasHistorico=locais.filter(function(t){return String(t.email||'').toLowerCase()===String(cfg.email||'').toLowerCase();}).map(function(t){t=Object.assign({},t);t.fase=tarefasHistFaseLocal_(t);return t;});renderTarefasHistorico();if(st){st.className='tarefas-hist-status show';st.textContent='Sem conexão com a AURA — mostrando o histórico disponível neste aparelho.';}}catch(e2){if(st){st.className='tarefas-hist-status show err';st.textContent='Falha ao carregar tarefas: '+(e&&e.message?e.message:e);}}
+    if(token!==_tarefasHistToken)return {ok:true,cancelled:true};
+    var erro=String(e&&e.message||e||'Falha ao carregar tarefas.');
+    try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');_tarefasHistorico=locais.filter(function(t){return String(t.email||'').toLowerCase()===String(cfg.email||'').toLowerCase();}).map(function(t){t=Object.assign({},t);t.fase=tarefasHistFaseLocal_(t);return t;});renderTarefasHistorico();if(st){st.className='tarefas-hist-status show';st.textContent='Sem conexão com a AURA — exibindo o histórico disponível neste aparelho.';}}catch(e2){if(st){st.className='tarefas-hist-status show err';st.textContent='Falha ao carregar tarefas: '+erro;}}
+    return {ok:false,error:'Não foi possível atualizar o histórico de tarefas: '+erro};
   }
 }
+
 function filtrarTarefasHistorico(f){_tarefasHistFiltro=f;['pendente','respondida','concluida'].forEach(function(x){var b=document.getElementById('tarefasHistTab_'+x);if(b)b.classList.toggle('active',x===f);});renderTarefasHistorico();}
 function renderTarefasHistorico(){
   ['pendente','respondida','concluida'].forEach(function(f){var n=_tarefasHistorico.filter(function(t){return (t.fase||tarefasHistFaseLocal_(t))===f;}).length,el=document.getElementById('tarefasHistCount_'+f);if(el)el.textContent=n;});
@@ -3640,10 +3583,18 @@ function renderTarefasHistorico(){
   dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
 }
 function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return String(v||'');var d=String(h).replace(/<[^>]+>/g,'').replace(/^\s*Validade:\s*/i,'').trim();return d||String(v||'');}
-function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
+function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
 async function tarefasHistFinalizar_(id,resposta){
-  var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return;var cfg=loadCfg();
-  try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Não foi possível finalizar.');t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase='concluida';mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Resposta final registrada.','ok');renderTarefasHistorico();buscarTarefas();setTimeout(function(){carregarTarefasHistorico(true);},500);}catch(e){mostrarToast('Falha ao finalizar tarefa: '+(e&&e.message?e.message:e),'err');}
+  var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return {ok:false,error:'A tarefa não está mais na lista. Atualize o histórico e tente novamente.'};var cfg=loadCfg();
+  if(!cfg.url||!cfg.email)return {ok:false,error:'A conexão com a AURA não está configurada.'};
+  try{
+    var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
+    if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Não foi possível finalizar.');
+    t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase=resposta==='sim'?'concluida':'respondida';
+    if(resposta==='sim')_tarefasPendentes=(_tarefasPendentes||[]).filter(function(x){return String(x.id)!==String(t.id);});
+    try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(Array.isArray(locais)){locais=locais.map(function(x){return String(x.id)===String(t.id)?Object.assign({},x,{carrinhoStatus:resposta,carrinhoRespondidoEm:t.carrinhoRespondidoEm}):x;});localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}}catch(eCache){}
+    mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Tarefa continua pendente; resposta registrada.','ok');renderTarefasHistorico();renderTarefas();return {ok:true};
+  }catch(e){var erro=String(e&&e.message||e||'Não foi possível finalizar.');mostrarToast('Falha ao finalizar tarefa: '+erro,'err');return {ok:false,error:erro};}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4154,10 +4105,13 @@ async function confirmarAtualizarEstoqueLote(i) {
         email: cfg.email || ''
       })
     });
-    if (!resp.ok) throw new Error('http-' + resp.status);
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    var resultado=await resp.json();if(!resultado||!resultado.ok)throw new Error((resultado&&resultado.erro)||'A AURA não confirmou a atualização do lote.');
     mostrarToast('Estoque atualizado com sucesso!', 'ok');
+    return {ok:true};
   } catch (e) {
-    mostrarToast('Sem conexão — tente novamente', 'warn');
+    var erro=String(e&&e.message||e||'Sem conexão — tente novamente');mostrarToast('Falha ao atualizar estoque: '+erro, 'warn');
+    return {ok:false,error:erro};
   } finally {
     _loteEanAtual = null;
     _lotesEncontrados = [];
@@ -4459,17 +4413,39 @@ function pararConfete() {
 //  2) o próprio arquivo servido ser "tablet.html" — assim, mesmo que
 //     um app instalado (PWA) no Android abra sem preservar a query
 //     string, o modo tablet continua ativo por causa do nome do arquivo.
-var _modoTablet = window.location.search.indexOf('tablet') >= 0
-  || /tablet\.html$/i.test(window.location.pathname);
+var _modoTablet = true; // build dedicado para tablet
+// v7.11 — gate de identidade: o tablet sempre começa no seletor de usuário.
+var _tabletUsuarioSelecionado=false;
+var _tabletEntradaInicial=true;
 
-function iniciarModoTablet() {
-  var grid = document.getElementById('tabletGrid');
-  var usuarios = COLABORADORES.filter(function(c) {
-    // inclui todos, mas marca quem não tem email
-    return true;
-  });
-  renderGridTablet(usuarios);
-  document.getElementById('tabletModal').classList.add('open');
+var TABLET_SESSION_KEY='aura_tablet_sessao_usuario_v1';
+function _tabletSessaoLer_(){
+  try{return JSON.parse(sessionStorage.getItem(TABLET_SESSION_KEY)||'null');}catch(e){return null;}
+}
+function _tabletSessaoSalvar_(nome,email){
+  try{sessionStorage.setItem(TABLET_SESSION_KEY,JSON.stringify({nome:String(nome||''),email:String(email||'').toLowerCase(),ts:Date.now()}));}catch(e){}
+}
+function _tabletSessaoLimpar_(){try{sessionStorage.removeItem(TABLET_SESSION_KEY);}catch(e){}}
+function _tabletAplicarSessao_(sessao){
+  // v7.11: sessão anterior nunca libera uma nova entrada automaticamente.
+  if(!_tabletUsuarioSelecionado||!sessao||!sessao.email)return false;
+  return true;
+}
+
+function iniciarModoTablet(forcarTroca) {
+  // Uma chamada atrasada/automática não pode interromper câmera, coleta ou NF-e.
+  // Só o botão "Trocar usuário" usa forcarTroca=true.
+  if(_tabletUsuarioSelecionado && !forcarTroca)return;
+  if(forcarTroca){
+    _tabletUsuarioSelecionado=false;
+    try{pararScanner();}catch(e){}
+    try{var av=document.getElementById('auraTaskNotice');if(av)av.remove();}catch(e){}
+  }
+  var grid=document.getElementById('tabletGrid');
+  var usuarios=(COLABORADORES||[]).filter(function(){return true;});
+  if(usuarios.length)renderGridTablet(usuarios);
+  else if(grid)grid.innerHTML='<div class="tablet-loading"><i class="ti ti-loader-2"></i> Carregando colaboradores…</div>';
+  var modal=document.getElementById('tabletModal');if(modal)modal.classList.add('open');
 }
 
 // Lista filtrada atual (referenciada pelo índice no onclick)
@@ -4536,26 +4512,26 @@ function filtrarUsuariosTablet(texto) {
 
 function selecionarUsuarioTablet(nome, email) {
   if (!email) return;
-  // Salva na cfg apenas para esta sessão (não sobrescreve cfg permanente do tablet)
-  var cfg = loadCfg();
-  cfg.email = email.toLowerCase();
+  // v7.11: a escolha do avatar é o único ponto que libera o tablet nesta entrada.
+  _tabletUsuarioSelecionado=true;
+  _tabletEntradaInicial=false;
+  var cfg=loadCfg();
+  cfg.email=email.toLowerCase();
   saveCfg(cfg);
 
-  // Atualiza header
-  document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + primeiroNome(nome) + ' — ' + email;
+  document.querySelector('.hdr-sub').innerHTML='<i class="ti ti-user"></i> '+primeiroNome(nome)+' — '+email;
+  _tabletSessaoSalvar_(nome,email); // só contexto da entrada atual; não restaura no próximo carregamento.
 
-  // ✅ CORREÇÃO: fecha o modal do seletor de usuário
-  document.getElementById('tabletModal').classList.remove('open');
+  var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
+  var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
+  var busca=document.getElementById('tabletSearch');if(busca)busca.value='';
 
-  // Mostra botão de trocar usuário no header
-  var btn = document.getElementById('trocaUsuarioBtn');
-  if (btn) btn.style.display = 'flex';
-  document.getElementById('tabletSearch').value = '';
-
-  // Verifica aniversário e busca tarefas
-  setTimeout(function() { verificarAniversario(email, nome); }, 400);
-  setTimeout(function() { buscarTarefas(); }, 25);
-  setTimeout(nfeAtualizarCardPendente_, 80);
+  // Cada seleção explícita é uma nova entrada para popup/auditoria.
+  try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
+  setTimeout(function(){verificarAniversario(email,nome);},250);
+  setTimeout(function(){buscarTarefas(true);},0);
+  setTimeout(nfeAtualizarCardPendente_,80);
+  setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
 
 
@@ -4587,6 +4563,7 @@ function nfeReabrirConferencia_(){
   if(_nfeColetaNota)nfeRenderNota_();
 }
 function nfeEscanearEan_(i){
+  if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de vincular produto na NF-e','warn');}catch(e){}return;}
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   _nfeVinculoScanIndex=i;
   _nfeModoScan=false; // produto: aceitar EAN/UPC/GTIN, não restringir a Code 128 da chave da NF-e
@@ -4727,7 +4704,7 @@ async function nfeSincronizarRascunhoServidor_(){
   if(typeof navigator!=='undefined'&&navigator.onLine===false)return null;
   _nfeServerSyncAtivo_=true;var salvoLocal=String(d.salvoEm||''),ch=nfeDigitos_(d.nota.chave||'');
   try{
-    var j=await nfePost_({action:'nfeSalvarRascunhoAtivo',nota:nfeNotaLimpaSync_(d.nota),chave:ch,operador:d.operadorEmail||nfeOperadorAtual_(),origemCliente:'individual',baseVersion:Number(d.serverVersion)||0,clientSalvoEm:salvoLocal});
+    var j=await nfePost_({action:'nfeSalvarRascunhoAtivo',nota:nfeNotaLimpaSync_(d.nota),chave:ch,operador:d.operadorEmail||nfeOperadorAtual_(),origemCliente:'tablet',baseVersion:Number(d.serverVersion)||0,clientSalvoEm:salvoLocal});
     var atual=nfeLerRascunho_();
     if(j&&j.finalizada&&atual&&atual.nota&&nfeDigitos_(atual.nota.chave)===ch){
       var stFinal=await nfeConsultarStatus_(ch);var ckFinal=(stFinal&&typeof nfeConfirmacaoCompleta_==='function')?nfeConfirmacaoCompleta_(stFinal,atual.nota):null;
@@ -4840,9 +4817,9 @@ function nfeConcluirRecebimento_(info,confirmado){
     if(ck.esperadas>0&&ck.fisicas<ck.esperadas)motivos.push('foram localizadas '+ck.fisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados na planilha');
     if(ck.parcial||!ck.statusFinal)motivos.push('status do servidor: '+(ck.status||'não concluído'));
     if(ck.pendServidor)motivos.push(ck.pendServidor+' pendência(s) informada(s) pelo servidor');
-    var diag=document.getElementById('nfeIndDiag');
+    var diag=document.getElementById('nfeTabletDiag');
     if(diag){
-      diag.className='nfe-ind-diag show err';
+      diag.className='nfe-tablet-diag show err';
       diag.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> <b>A NF-e NÃO foi encerrada.</b></span><br>'+nfeEsc_(motivos.join(' · ')||'A confirmação completa ainda não foi recebida.')+'<br><b>O rascunho local foi preservado.</b>';
     }
     nfeSalvarRascunho_();
@@ -4855,9 +4832,9 @@ function nfeConcluirRecebimento_(info,confirmado){
   var st=String(info.status||'').toUpperCase();
   var esperaTelecon=aguard.length>0||st==='AGUARDANDO_CADASTRO'||info.aguardandoCadastro===true;
 
-  var diag=document.getElementById('nfeIndDiag');
+  var diag=document.getElementById('nfeTabletDiag');
   if(diag){
-    diag.className='nfe-ind-diag show ok';
+    diag.className='nfe-tablet-diag show ok';
     diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados estão em Respostas ao formulário 1 e todos os itens locais estão conferidos.</span>'
       +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'');
   }
@@ -4881,7 +4858,7 @@ function nfeAbrir_(){ document.getElementById('nfeOverlay').classList.add('open'
 function nfeColetaFechar(){ nfeAutosaveAgora_(); document.getElementById('nfeOverlay').classList.remove('open'); document.body.style.overflow=''; _nfeModoScan=false; }
 function nfeColetaNova(){ _nfeColetaNota=null; nfeRenderEntradaChave_(); }
 function nfeRenderEntradaChave_(){
-  var dg=document.getElementById('nfeIndDiag');if(dg){dg.className='nfe-ind-diag';dg.innerHTML='';}
+  var dg=document.getElementById('nfeTabletDiag');if(dg){dg.className='nfe-tablet-diag';dg.innerHTML='';}
   nfeAbrir_(); document.getElementById('nfeActions').style.display='none'; document.getElementById('nfeHeadSub').textContent='Chave de acesso → produtos → validades';
   document.getElementById('nfeBody').innerHTML=nfeDraftEntradaHtml_()+'<div class="nfe-keybox"><div class="nfe-key-row"><input id="nfeKeyInput" inputmode="numeric" maxlength="44" placeholder="Digite ou cole os 44 dígitos da NF-e" onkeydown="if(event.key===\'Enter\'){event.preventDefault();nfeColetaBuscarChave(this.value)}"><button onclick="nfeColetaBuscarChave(document.getElementById(\'nfeKeyInput\').value)">BUSCAR</button></div><div class="nfe-hint">Você também pode fechar esta tela e bipar a chave diretamente com a câmera. Chaves de 44 dígitos são reconhecidas automaticamente.</div><div class="nfe-xml-box"><b style="font-size:11px">XML ainda não chegou ao Drive?</b><div class="nfe-hint" style="margin:4px 0 8px">Importe o XML como contingência. Depois podemos automatizar isso pelo e-mail que recebe as notas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div></div>';
   setTimeout(function(){var x=document.getElementById('nfeKeyInput');if(x)x.focus();},80);
@@ -4911,7 +4888,7 @@ confirmarManual = function(){
   return _nfeConfirmarManualProduto();
 };
 async function nfeColetaBuscarChave(chave){
-  chave=nfeDigitos_(chave);if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
+  chave=nfeDigitos_(chave);if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return {ok:false,error:'Chave da NF-e inválida.'};}
   var local=nfeLerRascunho_(),localMesma=!!(local&&local.nota&&nfeDigitos_(local.nota.chave||'')===chave);
   if(localMesma&&!nfeRascunhoPertenceUsuarioAtual_(local)){
     nfeAbrir_();document.getElementById('nfeActions').style.display='none';document.getElementById('nfeHeadSub').textContent='NF-e salva neste aparelho';
@@ -4945,16 +4922,16 @@ async function nfeColetaBuscarChave(chave){
   document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Nenhum rascunho foi encontrado. Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
   try{
     var j=await nfePost_({action:'nfeBuscarChave',chave:chave});
-    if(!j||!j.ok){var msg=(j&&j.erro)||'NF-e não localizada.';document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';return;}
+    if(!j||!j.ok){var msg=(j&&j.erro)||'NF-e não localizada.';if(window.AuraLoader)window.AuraLoader.markFailure(msg);document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';return;}
     _nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();
-  }catch(e){var em=String(e&&e.message||e||'Erro');if(/abort/i.test(em))em='A busca da NF-e demorou além do esperado. Tente novamente; se persistir, importe o XML desta nota como contingência.';document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(em)+'</div>';}
+  }catch(e){var em=String(e&&e.message||e||'Erro');if(window.AuraLoader)window.AuraLoader.markFailure(em);if(/abort/i.test(em))em='A busca da NF-e demorou além do esperado. Tente novamente; se persistir, importe o XML desta nota como contingência.';document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(em)+'</div>';}
 }
 function nfeColetaLerArquivoXml(file){
-  if(!file)return; var r=new FileReader();
+  if(!file)return; var ticket=window.AuraLoader?window.AuraLoader.start({message:'Lendo o XML da NF-e e salvando a nota…',complete:'NF-e importada e pronta para conferência'}):0; var r=new FileReader();
   r.onload=async function(){
     nfeAbrir_(); document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i>Lendo XML…</div>';
-    try{var j=await nfePost_({action:'nfeLerXml',xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();}catch(e){document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(e.message||e)+'</div>';}
-  }; r.readAsText(file);
+    try{var j=await nfePost_({action:'nfeLerXml',xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();if(ticket&&window.AuraLoader)window.AuraLoader.done();}catch(e){var err=String(e&&e.message||e||'Falha ao importar XML');document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(err)+'</div>';if(ticket&&window.AuraLoader)window.AuraLoader.fail(err);}
+  }; r.onerror=function(){var err='Não foi possível ler o arquivo XML.';if(ticket&&window.AuraLoader)window.AuraLoader.fail(err);}; r.readAsText(file);
 }
 // v6.99 — conversão universal de unidades XML + total manual
 function nfeNormUnidadeFront_(u){
@@ -5518,9 +5495,9 @@ function nfeAplicarResultadoParcial_(j){
   nfeRenderNota_();
   var btn=document.getElementById('nfeSaveBtn');
   if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> CORRIGIR E GRAVAR NF-e';}
-  var diag=document.getElementById('nfeIndDiag');
+  var diag=document.getElementById('nfeTabletDiag');
   if(diag){
-    diag.className='nfe-ind-diag show err';
+    diag.className='nfe-tablet-diag show err';
     diag.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> Nenhuma linha foi gravada.</span><br>'+pend.length+' item(ns) precisam de correção. O rascunho permanece salvo.';
   }
   mostrarToast(pend.length+' item(ns) precisam de correção. Nenhuma linha da NF-e foi descartada.','warn');
@@ -5530,7 +5507,7 @@ function nfeAplicarResultadoParcial_(j){
   },120);
 }
 
-function nfeIndividualColetarPayload_(){
+function nfeTabletColetarPayload_(){
   var n=_nfeColetaNota;
   var cfg=loadCfg(),email=cfg.email||'';
   var erros=[];
@@ -5614,7 +5591,7 @@ function nfeIndividualColetarPayload_(){
     };
   });
 
-  if(!email)erros.unshift('Configure o colaborador antes de receber a NF-e.');
+  if(!email)erros.unshift('Selecione/configure o colaborador antes de receber a NF-e.');
 
   return {
     erros:erros,
@@ -5630,8 +5607,8 @@ function nfeIndividualColetarPayload_(){
   };
 }
 
-function nfeIndividualMostrarDiagnostico_(c,tipo,extra){
-  var el=document.getElementById('nfeIndDiag');if(!el)return;
+function nfeTabletMostrarDiagnostico_(c,tipo,extra){
+  var el=document.getElementById('nfeTabletDiag');if(!el)return;
   var d=(c&&c.diagnostico)||{},ok=!c||!c.erros||!c.erros.length;
   var linhas=[];
   linhas.push('<b>'+Number(d.controlados||0)+' item(ns)</b> · '+Number(d.comCodigo||0)+' com código · '+Number(d.comValidade||0)+' com validade · '+Number(d.quantidadesOk||0)+' com quantidade correta');
@@ -5644,7 +5621,7 @@ function nfeIndividualMostrarDiagnostico_(c,tipo,extra){
     linhas.push('<span class="bad">'+Number(d.conversoesPendentes)+' conversão(ões) ainda sem decisão.</span>');
   }
   if(extra)linhas.push(extra);
-  el.className='nfe-ind-diag show '+(tipo||(ok?'ok':'err'));
+  el.className='nfe-tablet-diag show '+(tipo||(ok?'ok':'err'));
   el.innerHTML=linhas.join('<br>');
 }
 
@@ -5652,8 +5629,8 @@ async function nfeColetaSalvar(){
   var n=_nfeColetaNota;if(!n)return;
   nfeSalvarRascunho_();
 
-  var c=nfeIndividualColetarPayload_();
-  nfeIndividualMostrarDiagnostico_(c,c.erros.length?'err':'ok',
+  var c=nfeTabletColetarPayload_();
+  nfeTabletMostrarDiagnostico_(c,c.erros.length?'err':'ok',
     c.erros.length
       ?'<span class="bad">Corrija os itens abaixo. Nenhuma linha será enviada enquanto existir pendência.</span>'
       :'<span class="oktxt">Enviando ao servidor e conferindo fisicamente a aba Respostas ao formulário 1…</span>'
@@ -5661,6 +5638,7 @@ async function nfeColetaSalvar(){
 
   if(c.erros.length){
     mostrarToast(c.erros[0],'warn');
+    // Marca os erros diretamente nos itens quando possível.
     (n.itens||[]).forEach(function(it){it._erroGravacao='';});
     c.erros.forEach(function(msg){
       var alvo=(n.itens||[]).find(function(it){
@@ -5671,9 +5649,9 @@ async function nfeColetaSalvar(){
     });
     nfeSalvarRascunho_();
     nfeRenderNota_();
-    var diag2=document.getElementById('nfeIndDiag');
-    if(diag2){diag2.className='nfe-ind-diag show err';diag2.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> Gravação bloqueada antes do envio.</span><br>'+c.erros.slice(0,5).map(nfeEsc_).join('<br>');}
-    return;
+    var diag2=document.getElementById('nfeTabletDiag');
+    if(diag2){diag2.className='nfe-tablet-diag show err';diag2.innerHTML='<span class="bad"><i class="ti ti-alert-triangle"></i> Gravação bloqueada antes do envio.</span><br>'+c.erros.slice(0,5).map(nfeEsc_).join('<br>');}
+    return {ok:false,error:c.erros[0]||'Corrija os itens pendentes antes de gravar.'};
   }
 
   var btn=document.getElementById('nfeSaveBtn');
@@ -5689,23 +5667,23 @@ async function nfeColetaSalvar(){
     if(j&&j.ok&&j.confirmacaoRespostas===true&&Number(j.linhasRespostas)>0){
       restaurar();
       nfeConcluirRecebimento_(j,false);
-      return;
+      return {ok:true};
     }
 
     if(j&&j.ok){
-      nfeIndividualMostrarDiagnostico_(c,'warn','<b>O servidor respondeu, mas ainda falta confirmar as linhas físicas. Consultando novamente…</b>');
+      nfeTabletMostrarDiagnostico_(c,'warn','<b>O servidor respondeu, mas ainda falta confirmar as linhas físicas. Consultando novamente…</b>');
       var stOk=await nfeConsultarStatus_(n.chave);
       restaurar();
       if(stOk&&stOk.segura&&stOk.confirmacaoRespostas===true&&Number(stOk.linhasRespostas)>0){
         nfeConcluirRecebimento_(stOk,true);
-        return;
+        return {ok:true};
       }
       throw new Error('A NF-e não será encerrada: ainda não há confirmação física das linhas em Respostas ao formulário 1. O rascunho foi preservado.');
     }
 
     if(j&&String(j.status||'').toUpperCase()==='PENDENTE_ITENS'){
       nfeAplicarResultadoParcial_(j);
-      return;
+      return {ok:false,error:'A NF-e foi salva parcialmente e ainda tem itens pendentes.'};
     }
 
     var listaPend=(j&&Array.isArray(j.pendentes)&&j.pendentes.length)
@@ -5723,7 +5701,7 @@ async function nfeColetaSalvar(){
     var ambiguo=/abort|timeout|fetch|network|failed to fetch|load failed|conex[aã]o|demor|j[aá] foi conclu[ií]da/i.test(em);
 
     if(ambiguo){
-      nfeIndividualMostrarDiagnostico_(c,'warn','<b>A resposta demorou. Confirmando diretamente na aba Respostas…</b>');
+      nfeTabletMostrarDiagnostico_(c,'warn','<b>A resposta demorou. Confirmando diretamente na aba Respostas…</b>');
       mostrarToast('A resposta demorou. Conferindo a gravação em Respostas…','warn');
       var st=await nfeConsultarStatus_(n.chave);
       if(st&&st.segura&&st.confirmacaoRespostas===true&&Number(st.linhasRespostas)>0){
@@ -5737,8 +5715,10 @@ async function nfeColetaSalvar(){
     }
 
     restaurar();
-    nfeIndividualMostrarDiagnostico_(c,'err','<span class="bad"><i class="ti ti-alert-triangle"></i> '+nfeEsc_(em)+'</span><br>O rascunho continua salvo no aparelho e no servidor.');
+    nfeTabletMostrarDiagnostico_(c,'err','<span class="bad"><i class="ti ti-alert-triangle"></i> '+nfeEsc_(em)+'</span><br>O rascunho continua salvo no tablet e no servidor.');
     mostrarToast(em,'err');
+    if(window.AuraLoader)window.AuraLoader.markFailure(em);
+    return {ok:false,error:em};
   }
 }
 
@@ -5862,12 +5842,12 @@ async function carregarRetiradas(manual){
   if(ctx)ctx.innerHTML='<i class="ti ti-calendar"></i><span>'+retiradaMensagemData_(iso)+'.</span>';
 
   if(!cfg.url){
-    if(status)status.innerHTML='<i class="ti ti-alert-circle"></i> Configure a URL do Apps Script para consultar as retiradas.';
-    return;
+    var semUrl='Configure a URL do Apps Script para consultar as retiradas.';if(status)status.innerHTML='<i class="ti ti-alert-circle"></i> '+semUrl;
+    return {ok:false,error:semUrl};
   }
   if(!navigator.onLine){
-    if(status)status.innerHTML='<i class="ti ti-wifi-off"></i> É necessária conexão para consultar a lista atual de retiradas.';
-    return;
+    var semRede='É necessária conexão para consultar a lista atual de retiradas.';if(status)status.innerHTML='<i class="ti ti-wifi-off"></i> '+semRede;
+    return {ok:false,error:semRede};
   }
 
   try{
@@ -5900,6 +5880,7 @@ async function carregarRetiradas(manual){
 
     // Fotos entram depois dos dados, em baixa concorrência, para não travar a lista.
     retiradaCarregarFotos_(_retiradaItens,token);
+    return {ok:true,total:_retiradaItens.length};
   }catch(e){
     if(token!==_retiradaToken)return;
     _retiradaItens=[];
@@ -5910,6 +5891,9 @@ async function carregarRetiradas(manual){
       if(/abort|timeout|timed out/i.test(em))em='A AURA demorou além do esperado para consultar a planilha. Toque em Hoje ou escolha a data novamente para tentar de novo.';
       status.innerHTML='<i class="ti ti-alert-circle"></i> Falha ao consultar retiradas: '+retiradaEsc_(em);
     }
+    var em=String(e&&e.message?e.message:e||'Falha ao consultar retiradas.');
+    if(/abort|timeout|timed out/i.test(em))em='A AURA demorou além do esperado para consultar a planilha. Toque em Hoje ou escolha a data novamente para tentar de novo.';
+    return {ok:false,error:em};
   }
 }
 
@@ -6062,9 +6046,27 @@ function nfeHistVoltar_(){if(_nfeHistDetalhe){_nfeHistDetalhe=null;nfeHistMostra
 function nfeHistMostrarLista_(){var w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');if(w)w.classList.remove('hide');if(d){d.classList.remove('open');d.innerHTML='';}if(t)t.textContent='Histórico de NF-e';}
 function nfeHistAtualizar_(){if(_nfeHistDetalhe)abrirDetalheNFe_(_nfeHistDetalhe.nota.chave,true);else carregarHistoricoNFe(true);}
 function nfeHistBuscar_(v){_nfeHistBusca=String(v||'').trim();renderHistoricoNFe_();}
-async function carregarHistoricoNFe(manual){var cfg=loadCfg(),st=document.getElementById('nfeHistStatus'),list=document.getElementById('nfeHistList');if(!cfg.url||!cfg.email)return;var token=++_nfeHistToken;if(st){st.className='nfe-hist-status show';st.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> Consultando histórico…';}if(list)list.innerHTML='';try{var ctrl=typeof AbortController!=='undefined'?new AbortController():null,t=ctrl?setTimeout(function(){ctrl.abort();},60000):null;var r=await fetch(cfg.url+'?action=nfeHistoricoUsuario&email='+encodeURIComponent(cfg.email)+'&limite=150&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(t)clearTimeout(t);var j=await r.json();if(token!==_nfeHistToken)return;if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao consultar histórico.');_nfeHistNotas=Array.isArray(j.notas)?j.notas:[];if(st){st.className='nfe-hist-status';st.textContent='';}renderHistoricoNFe_();}catch(e){if(token!==_nfeHistToken)return;if(st){st.className='nfe-hist-status show err';st.textContent='Falha ao carregar histórico: '+(e&&e.message?e.message:e);}}}
+async function carregarHistoricoNFe(manual){
+  var cfg=loadCfg(),st=document.getElementById('nfeHistStatus'),list=document.getElementById('nfeHistList');
+  if(!cfg.url||!cfg.email){var semCfg='Selecione o colaborador e configure a conexão com a AURA para consultar o histórico de NF-e.';if(st){st.className='nfe-hist-status show err';st.textContent=semCfg;}return {ok:false,error:semCfg};}
+  var token=++_nfeHistToken;if(st){st.className='nfe-hist-status show';st.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> Consultando histórico…';}if(list)list.innerHTML='';
+  try{
+    var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},60000):null;
+    var resp=await fetch(cfg.url+'?action=nfeHistoricoUsuario&email='+encodeURIComponent(cfg.email)+'&limite=150&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);var data=await resp.json();if(token!==_nfeHistToken)return {ok:true,cancelled:true};if(!data||!data.ok)throw new Error((data&&data.erro)||'Falha ao consultar o histórico de NF-e.');
+    _nfeHistNotas=Array.isArray(data.notas)?data.notas:[];if(st){st.className='nfe-hist-status';st.textContent='';}renderHistoricoNFe_();return {ok:true,total:_nfeHistNotas.length};
+  }catch(e){
+    if(token!==_nfeHistToken)return {ok:true,cancelled:true};var erro=String(e&&e.message||e||'Falha ao carregar histórico de NF-e.');if(st){st.className='nfe-hist-status show err';st.textContent='Falha ao carregar histórico: '+erro;}return {ok:false,error:erro};
+  }
+}
 function renderHistoricoNFe_(){var list=document.getElementById('nfeHistList');if(!list)return;var q=nfeHistNorm_(_nfeHistBusca),dados=_nfeHistNotas.filter(function(n){if(!q)return true;var h=nfeHistNorm_([n.numero,n.fornecedor,n.chave,n.status,n.emissao,n.processadaEm].join(' '));return q.split(/\s+/).filter(Boolean).every(function(x){return h.indexOf(x)>=0;});});if(!dados.length){list.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-file-search"></i>'+(q?'Nenhuma NF-e encontrada para esta pesquisa.':'Você ainda não lançou NF-e neste usuário.')+'</div>';return;}list.innerHTML=dados.map(function(n){var sc=nfeHistStatusClass_(n.status);return '<div class="nfe-hist-card" onclick="abrirDetalheNFe_(\''+nfeHistEsc_(n.chave)+'\')"><div class="nfe-hist-card-top"><div class="nfe-hist-card-icon"><i class="ti ti-file-invoice"></i></div><div class="nfe-hist-card-main"><div class="nfe-hist-forn">NF '+nfeHistEsc_(n.numero||'—')+' · '+nfeHistEsc_(n.fornecedor||'Fornecedor')+'</div><div class="nfe-hist-meta">'+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+' · '+nfeHistEsc_(n.itens||0)+' item(ns) · '+nfeHistEsc_(n.lotes||0)+' lote(s)<br><span style="font-family:var(--mono)">'+nfeHistEsc_(n.chave)+'</span></div><span class="nfe-hist-status-badge '+sc+'">'+nfeHistEsc_(n.status||'—')+'</span>'+((['PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(String(n.status||'').toUpperCase())>=0)?'<button type="button" class="nfe-hist-resume-chip" onclick="event.stopPropagation();nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave)+'\')"><i class="ti ti-player-play"></i> CONTINUAR</button>':'')+'</div><i class="ti ti-chevron-right" style="color:var(--tx2);margin-top:10px"></i></div></div>';}).join('');}
-async function abrirDetalheNFe_(chave,refresh){var cfg=loadCfg(),w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');if(w)w.classList.add('hide');if(d){d.classList.add('open');d.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-loader-2 nfe-spin"></i>Carregando itens da NF-e…</div>';}if(t)t.textContent='Detalhe da NF-e';try{var r=await fetch(cfg.url+'?action=nfeHistoricoDetalhe&chave='+encodeURIComponent(chave)+'&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'}),j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao carregar NF-e.');_nfeHistDetalhe=j;renderDetalheNFe_();}catch(e){if(d)d.innerHTML='<div class="nfe-hist-status show err">'+nfeHistEsc_(e&&e.message?e.message:e)+'</div>';}}
+async function abrirDetalheNFe_(chave,refresh){
+  var cfg=loadCfg(),w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');
+  if(!cfg.url||!cfg.email)return {ok:false,error:'Selecione um colaborador para abrir esta NF-e.'};
+  if(w)w.classList.add('hide');if(d){d.classList.add('open');d.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-loader-2 nfe-spin"></i>Carregando itens da NF-e…</div>';}if(t)t.textContent='Detalhe da NF-e';
+  try{var r=await fetch(cfg.url+'?action=nfeHistoricoDetalhe&chave='+encodeURIComponent(chave)+'&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao carregar NF-e.');_nfeHistDetalhe=j;renderDetalheNFe_();return {ok:true};}
+  catch(e){var erro=String(e&&e.message||e||'Falha ao carregar NF-e.');if(d)d.innerHTML='<div class="nfe-hist-status show err">'+nfeHistEsc_(erro)+'</div>';return {ok:false,error:erro};}
+}
 function nfeHistSetoresOptions_(sel){var a=['Açougue','Bazar','Bebidas','Congelados','Frios','Horti','Laticínios','Limpeza','Outros','Padaria','Perfumaria','Pet','Pilhas/Baterias','Seca','Seca doce'];return a.map(function(x){return '<option value="'+nfeHistEsc_(x)+'" '+(x===sel?'selected':'')+'>'+nfeHistEsc_(x)+'</option>';}).join('');}
 function nfeHistThumbHtml_(x,idx){
   if(x&&x.fotoDataUrl)return '<div class="nfe-thumb" id="nfeHistThumb'+idx+'"><img src="'+nfeHistEsc_(x.fotoDataUrl)+'" alt="Produto"></div>';
@@ -6154,40 +6156,165 @@ async function nfeHistRetomarPendente_(chave){
 
 function nfeHistAbrirEdicao_(idx){var e=document.getElementById('nfeHistEdit'+idx);if(e)e.classList.add('open');}
 function nfeHistFecharEdicao_(idx){var e=document.getElementById('nfeHistEdit'+idx);if(e)e.classList.remove('open');}
-async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||!j.itens[idx])return;var x=j.itens[idx],cfg=loadCfg(),ean=(document.getElementById('nfeHistEan'+idx)||{}).value||'',setor=(document.getElementById('nfeHistSetor'+idx)||{}).value||'Outros';ean=String(ean).replace(/\D/g,'');if(!ean){mostrarToast('Informe o código de barras','warn');return;}if(!confirm('Confirmar vínculo deste item ao EAN '+ean+'?'))return;try{mostrarToast('Validando produto no banco Telecon…','warn');var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'nfeEditarItemHistorico',chave:j.nota.chave,operador:cfg.email,itemId:x.itemId,nItem:x.nItem,cProd:x.cProd,eanNovo:ean,setor:setor})}),res=await r.json();if(!res||!res.ok)throw new Error((res&&res.erro)||'Falha ao atualizar item.');mostrarToast('Vínculo atualizado: '+(res.descricao||res.ean),'ok');await abrirDetalheNFe_(j.nota.chave,true);carregarHistoricoNFe(false);}catch(e){mostrarToast((e&&e.message)||'Falha ao atualizar item','err');}}
+async function nfeHistSalvarEdicao_(idx){
+  var j=_nfeHistDetalhe;if(!j||!j.itens||!j.itens[idx])return {ok:false,error:'Item da NF-e não encontrado.'};
+  var x=j.itens[idx],cfg=loadCfg(),ean=(document.getElementById('nfeHistEan'+idx)||{}).value||'',setor=(document.getElementById('nfeHistSetor'+idx)||{}).value||'Outros';ean=String(ean).replace(/\D/g,'');
+  if(!ean){mostrarToast('Informe o código de barras','warn');return {ok:false,error:'Informe o código de barras.'};}
+  if(!confirm('Confirmar vínculo deste item ao EAN '+ean+'?'))return {ok:true,cancelled:true};
+  try{mostrarToast('Validando produto no banco Telecon…','warn');var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'nfeEditarItemHistorico',chave:j.nota.chave,operador:cfg.email,itemId:x.itemId,nItem:x.nItem,cProd:x.cProd,eanNovo:ean,setor:setor})});if(!r.ok)throw new Error('HTTP '+r.status);var res=await r.json();if(!res||!res.ok)throw new Error((res&&res.erro)||'Falha ao atualizar item.');mostrarToast('Vínculo atualizado: '+(res.descricao||res.ean),'ok');await abrirDetalheNFe_(j.nota.chave,true);await carregarHistoricoNFe(false);return {ok:true};}
+  catch(e){var erro=String(e&&e.message||e||'Falha ao atualizar item.');mostrarToast(erro,'err');return {ok:false,error:erro};}
+}
 
+// ═══════════════════════════════════════════════════════════
+// v7.03 — NF-e SINCRONIZADA ENTRE DISPOSITIVOS + LEITURA iPHONE OTIMIZADA
+// ═══════════════════════════════════════════════════════════
+var COLETA_DRAFT_KEY='aura_coleta_item_draft_v700';
+var _coletaDraftLast_='';
+var _coletaDraftRestaurado_=false;
+
+function coletaDraftSnapshot_(){
+  var cfg=loadCfg();
+  var val=(document.getElementById('fValidade')||{}).value||'';
+  var setor=(document.getElementById('fSetor')||{}).value||'';
+  var qty=(document.getElementById('fQty')||{}).value||'1';
+  var peso=(document.getElementById('fPeso')||{}).value||'';
+  var codigo=String(codigoAtual||'').trim();
+  var desc=String(descricaoAtual||'').trim();
+  return {
+    ts:new Date().toISOString(),
+    email:String((cfg&&cfg.email)||'').toLowerCase(),
+    codigo:codigo,descricao:desc,validade:String(val||''),setor:String(setor||''),
+    qty:String(qty||'1'),peso:String(peso||''),pesoAtivo:!!pesoAtivo
+  };
+}
+function coletaDraftTemConteudo_(d){
+  if(!d)return false;
+  return !!(d.codigo||d.validade||d.peso||d.pesoAtivo||((d.qty||'1')!=='1'));
+}
+function coletaDraftSalvar_(){
+  try{
+    var d=coletaDraftSnapshot_();
+    if(!d.email||!coletaDraftTemConteudo_(d))return;
+    var serial=JSON.stringify(d);
+    if(serial===_coletaDraftLast_)return;
+    localStorage.setItem(COLETA_DRAFT_KEY,serial);
+    _coletaDraftLast_=serial;
+  }catch(e){console.warn('[AURA] Falha ao salvar rascunho da coleta atual:',e);}
+}
+function coletaDraftLer_(){
+  try{var s=localStorage.getItem(COLETA_DRAFT_KEY);return s?JSON.parse(s):null;}catch(e){return null;}
+}
+function coletaDraftLimpar_(){
+  try{localStorage.removeItem(COLETA_DRAFT_KEY);}catch(e){}
+  _coletaDraftLast_='';
+}
+function coletaDraftRestaurar_(silencioso){
+  if(_coletaDraftRestaurado_)return false;
+  var d=coletaDraftLer_();if(!d||!coletaDraftTemConteudo_(d))return false;
+  var cfg=loadCfg(),email=String((cfg&&cfg.email)||'').toLowerCase();
+  if(!email||String(d.email||'').toLowerCase()!==email)return false;
+  var idade=Date.now()-new Date(d.ts||0).getTime();
+  if(!isFinite(idade)||idade>24*60*60*1000){coletaDraftLimpar_();return false;}
+  _coletaDraftRestaurado_=true;
+  if(d.codigo){
+    codigoAtual=String(d.codigo||'');
+    descricaoAtual=String(d.descricao||'');
+    var codEl=document.getElementById('prodCodigo'); if(codEl){codEl.textContent=codigoAtual;codEl.classList.remove('empty');}
+    var descEl=document.getElementById('prodDesc'); if(descEl){descEl.textContent=descricaoAtual||'Produto em andamento';descEl.classList.remove('loading','notfound');}
+  }
+  var val=document.getElementById('fValidade');if(val)val.value=d.validade||'';
+  var set=document.getElementById('fSetor');if(set&&d.setor)set.value=d.setor;
+  var q=document.getElementById('fQty');if(q)q.value=d.qty||'1';
+  var p=document.getElementById('fPeso');if(p)p.value=d.peso||'';
+  if(!!d.pesoAtivo!==!!pesoAtivo)togglePeso();
+  try{
+    if(d.validade){
+      var dt=new Date(d.validade+'T12:00:00');
+      var disp=document.getElementById('drumDisplay');
+      if(disp&&!isNaN(dt.getTime())){disp.textContent=dt.toLocaleDateString('pt-BR');disp.classList.remove('empty');}
+    }
+  }catch(e){}
+  if(!silencioso)mostrarToast('Coleta em andamento restaurada após a atualização','ok');
+  return true;
+}
+
+// Salva o item ainda não confirmado. Isso cobre código já bipado, validade,
+// setor, quantidade e peso caso a página seja recarregada ou o PWA seja fechado.
+setInterval(function(){try{coletaDraftSalvar_();}catch(e){}},700);
+['input','change'].forEach(function(ev){document.addEventListener(ev,function(e){
+  var id=e&&e.target&&e.target.id||'';
+  if(['fQty','fPeso','fValidade','fSetor','manualInput'].indexOf(id)>=0)setTimeout(coletaDraftSalvar_,0);
+},true);});
+window.addEventListener('pagehide',function(){try{coletaDraftSalvar_();}catch(e){}});
+window.addEventListener('beforeunload',function(){try{coletaDraftSalvar_();}catch(e){}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){try{coletaDraftSalvar_();}catch(e){}}});
+
+// Chrome/Android e alguns WebViews tratam o gesto de puxar a página para baixo
+// como comando de recarregar. CSS overscroll-behavior já bloqueia a maioria dos
+// casos; este guard é o fallback para navegadores/PWAs que ainda propagam o gesto.
+(function instalarProtecaoPullToRefresh_(){
+  var startY=0,startX=0;
+  function scrollPai_(el){
+    while(el&&el!==document.body&&el!==document.documentElement){
+      try{var st=getComputedStyle(el),oy=st.overflowY;if((oy==='auto'||oy==='scroll')&&el.scrollHeight>el.clientHeight+2)return el;}catch(e){}
+      el=el.parentElement;
+    }
+    return null;
+  }
+  document.addEventListener('touchstart',function(e){if(e.touches&&e.touches.length===1){startY=e.touches[0].clientY;startX=e.touches[0].clientX;}},{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!e.touches||e.touches.length!==1)return;
+    var dy=e.touches[0].clientY-startY,dx=Math.abs(e.touches[0].clientX-startX);
+    if(dy<=8||dy<dx)return;
+    var sc=scrollPai_(e.target),topo=sc?(sc.scrollTop<=0):(window.scrollY<=0);
+    if(topo)e.preventDefault();
+  },{passive:false});
+})();
 
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 (async function init() {
-  var cfg = loadCfg();
+  var tabletBootTicket=null;
+  var cfg=loadCfg();
+  if(cfg.lastSetor)document.getElementById('fSetor').value=cfg.lastSetor;
 
-  // Restaurar setor e tipo da última sessão
-  if (cfg.lastSetor) document.getElementById('fSetor').value = cfg.lastSetor;
-  // Mostrar email no header se configurado
-  if (cfg.email) {
-    document.querySelector('.hdr-sub').innerHTML = '<i class="ti ti-user"></i> ' + cfg.email;
+  if(_modoTablet){
+    // v7.11: o seletor já nasce aberto no HTML, antes de qualquer resposta de rede.
+    // Nunca considera o email salvo da entrada anterior como usuário ativo.
+    _tabletUsuarioSelecionado=false;
+    _tabletSessaoLimpar_();
+    var sub=document.querySelector('.hdr-sub');if(sub)sub.innerHTML='<i class="ti ti-user"></i> Selecione o colaborador';
+    var modal=document.getElementById('tabletModal');if(modal)modal.classList.add('open');
+    var troca=document.getElementById('trocaUsuarioBtn');if(troca)troca.style.display='none';
+  }else if(cfg.email){
+    document.querySelector('.hdr-sub').innerHTML='<i class="ti ti-user"></i> '+cfg.email;
   }
 
   renderHistorico();
   atualizarPendUI();
-  setTimeout(nfeAtualizarCardPendente_, 120);
+  setTimeout(nfeAtualizarCardPendente_,120);
 
-  // Carrega a lista de colaboradores da planilha antes de qualquer coisa
-  // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
+  if(_modoTablet){
+    // Aguarda o loader do AURA System, definido no fim do HTML, antes de iniciar a carga.
+    // Assim a abertura e a busca da equipe formam uma única operação visível.
+    await new Promise(function(resolve){requestAnimationFrame(function(){resolve();});});
+    if(window.AuraLoader)tabletBootTicket=window.AuraLoader.start({message:'Abrindo o sistema e carregando colaboradores…'});
+  }
+
   await carregarColaboradores();
 
-  if (_modoTablet) {
-    // Modo tablet: sempre mostra o seletor de usuário
-    setTimeout(iniciarModoTablet, 100);
-  } else {
-    // Modo pessoal: fluxo normal
-    setTimeout(buscarTarefas, 25);
-    if (cfg.email) {
-      setTimeout(function() { verificarAniversario(cfg.email, null); }, 500);
-    }
-    setTimeout(verificarPrimeiroUso, 150);
+  if(_modoTablet){
+    // Só preenche os avatares. NÃO agenda abertura futura do modal.
+    // Isso elimina o popup de avatares aparecendo no meio de uma câmera/coleta/NF-e.
+    if(!_tabletUsuarioSelecionado)renderGridTablet((COLABORADORES||[]).slice());
+    // Espera o navegador pintar os cards antes de liberar 100% e retirar o velocímetro.
+    await new Promise(function(resolve){requestAnimationFrame(function(){requestAnimationFrame(resolve);});});
+    if(tabletBootTicket&&window.AuraLoader)window.AuraLoader.done('Lista de colaboradores pronta',true);
+  }else{
+    setTimeout(buscarTarefas,200);
+    if(cfg.email)setTimeout(function(){verificarAniversario(cfg.email,null);},500);
+    setTimeout(verificarPrimeiroUso,150);
   }
 })();
 </script>
@@ -6195,6 +6322,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
+<script>window.AURA_TABLET_BUILD='v7.11-entrada-usuario-segura';console.info('[AURA] Coleta Tablet v7.11 — usuário primeiro; câmera/coleta/NF-e depois');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6331,7 +6459,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
 <script id="auraTarefasAutoV2">
 (function(){
   'use strict';
-  var APP_KEY='coleta_individual', APP_LABEL='Coleta Individual';
+  var APP_KEY='coleta_tablet', APP_LABEL='Coleta Tablet';
   var _taskPollTimer=null,_taskSilentBusy=false;
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
@@ -6341,12 +6469,13 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
     var d=Number(l.diasParaVencer),cls=d<=10?' urgent':'';
     return '<div class="aura-validade-price'+cls+'"><div><b>'+fmtMoney(l.precoSugerido)+'</b> · preço sugerido</div><div>'+d+' dia'+(d===1?'':'s')+' para vencer'+(Number(l.precoNormal)>0?' · venda normal '+fmtMoney(l.precoNormal):'')+'</div></div>';
   };
-  function nomeAtual_(cfg){try{return nomeDoEmail(cfg.email)||String(cfg.email||'').split('@')[0];}catch(e){return String(cfg.email||'').split('@')[0];}}
+  function nomeAtual_(cfg){try{if(APP_KEY==='coleta_tablet'&&typeof _tabletSessaoLer_==='function'){var st=_tabletSessaoLer_();if(st&&st.email&&String(st.email).toLowerCase()===String(cfg.email||'').toLowerCase()&&st.nome)return primeiroNome(st.nome);}return nomeDoEmail(cfg.email)||String(cfg.email||'').split('@')[0];}catch(e){return String(cfg.email||'').split('@')[0];}}
   function hojeKey_(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function countKey_(email){return 'aura_task_count_'+hojeKey_()+'_'+String(email||'').toLowerCase();}
   function cacheCountGet_(email){try{var v=localStorage.getItem(countKey_(email));return v===null?null:Math.max(0,Number(v)||0);}catch(e){return null;}}
   function cacheCountSet_(email,q){try{localStorage.setItem(countKey_(email),String(Math.max(0,Number(q)||0)));}catch(e){}}
   var _auraEntradaSessao_='',_auraEntradaEmail_='',_auraEntradaPopupEmail_='';
+  window.auraTarefasNovaEntrada_=function(){_auraEntradaSessao_='';_auraEntradaEmail_='';_auraEntradaPopupEmail_='';window._auraTarefasPrimeiraBuscaFeita=false;try{var e=document.getElementById('auraTaskNotice');if(e)e.remove();}catch(_e){}};
   function getSessao_(email){var e=String(email||'').toLowerCase();if(!_auraEntradaSessao_||_auraEntradaEmail_!==e){_auraEntradaEmail_=e;_auraEntradaSessao_=APP_KEY+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);}return _auraEntradaSessao_;}
   function post_(body){var cfg=loadCfg();if(!cfg.url)return Promise.resolve(null);return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)}).then(function(r){return r.json();}).catch(function(){return null;});}
   function registrarAcessoBg_(ctx){if(!ctx||ctx.regAcesso)return;ctx.regAcesso=true;post_({action:'registrarAcessoApp',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,abertoEmCliente:new Date().toISOString()});}
@@ -6361,7 +6490,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
     if(cnt)cnt.textContent=pend.length;body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');if(pend.length)try{carregarFotosTarefas('m');}catch(e){}
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
   };
   function htmlAviso_(nome,cached){
     var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
@@ -6386,7 +6515,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
   }
   var originalBuscar=window.buscarTarefas;
   if(typeof originalBuscar==='function')window.buscarTarefas=async function(){
-    var ctx=prepararAvisoImediato_(),r=await originalBuscar.apply(this,arguments),q=atualizarBadge_();aplicarQtdAviso_(ctx,q);return r;
+    window._auraTarefasPrimeiraBuscaFeita=true;var ctx=prepararAvisoImediato_(),r=await originalBuscar.apply(this,arguments),q=atualizarBadge_();aplicarQtdAviso_(ctx,q);return r;
   };
   async function syncCentralSilencioso_(){
     if(_taskSilentBusy||!window._tarefasHistAberta||document.visibilityState==='hidden')return;var cfg=loadCfg();if(!cfg.url||!cfg.email)return;_taskSilentBusy=true;
@@ -6394,7 +6523,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
     catch(e){}finally{_taskSilentBusy=false;}
   }
   _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
-  console.info('[AURA] tarefas automáticas v3 — popup em toda entrada + decisão/execução auditáveis');
+  console.info('[AURA] tarefas automáticas v3.1 — identidade tablet obrigatória antes do popup');
 })();
 </script>
 
@@ -6480,16 +6609,16 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
     fotos.forEach(function(x){_carregarFotoTarefa('g'+x.idx,x.t.cod,x.t.produto);});
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas().then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
   };
   console.info('[AURA] tarefas v4 — filtros por setor + dias para vencer; agrupamento por vencimento exato');
 })();
 </script>
 
 
-<script>console.info('[AURA Mobile] Individual v7.08 — tarefas por setor + dias para vencer; validade até 21:00');</script>
+<script>console.info('[AURA Mobile] Tablet v7.09 — tarefas por setor + dias para vencer; validade até 21:00');</script>
 
-<script>console.info('[AURA Mobile] Individual v7.09 — popup a cada entrada + feedback gerencial de execução');</script>
+<script>console.info('[AURA Mobile] Tablet v7.10 — popup a cada entrada + feedback gerencial de execução');</script>
 <style id="aura-loading-gauge-css">
 #aura-loading-gauge{--ag:#4A8CE8;--abg:#F6F4F1;--acard:#fff;--aink:#1B1B1F;--amute:#6B6B73;--aline:#E4E1DC;--atrack:#E9E6E1;--aok:#4CE660;--aslow:#E8C400;--astuck:#FF8C00;--aerr:#D4001A;position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(20,20,26,.25);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,visibility 0s .22s;font-family:Arial,Helvetica,sans-serif;color:var(--aink)}
 @media(prefers-color-scheme:dark){#aura-loading-gauge{--abg:#15151A;--acard:#1F1F26;--aink:#F4F2EE;--amute:#9C9CA6;--aline:#32323C;--atrack:#2D2D36}}
@@ -6519,7 +6648,7 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
  'use strict'; if(w.AuraLoader&&w.AuraLoader.__gauge)return;
  var root=d.getElementById('aura-loading-gauge'),panel=root.querySelector('.ag-panel'),fill=root.querySelector('.ag-fill'),needle=root.querySelector('.ag-needle'),pct=root.querySelector('.ag-pct'),msg=root.querySelector('.ag-msg'),meta=root.querySelector('.ag-meta'),actions=root.querySelector('.ag-actions'),ticks=root.querySelector('.ag-ticks');
  for(var i=0;i<=10;i++){var a=(-90+i*18)*Math.PI/180,x1=150+Math.sin(a)*130,y1=150-Math.cos(a)*130,x2=150+Math.sin(a)*(i%5?136:142),y2=150-Math.cos(a)*(i%5?136:142),line=d.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('class','ag-tick');line.setAttribute('x1',x1.toFixed(1));line.setAttribute('y1',y1.toFixed(1));line.setAttribute('x2',x2.toFixed(1));line.setAttribute('y2',y2.toFixed(1));ticks.appendChild(line)}
- var active=0,started=0,timer=0,visibleTimer=0,interval=0,state='run',currentLabel='Carregando conteúdo…',real=false,realPct=0,seq=0,intentAt=Date.now(),pageAt=Date.now(),hideAfter=0,groupError='';
+ var active=0,started=0,timer=0,visibleTimer=0,interval=0,state='run',currentLabel='Carregando conteúdo…',real=false,realPct=0,seq=0,hideAfter=0,groupError='',currentComplete='Processo concluído';
  function draw(p){p=Math.max(0,Math.min(100,p));fill.setAttribute('stroke-dasharray',p+' 100');var deg=-90+p*1.8;needle.style.setProperty('--a',deg+'deg');needle.style.transform='rotate('+deg+'deg)';pct.textContent=Math.round(p)+'%'}
  function setState(s,title,detail){state=s;root.dataset.s=s;msg.textContent=title||'';meta.textContent=detail||''}
  function clearTimers(){clearTimeout(timer);clearTimeout(visibleTimer);clearTimeout(hideAfter);clearInterval(interval);timer=visibleTimer=interval=hideAfter=0}
@@ -6528,50 +6657,16 @@ async function nfeHistSalvarEdicao_(idx){var j=_nfeHistDetalhe;if(!j||!j.itens||
  function labelFor(text){text=(text||'').replace(/\s+/g,' ').trim();return text?text.slice(0,90):'Processando sua solicitação…'}
  function gestureLabel(el){var node=el&&el.closest?el.closest('button,[role="button"],input[type="submit"],input[type="button"],a,[aria-label]'):null;if(!node)return '';return labelFor(node.getAttribute('aria-label')||node.innerText||node.value||node.title||'')}
  function begin(label,mode){if(active===0){clearTimers();groupError='';started=Date.now();real=false;realPct=0;draw(0);actions.textContent='';setState('run',label||'Carregando conteúdo…','Percentual estimado');root.classList.remove('on');visibleTimer=setTimeout(function(){if(active>0&&state!=='hidden')root.classList.add('on')},220);interval=setInterval(tick,100)}else if(label&&currentLabel==='Carregando conteúdo…'){currentLabel=label;msg.textContent=label}active++;seq++;return seq}
- function finish(err){if(err)groupError=groupError||err;active=Math.max(0,active-1);if(active>0)return;if(state==='hidden'){state='idle';clearTimers();return}clearInterval(interval);interval=0;if(groupError){clearTimeout(visibleTimer);root.classList.add('on');actions.textContent='';setState('err','Falha ao concluir a solicitação',groupError);button('Fechar',dismiss);groupError='';return}real=false;draw(100);setState('ok','Concluído','Conteúdo atualizado');clearTimeout(visibleTimer);root.classList.add('on');hideAfter=setTimeout(function(){if(active===0)dismiss()},850)}
+ function finish(err,immediate){if(err)groupError=groupError||err;active=Math.max(0,active-1);if(active>0)return;if(state==='hidden'){state='idle';clearTimers();return}clearInterval(interval);interval=0;if(groupError){clearTimeout(visibleTimer);root.classList.add('on');actions.textContent='';setState('err','Falha ao concluir a solicitação',groupError);button('Fechar',dismiss);groupError='';return}real=false;draw(100);setState('ok',currentComplete||'Processo concluído',immediate?'Avatares apresentados':'Etapa finalizada');clearTimeout(visibleTimer);if(immediate){root.classList.remove('on');actions.textContent='';clearTimers();state='idle';return}root.classList.add('on');hideAfter=setTimeout(function(){if(active===0)dismiss()},850)}
  function tick(){if(!active||state==='hidden')return;var elapsed=Date.now()-started,sec=(elapsed/1000).toFixed(1).replace('.',',');if(!real){var p=elapsed<2000?70*elapsed/2000:70+22*(1-Math.exp(-(elapsed-2000)/4300));draw(Math.min(92,p));meta.textContent='Percentual estimado · '+sec+' s'}else{draw(realPct);meta.textContent=Math.round(realPct)+'% confirmado · '+sec+' s'}if(elapsed>=20000){setState('stuck','Ainda processando',sec+' s · a operação não respondeu no tempo esperado');if(!actions.firstChild)button('Ocultar',dismiss)}else if(elapsed>=8000){setState('slow','Demorando mais que o normal',sec+' s · aguardando resposta');}else if(state==='run'){setState('run',currentLabel,real?'Progresso confirmado':'Percentual estimado · '+sec+' s')}}
- function relevant(){return active>0||Date.now()-intentAt<8000}
- function inferLabel(args){try{var init=args&&args[1],body=init&&init.body;if(typeof body==='string'){var o=JSON.parse(body);if(o&&o.action)return labelFor(String(o.action).replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' '))} }catch(e){}return gestureLabel(lastTarget)||currentLabel}
- var lastTarget=null;
- function markProcessIntent(target,label){lastTarget=target||null;currentLabel=labelFor(label||gestureLabel(target)||'Processando solicitação…');intentAt=Date.now()}
- function isProcessAction(target){
-  var node=target&&target.closest?target.closest('button,[role="button"],input[type="submit"],input[type="button"],a,[aria-label]'):null;
-  if(!node)return false;
-  var mode=String(node.getAttribute('data-aura-loader')||'').toLowerCase();
-  if(mode==='off'||mode==='ignore')return false;
-  if(mode==='start'||mode==='final')return true;
-  var label=labelFor(node.getAttribute('aria-label')||node.innerText||node.value||node.title||'').toLowerCase();
-  try{label=label.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(e){}
-  if(/\b(converter|fator)\b/.test(label))return false;
-  return /\b(buscar|pesquisar|consultar|importar|upload|ler|escanear|bipar|carregar|atualizar|sincronizar|enviar|gerar|executar|processar|programar|salvar|registrar|confirmar|concluir|finalizar|publicar|agendar|baixar|excluir|deletar|remover|receber|abrir|comecar|iniciar|reprocessar|restaurar|emitir|exportar)\b/.test(label);
- }
- d.addEventListener('click',function(e){if(isProcessAction(e.target))markProcessIntent(e.target,gestureLabel(e.target))},true);
- d.addEventListener('submit',function(e){markProcessIntent(e.target,gestureLabel(e.submitter)||'Enviando formulário…')},true);
- d.addEventListener('change',function(e){if(e.target&&/^file$/i.test(e.target.type||''))markProcessIntent(e.target,'Lendo arquivo…')},true);
- d.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&/search/i.test((e.target.type||'')+' '+(e.target.name||'')))markProcessIntent(e.target,'Pesquisando…')},true);
- function isTelemetry(args){try{var target=args&&args[0],raw=typeof target==='string'?target:(target&&target.url)||'',url=new URL(raw,w.location.href);return /\/cdn-cgi\/rum(?:\/|$)/i.test(url.pathname)}catch(e){return false}}
- var originalFetch=w.fetch;if(typeof originalFetch==='function'){w.fetch=function(){var args=arguments;if(isTelemetry(args)||!relevant())return originalFetch.apply(this,args);var id=begin(inferLabel(args));var p;try{p=originalFetch.apply(this,args)}catch(e){finish('Erro de rede: '+(e&&e.message||'falha'));throw e}return Promise.resolve(p).then(function(r){if(!r||!r.ok){finish('Resposta HTTP '+(r&&r.status||'inválida'));}else finish(null);return r},function(e){finish('Erro de rede: '+(e&&e.message||'conexão interrompida'));throw e})}}
- if(w.XMLHttpRequest){var xp=w.XMLHttpRequest.prototype,oldOpen=xp.open,oldSend=xp.send;xp.open=function(method,url){try{this._auraLoaderTelemetry=isTelemetry([url])}catch(e){this._auraLoaderTelemetry=false}return oldOpen.apply(this,arguments)};xp.send=function(){var xhr=this,tracked=!xhr._auraLoaderTelemetry&&relevant();if(tracked){begin(currentLabel||'Comunicando com o servidor…');xhr.addEventListener('loadend',function(){if(xhr.status>=400)finish('Resposta HTTP '+xhr.status);else if(xhr.status===0)finish('Conexão interrompida');else finish(null)},{once:true})}return oldSend.apply(xhr,arguments)}}
- w.AuraLoader={__gauge:true,start:function(options){options=typeof options==='string'?{message:options}:options||{};intentAt=Date.now();currentLabel=labelFor(options.message||'Processando sua solicitação…');return begin(currentLabel,'manual')},progress:function(current,total,message){if(active===0)begin(message||'Processando…','manual');real=true;realPct=total>0?Math.max(0,Math.min(100,100*current/total)):0;draw(realPct);if(message)currentLabel=labelFor(message);setState('run',currentLabel,Math.round(realPct)+'% confirmado · '+current+' de '+total)},done:function(message){if(active===0){begin(message||'Finalizando…','manual')}finish(null)},fail:function(message){finish(message||'A ação não foi confirmada pelo servidor')},__version:'1.0.0'};
+ w.AuraLoader={__gauge:true,start:function(options){options=typeof options==='string'?{message:options}:options||{};if(typeof loginBlocksLoader==='function'&&loginBlocksLoader())return 0;if(active===0){currentLabel=labelFor(options.message||'Processando a ação…');currentComplete=labelFor(options.complete||'Processo concluído')}return begin(currentLabel,'manual')},progress:function(current,total,message){if(active===0)begin(message||'Processando a ação…','manual');real=true;realPct=total>0?Math.max(0,Math.min(100,100*current/total)):0;draw(realPct);if(message)currentLabel=labelFor(message);setState('run',currentLabel,Math.round(realPct)+'% confirmado · '+current+' de '+total)},done:function(message,immediate){if(message)currentComplete=labelFor(message);if(active===0)begin('Finalizando a ação…','manual');finish(null,!!immediate)},fail:function(message){finish(message||'A ação não foi concluída')},markFailure:function(message){if(active>0)groupError=groupError||String(message||'A ação não foi concluída')},wrapAction:function(name,message,complete,condition){var original=w[name];if(typeof original!=='function'||original.__auraProcessWrapped)return false;var wrapped=function(){var self=this,args=arguments;if(condition==='manualBool'&&args[0]!==true)return original.apply(self,args);if(condition==='manualTag'&&args[0]!=='manual')return original.apply(self,args);if(condition==='ean44'&&String(args[0]||'').replace(/\D/g,'').length!==44)return original.apply(self,args);var ticket=w.AuraLoader.start({message:message,complete:complete});var out;try{out=original.apply(self,args)}catch(e){if(ticket)w.AuraLoader.fail(e&&e.message||complete);throw e}if(!ticket)return out;function settle(v){if(v===false||(v&&(v.ok===false||v.success===false))){w.AuraLoader.fail(v.erro||v.error||('Não foi possível concluir: '+complete))}else w.AuraLoader.done()}if(out&&typeof out.then==='function')return Promise.resolve(out).then(function(v){settle(v);return v},function(e){w.AuraLoader.fail(e&&e.message||complete);throw e});settle(out);return out};wrapped.__auraProcessWrapped=true;w[name]=wrapped;return true},__version:'2.0.0'};
+
+ var _auraToastOriginal=w.mostrarToast;if(typeof _auraToastOriginal==='function'&&!_auraToastOriginal.__auraToastObserved){var _auraToastObserved=function(msg,type){if(active>0&&/^(err|error)$/i.test(String(type||'')))groupError=groupError||String(msg||'Falha informada pela aplicação');return _auraToastOriginal.apply(this,arguments)};_auraToastObserved.__auraToastObserved=true;w.mostrarToast=_auraToastObserved}
  draw(0);
-})(window,document);
-</script>
-<script id="aura-nfe-search-loader-hook">
-(function(w){
-  var original=w.nfeColetaBuscarChave;
-  if(typeof original!=="function"||!w.AuraLoader||original.__auraGaugeWrapped)return;
-  var wrapped=function(chave){
-    var digitos=String(chave||"").replace(/\D/g,"");
-    if(digitos.length!==44)return original.apply(this,arguments);
-    var ticket=w.AuraLoader.start({message:"Consultando NF-e pela chave escaneada…"});
-    var resultado;
-    try{resultado=original.apply(this,arguments);}
-    catch(e){w.AuraLoader.fail("Falha ao consultar a NF-e.");throw e;}
-    return Promise.resolve(resultado).finally(function(){if(ticket)w.AuraLoader.done();});
-  };
-  wrapped.__auraGaugeWrapped=true;
-  w.nfeColetaBuscarChave=wrapped;
-})(window);
+})(window,document);</script>
+
+<script id="aura-process-loader-hooks">
+(function(){if(!window.AuraLoader)return;var ops=[["tarefasHistFinalizar_", "Registrando a resposta da tarefa…", "Resposta da tarefa registrada"], ["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["carregarTarefasHistorico", "Consultando o histórico de tarefas…", "Histórico de tarefas carregado"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarTarefa", "Gravando a conferência do estoque da tarefa…", "Estoque da tarefa confirmado"], ["responderCarrinhoTarefa", "Registrando a situação da tarefa…", "Situação da tarefa registrada"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
 </script>
 </body>
 </html>
