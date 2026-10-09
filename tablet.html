@@ -5280,7 +5280,7 @@ function nfeCarregarFotosPendentes_(){
 }
 function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
-function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+function nfeSetEan_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var novo=nfeDigitos_(v),atual=nfeDigitos_(it.eanAura||''),status=String(it.status||'');if(novo&&novo===atual&&(status==='encontrado'||status==='aguardando_cadastro'))return;it._campoBusca=String(v||'');it.eanAura=novo;it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
 // v6.57 — busca no Banco AURA/Telecon por código ou nome durante o vínculo da NF-e
 var _nfeBuscaProdutoTimer_={};
@@ -5332,7 +5332,11 @@ function nfeCampoCodigoKey_(ev,i,el){
 }
 function nfeCampoCodigoBlur_(i,el){
   setTimeout(function(){nfeFecharSugestoes_(i);},180);
-  var v=String(el&&el.value||'').trim();if(/^\d+$/.test(v))nfeSetEan_(i,v);
+  var v=String(el&&el.value||'').trim();if(!/^\d+$/.test(v))return;
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_(v),atual=nfeDigitos_(it&&it.eanAura||''),status=String(it&&it.status||'');
+  if(atual===ean&&(status==='encontrado'||status==='aguardando_cadastro'))return;
+  if(atual!==ean)nfeSetEan_(i,v);
+  nfeValidarEan_(i);
 }
 
 function nfeAjustarConversao_(i,v){
@@ -6450,7 +6454,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
       if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco};});_nfeBuscaProdutoResultados_[i]=arr;if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');},ms);
   };
   var validarServidor=window.nfeValidarEan_;
-  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||'');var p=hit(ean);if(!it||!p){return validarServidor(i);}it.eanAura=p.ean;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
+  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||''),p=hit(ean);if(!it||!p)return validarServidor(i);it.eanAura=nfeDigitos_(p.ean||ean);it._campoBusca=String(p.ean||ean);var input=document.getElementById('nfeEan_'+i);if(input)input.value=it._campoBusca;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur._campoBusca=String(cur.eanAura);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
   };
 })();
 </script>
