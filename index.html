@@ -1338,7 +1338,7 @@ body.tarefas-hist-aberta{overflow:hidden}
 
   <div>
     <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
-    <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
+    <div class="drum-trigger" id="drumTrigger" onclick="nfeAbrirValidadeColeta_()">
       <span class="dt-icon"><i class="ti ti-calendar"></i></span>
       <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
       <span style="color:var(--tx2);font-size:13px"><i class="ti ti-chevron-down"></i></span>
@@ -3935,9 +3935,10 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
 var _vencPendente = null;
 
 function vencAlertCorrigir() {
-  // Fecha o popup e mantém o drum aberto para o colaborador corrigir a data
+  // Mantém o seletor que originou a data disponível para correção.
   document.getElementById('vencAlertBg').classList.remove('open');
-  _vencPendente = null;
+  var pendente=_vencPendente;_vencPendente=null;
+  if(pendente&&pendente.origem==='calendar')nfeAbrirValidadeColeta_(pendente.valFormatada);
 }
 
 function vencAlertContinuar() {
@@ -5246,7 +5247,7 @@ function nfeCarregarFotosPendentes_(){
 }
 function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
-function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+function nfeSetEan_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var novo=nfeDigitos_(v),atual=nfeDigitos_(it.eanAura||''),status=String(it.status||'');if(novo&&novo===atual&&(status==='encontrado'||status==='aguardando_cadastro'))return;it._campoBusca=String(v||'');it.eanAura=novo;it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
 // v6.57 — busca no Banco AURA/Telecon por código ou nome durante o vínculo da NF-e
 var _nfeBuscaProdutoTimer_={};
@@ -5298,7 +5299,11 @@ function nfeCampoCodigoKey_(ev,i,el){
 }
 function nfeCampoCodigoBlur_(i,el){
   setTimeout(function(){nfeFecharSugestoes_(i);},180);
-  var v=String(el&&el.value||'').trim();if(/^\d+$/.test(v))nfeSetEan_(i,v);
+  var v=String(el&&el.value||'').trim();if(!/^\d+$/.test(v))return;
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_(v),atual=nfeDigitos_(it&&it.eanAura||''),status=String(it&&it.status||'');
+  if(atual===ean&&(status==='encontrado'||status==='aguardando_cadastro'))return;
+  if(atual!==ean)nfeSetEan_(i,v);
+  nfeValidarEan_(i);
 }
 
 function nfeAjustarConversao_(i,v){
@@ -5394,7 +5399,9 @@ function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function nfeFmtDataPicker_(iso){var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};_nfeDateSelected=lotes[li].validade||'';var m=_nfeDateSelected.match(/^(\d{4})-(\d{2})-(\d{2})$/),now=new Date();_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
+function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};nfeDateAbrirComValor_(lotes[li].validade||'');}
+function nfeAbrirValidadeColeta_(valor){_nfeDateTarget={modo:'coleta'};nfeDateAbrirComValor_(valor||document.getElementById('fValidade').value||'');}
+function nfeDateAbrirComValor_(valor){var raw=String(valor||''),m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/),br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/),now=new Date();if(!m&&br)m=[raw,br[3],String(br[2]).padStart(2,'0'),String(br[1]).padStart(2,'0')];_nfeDateSelected=m?m[1]+'-'+m[2]+'-'+m[3]:'';_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
 function nfeDateRenderMonths_(){var h=document.getElementById('nfeDateMonths');if(h)h.innerHTML=_nfeDateShort.map(function(n,i){return '<button type="button" class="nfe-date-month'+(i===_nfeDateMonth?' selected':'')+'" onclick="nfeDateEscolherMes_('+i+')">'+n+'</button>';}).join('');}
 function nfeDateRenderYears_(){var h=document.getElementById('nfeDateYears');if(!h)return;var now=(new Date()).getFullYear(),start=Math.min(2020,now-5,_nfeDateYear),end=Math.max(now+20,_nfeDateYear),html='';for(var y=start;y<=end;y++)html+='<button type="button" class="nfe-date-year'+(y===_nfeDateYear?' selected':'')+'" onclick="nfeDateEscolherAno_('+y+')">'+y+'</button>';h.innerHTML=html;}
 function nfeDateEscolherAno_(y){_nfeDateYear=y;nfeDateRenderYears_();}
@@ -5402,7 +5409,7 @@ function nfeDateEscolherMes_(m){_nfeDateMonth=m;document.getElementById('nfeDate
 function nfeDateVoltarMeses_(){document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();}
 function nfeDateMoverMes_(d){_nfeDateMonth+=d;if(_nfeDateMonth<0){_nfeDateMonth=11;_nfeDateYear--;}else if(_nfeDateMonth>11){_nfeDateMonth=0;_nfeDateYear++;}nfeDateRenderCalendar_();}
 function nfeDateRenderCalendar_(){var label=document.getElementById('nfeDateCalLabel'),h=document.getElementById('nfeDateDays');if(!h)return;label.textContent=_nfeDateMonthNames[_nfeDateMonth]+' '+_nfeDateYear;var first=new Date(_nfeDateYear,_nfeDateMonth,1),offset=(first.getDay()+6)%7,total=new Date(_nfeDateYear,_nfeDateMonth+1,0).getDate(),html='';for(var x=0;x<offset;x++)html+='<button class="nfe-date-day empty" tabindex="-1" aria-hidden="true"></button>';for(var d=1;d<=total;d++){var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');html+='<button type="button" class="nfe-date-day'+(iso===_nfeDateSelected?' selected':'')+'" onclick="nfeDateEscolherDia_('+d+')">'+d+'</button>';}h.innerHTML=html;}
-function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
+function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;if(t.modo==='coleta'){var fmt=nfeFmtDataPicker_(iso),partes=auraValidadePartes21h_(fmt);if(auraValidadeVencida21h_(fmt)){_vencPendente={dd:String(partes.d).padStart(2,'0'),mm:String(partes.m).padStart(2,'0'),yy:partes.y,valFormatada:fmt,origem:'calendar'};var alerta=document.getElementById('vencAlertData');if(alerta)alerta.textContent=fmt;nfeFecharSeletorValidade_();document.getElementById('vencAlertBg').classList.add('open');return;}_aplicarValidade(String(partes.d).padStart(2,'0'),String(partes.m).padStart(2,'0'),partes.y,fmt);nfeFecharSeletorValidade_();return;}nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
 function nfeFecharSeletorValidade_(){var o=document.getElementById('nfeDatePicker');if(o){o.classList.remove('open');o.setAttribute('aria-hidden','true');}document.body.style.overflow='';_nfeDateTarget=null;}
 function nfeDateOutside_(e){if(e.target&&e.target.id==='nfeDatePicker')nfeFecharSeletorValidade_();}document.addEventListener('keydown',function(e){if(e.key==='Escape')nfeFecharSeletorValidade_();});
 
@@ -6294,7 +6301,7 @@ async function nfeHistSalvarEdicao_(idx){
       if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco};});_nfeBuscaProdutoResultados_[i]=arr;if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');},ms);
   };
   var validarServidor=window.nfeValidarEan_;
-  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||'');var p=hit(ean);if(!it||!p){return validarServidor(i);}it.eanAura=p.ean;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
+  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||''),p=hit(ean);if(!it||!p)return validarServidor(i);it.eanAura=nfeDigitos_(p.ean||ean);it._campoBusca=String(p.ean||ean);var input=document.getElementById('nfeEan_'+i);if(input)input.value=it._campoBusca;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur._campoBusca=String(cur.eanAura);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
   };
 })();
 </script>
