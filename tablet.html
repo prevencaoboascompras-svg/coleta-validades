@@ -1145,12 +1145,12 @@ html,body{overscroll-behavior-y:none!important;}
   <div class="tarefas-modal-box">
     <div class="tarefas-modal-hdr">
       <span class="tarefas-modal-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
-      <span class="tarefas-modal-hdr-title">Tarefas pendentes</span>
+      <span class="tarefas-modal-hdr-title">Tarefas do dia</span>
       <span class="tarefas-modal-hdr-count" id="tarefasModalCount">0</span>
     </div>
-    <div class="tarefas-modal-sub">Confirme as tarefas abaixo antes de iniciar a coleta.</div>
+    <div class="tarefas-modal-sub">Ações rápidas: confirme o estoque e siga para a próxima.</div>
     <div class="tarefas-modal-body" id="tarefasModalBody"></div>
-    <button class="tarefas-modal-dismiss" onclick="fecharTarefasModal()">Resolver depois <i class="ti ti-chevron-down"></i></button>
+    <button class="tarefas-modal-dismiss" onclick="fecharTarefasModal()">Voltar à coleta <i class="ti ti-chevron-down"></i></button>
   </div>
 </div>
 
@@ -1308,7 +1308,7 @@ html,body{overscroll-behavior-y:none!important;}
 <div class="tarefas-section" id="tarefasSection">
   <div class="tarefas-hdr">
     <span class="tarefas-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
-    <span class="tarefas-hdr-title">Tarefas pendentes</span>
+    <span class="tarefas-hdr-title">Tarefas do dia</span>
     <span class="tarefas-hdr-count" id="tarefasCount">0</span>
   </div>
   <div id="tarefasList"></div>
@@ -1344,7 +1344,7 @@ html,body{overscroll-behavior-y:none!important;}
 
   <div>
     <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
-    <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
+    <div class="drum-trigger" id="drumTrigger" onclick="nfeAbrirValidadeColeta_()">
       <span class="dt-icon"><i class="ti ti-calendar"></i></span>
       <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
       <span style="color:var(--tx2);font-size:13px"><i class="ti ti-chevron-down"></i></span>
@@ -3471,22 +3471,37 @@ function alterarTarefaQty(id, delta) {
   el.value = Math.max(0, Math.min(999, v + delta));
 }
 
+function tarefaSalvarUi_(idx, salvar) {
+  ['m','s'].forEach(function(prefixo) {
+    var card=document.getElementById('tarefa_'+prefixo+idx);
+    if(!card)return;
+    Array.prototype.forEach.call(card.querySelectorAll('button'),function(btn){btn.disabled=!!salvar;});
+    var principal=card.querySelector('.tarefa-confirm-btn');
+    if(principal){
+      if(salvar){principal.dataset.auraTaskHtml=principal.innerHTML;principal.innerHTML='<i class="ti ti-loader-2"></i> Salvando…';}
+      else if(principal.dataset.auraTaskHtml){principal.innerHTML=principal.dataset.auraTaskHtml;delete principal.dataset.auraTaskHtml;}
+    }
+  });
+}
+
 async function confirmarTarefa(idx) {
   var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
   if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo confirmada.'};
   var elModal=document.getElementById('tarefaQty_m'+idx),elInline=document.getElementById('tarefaQty_s'+idx),qty=parseInt((elModal||elInline||{}).value)||0;
   var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta tarefa.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
-  t._auraTaskSaving=true;
+  t._auraTaskSaving=true;tarefaSalvarUi_(idx,true);
   try{
     var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarTarefa',tarefaId:t.id,quantidade:qty,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da tarefa.');
-  }catch(e){var err=String(e&&e.message||e||'Falha ao confirmar a tarefa.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a tarefa: '+err,'err');return {ok:false,error:err};}
+  }catch(e){var err=String(e&&e.message||e||'Falha ao confirmar a tarefa.');t._auraTaskSaving=false;tarefaSalvarUi_(idx,false);mostrarToast('Falha ao gravar a tarefa: '+err,'err');return {ok:false,error:err};}
   t._localConfirmada=true;t._qtdeLocal=qty;t.quantidadeConfirmada=qty;t.status='concluida';t.confirmadoEm=new Date().toISOString();t.email=cfg.email;
   try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{status:'concluida',quantidadeConfirmada:qty,confirmadoEm:t.confirmadoEm,email:cfg.email,_localConfirmada:true,_qtdeLocal:qty});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Confirmação gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
-  t._auraTaskSaving=false;renderTarefas();
+  t._auraTaskSaving=false;
+  if(qty===0)_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});
+  renderTarefas();
   if(qty>0)mostrarToast('Tarefa confirmada! Qtde: '+qty,'ok');
-  else{mostrarToast('Tarefa confirmada! Sem estoque restante.','ok');setTimeout(function(){_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});renderTarefas();},3000);}
+  else mostrarToast('Tarefa concluída: sem estoque restante.','ok');
   return {ok:true};
 }
 
@@ -3494,12 +3509,12 @@ async function responderCarrinhoTarefa(idx, resposta) {
   var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
   if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo atualizada.'};
   var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta resposta.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
-  t._auraTaskSaving=true;
+  t._auraTaskSaving=true;tarefaSalvarUi_(idx,true);
   try{
     var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t._qtdeLocal||t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da resposta.');
-  }catch(e){var err=String(e&&e.message||e||'Falha ao registrar a resposta.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a resposta: '+err,'err');return {ok:false,error:err};}
+  }catch(e){var err=String(e&&e.message||e||'Falha ao registrar a resposta.');t._auraTaskSaving=false;tarefaSalvarUi_(idx,false);mostrarToast('Falha ao gravar a resposta: '+err,'err');return {ok:false,error:err};}
   t._carrinhoStatus=resposta;t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t._auraTaskSaving=false;
   try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{carrinhoStatus:resposta,carrinhoRespondidoEm:t.carrinhoRespondidoEm,email:cfg.email});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Resposta gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
   renderTarefas();var ehRefrig=_tarefaAutoRefrigerada_(t);
@@ -3583,7 +3598,7 @@ function renderTarefasHistorico(){
   dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
 }
 function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return String(v||'');var d=String(h).replace(/<[^>]+>/g,'').replace(/^\s*Validade:\s*/i,'').trim();return d||String(v||'');}
-function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
+function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
 async function tarefasHistFinalizar_(id,resposta){
   var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return {ok:false,error:'A tarefa não está mais na lista. Atualize o histórico e tente novamente.'};var cfg=loadCfg();
   if(!cfg.url||!cfg.email)return {ok:false,error:'A conexão com a AURA não está configurada.'};
@@ -3930,9 +3945,10 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
 var _vencPendente = null;
 
 function vencAlertCorrigir() {
-  // Fecha o popup e mantém o drum aberto para o colaborador corrigir a data
+  // Mantém o seletor que originou a data disponível para correção.
   document.getElementById('vencAlertBg').classList.remove('open');
-  _vencPendente = null;
+  var pendente=_vencPendente;_vencPendente=null;
+  if(pendente&&pendente.origem==='calendar')nfeAbrirValidadeColeta_(pendente.valFormatada);
 }
 
 function vencAlertContinuar() {
@@ -4529,7 +4545,7 @@ function selecionarUsuarioTablet(nome, email) {
   // Cada seleção explícita é uma nova entrada para popup/auditoria.
   try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
   setTimeout(function(){verificarAniversario(email,nome);},250);
-  setTimeout(function(){buscarTarefas(true);},0);
+  setTimeout(function(){buscarTarefas(false);},0);
   setTimeout(nfeAtualizarCardPendente_,80);
   setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
@@ -5412,7 +5428,9 @@ function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function nfeFmtDataPicker_(iso){var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};_nfeDateSelected=lotes[li].validade||'';var m=_nfeDateSelected.match(/^(\d{4})-(\d{2})-(\d{2})$/),now=new Date();_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
+function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};nfeDateAbrirComValor_(lotes[li].validade||'');}
+function nfeAbrirValidadeColeta_(valor){_nfeDateTarget={modo:'coleta'};nfeDateAbrirComValor_(valor||document.getElementById('fValidade').value||'');}
+function nfeDateAbrirComValor_(valor){var raw=String(valor||''),m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/),br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/),now=new Date();if(!m&&br)m=[raw,br[3],String(br[2]).padStart(2,'0'),String(br[1]).padStart(2,'0')];_nfeDateSelected=m?m[1]+'-'+m[2]+'-'+m[3]:'';_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
 function nfeDateRenderMonths_(){var h=document.getElementById('nfeDateMonths');if(h)h.innerHTML=_nfeDateShort.map(function(n,i){return '<button type="button" class="nfe-date-month'+(i===_nfeDateMonth?' selected':'')+'" onclick="nfeDateEscolherMes_('+i+')">'+n+'</button>';}).join('');}
 function nfeDateRenderYears_(){var h=document.getElementById('nfeDateYears');if(!h)return;var now=(new Date()).getFullYear(),start=Math.min(2020,now-5,_nfeDateYear),end=Math.max(now+20,_nfeDateYear),html='';for(var y=start;y<=end;y++)html+='<button type="button" class="nfe-date-year'+(y===_nfeDateYear?' selected':'')+'" onclick="nfeDateEscolherAno_('+y+')">'+y+'</button>';h.innerHTML=html;}
 function nfeDateEscolherAno_(y){_nfeDateYear=y;nfeDateRenderYears_();}
@@ -5420,7 +5438,7 @@ function nfeDateEscolherMes_(m){_nfeDateMonth=m;document.getElementById('nfeDate
 function nfeDateVoltarMeses_(){document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();}
 function nfeDateMoverMes_(d){_nfeDateMonth+=d;if(_nfeDateMonth<0){_nfeDateMonth=11;_nfeDateYear--;}else if(_nfeDateMonth>11){_nfeDateMonth=0;_nfeDateYear++;}nfeDateRenderCalendar_();}
 function nfeDateRenderCalendar_(){var label=document.getElementById('nfeDateCalLabel'),h=document.getElementById('nfeDateDays');if(!h)return;label.textContent=_nfeDateMonthNames[_nfeDateMonth]+' '+_nfeDateYear;var first=new Date(_nfeDateYear,_nfeDateMonth,1),offset=(first.getDay()+6)%7,total=new Date(_nfeDateYear,_nfeDateMonth+1,0).getDate(),html='';for(var x=0;x<offset;x++)html+='<button class="nfe-date-day empty" tabindex="-1" aria-hidden="true"></button>';for(var d=1;d<=total;d++){var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');html+='<button type="button" class="nfe-date-day'+(iso===_nfeDateSelected?' selected':'')+'" onclick="nfeDateEscolherDia_('+d+')">'+d+'</button>';}h.innerHTML=html;}
-function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
+function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;if(t.modo==='coleta'){var fmt=nfeFmtDataPicker_(iso),partes=auraValidadePartes21h_(fmt);if(auraValidadeVencida21h_(fmt)){_vencPendente={dd:String(partes.d).padStart(2,'0'),mm:String(partes.m).padStart(2,'0'),yy:partes.y,valFormatada:fmt,origem:'calendar'};var alerta=document.getElementById('vencAlertData');if(alerta)alerta.textContent=fmt;nfeFecharSeletorValidade_();document.getElementById('vencAlertBg').classList.add('open');return;}_aplicarValidade(String(partes.d).padStart(2,'0'),String(partes.m).padStart(2,'0'),partes.y,fmt);nfeFecharSeletorValidade_();return;}nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
 function nfeFecharSeletorValidade_(){var o=document.getElementById('nfeDatePicker');if(o){o.classList.remove('open');o.setAttribute('aria-hidden','true');}document.body.style.overflow='';_nfeDateTarget=null;}
 function nfeDateOutside_(e){if(e.target&&e.target.id==='nfeDatePicker')nfeFecharSeletorValidade_();}document.addEventListener('keydown',function(e){if(e.key==='Escape')nfeFecharSeletorValidade_();});
 
@@ -6487,14 +6505,20 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function fecharAviso_(){var e=document.getElementById('auraTaskNotice');if(e)e.remove();}
   function atualizarBadge_(){var b=document.getElementById('tarefaBadge'),q=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;if(b){b.textContent=q;if(q)b.classList.add('show');else b.classList.remove('show');}var s=document.getElementById('tarefasSection');if(s){s.classList.remove('show');s.style.display='none';}return q;}
   // Não renderiza mais a lista de tarefas atrás do app. Só badge.
-  window.renderTarefas=function(){return atualizarBadge_();};
+  window.renderTarefas=function(){
+    var qtd=atualizarBadge_(),modal=document.getElementById('tarefasModal');
+    if(modal&&modal.classList.contains('open'))window.auraRenderTarefasModal_();
+    return qtd;
+  };
   window.auraRenderTarefasModal_=function(){
     var modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(!modal||!body)return;
     var pend=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});
-    if(cnt)cnt.textContent=pend.length;body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');if(pend.length)try{carregarFotosTarefas('m');}catch(e){}
+    if(cnt)cnt.textContent=pend.length;
+    if(!pend.length){body.innerHTML='<div class="tarefas-hist-empty"><i class="ti ti-circle-check"></i>Tudo certo! Não há tarefas pendentes.</div>';modal.classList.add('open');return;}
+    body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');try{carregarFotosTarefas('m');}catch(e){}
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
+    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
   };
   function htmlAviso_(nome,cached){
     var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
@@ -6614,7 +6638,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     fotos.forEach(function(x){_carregarFotoTarefa('g'+x.idx,x.t.cod,x.t.produto);});
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
+    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
   };
   console.info('[AURA] tarefas v4 — filtros por setor + dias para vencer; agrupamento por vencimento exato');
 })();
@@ -6671,7 +6695,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 })(window,document);</script>
 
 <script id="aura-process-loader-hooks">
-(function(){if(!window.AuraLoader)return;var ops=[["tarefasHistFinalizar_", "Registrando a resposta da tarefa…", "Resposta da tarefa registrada"], ["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["carregarTarefasHistorico", "Consultando o histórico de tarefas…", "Histórico de tarefas carregado"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarTarefa", "Gravando a conferência do estoque da tarefa…", "Estoque da tarefa confirmado"], ["responderCarrinhoTarefa", "Registrando a situação da tarefa…", "Situação da tarefa registrada"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
+(function(){if(!window.AuraLoader)return;var ops=[["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
 </script>
 </body>
 </html>
