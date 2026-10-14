@@ -1145,12 +1145,12 @@ html,body{overscroll-behavior-y:none!important;}
   <div class="tarefas-modal-box">
     <div class="tarefas-modal-hdr">
       <span class="tarefas-modal-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
-      <span class="tarefas-modal-hdr-title">Tarefas do dia</span>
+      <span class="tarefas-modal-hdr-title">Tarefas pendentes</span>
       <span class="tarefas-modal-hdr-count" id="tarefasModalCount">0</span>
     </div>
-    <div class="tarefas-modal-sub">Ações rápidas: confirme o estoque e siga para a próxima.</div>
+    <div class="tarefas-modal-sub">Confirme as tarefas abaixo antes de iniciar a coleta.</div>
     <div class="tarefas-modal-body" id="tarefasModalBody"></div>
-    <button class="tarefas-modal-dismiss" onclick="fecharTarefasModal()">Voltar à coleta <i class="ti ti-chevron-down"></i></button>
+    <button class="tarefas-modal-dismiss" onclick="fecharTarefasModal()">Resolver depois <i class="ti ti-chevron-down"></i></button>
   </div>
 </div>
 
@@ -1255,7 +1255,7 @@ html,body{overscroll-behavior-y:none!important;}
   <div class="prod-foto" id="fotoPreview"><i class="ti ti-photo-search" style="font-size:40px"></i></div>
   <div class="prod-info">
     <span class="prod-desc-val" id="descVal">Aguardando leitura…</span>
-    <span class="prod-preco" id="descPreco"></span>
+    <div class="prod-price-row" id="descPriceRow"><span class="prod-preco" id="descPreco"></span><span class="prod-preco-promo" id="descPrecoPromo"></span></div>
     <span class="prod-codigo empty" id="codeDisplay">Aguardando leitura…</span>
     <!-- status de onde a foto foi encontrada fica só no elemento (não exibido), mantido pra debug -->
     <span class="foto-status" id="fotoStatus" style="display:none"></span>
@@ -1308,7 +1308,7 @@ html,body{overscroll-behavior-y:none!important;}
 <div class="tarefas-section" id="tarefasSection">
   <div class="tarefas-hdr">
     <span class="tarefas-hdr-icon"><i class="ti ti-clipboard-check"></i></span>
-    <span class="tarefas-hdr-title">Tarefas do dia</span>
+    <span class="tarefas-hdr-title">Tarefas pendentes</span>
     <span class="tarefas-hdr-count" id="tarefasCount">0</span>
   </div>
   <div id="tarefasList"></div>
@@ -1344,7 +1344,7 @@ html,body{overscroll-behavior-y:none!important;}
 
   <div>
     <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
-    <div class="drum-trigger" id="drumTrigger" onclick="nfeAbrirValidadeColeta_()">
+    <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
       <span class="dt-icon"><i class="ti ti-calendar"></i></span>
       <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
       <span style="color:var(--tx2);font-size:13px"><i class="ti ti-chevron-down"></i></span>
@@ -2451,6 +2451,7 @@ function resetCodigo() {
   document.getElementById('descVal').className = 'prod-desc-val';
   document.getElementById('descPreco').classList.remove('show');
   document.getElementById('descPreco').textContent = '';
+  var precoPromo=document.getElementById('descPrecoPromo');if(precoPromo){precoPromo.classList.remove('show');precoPromo.textContent='';}
   // Reseta foto
   fotoToken++;
   limparFoto('');
@@ -2748,10 +2749,12 @@ async function buscarDescricao(ean) {
   var cfg = loadCfg();
   var el  = document.getElementById('descVal');
   var elPreco = document.getElementById('descPreco');
+  var elPrecoPromo = document.getElementById('descPrecoPromo');
   el.textContent = 'Buscando produto…';
   el.className = 'prod-desc-val loading';
   elPreco.classList.remove('show');
   elPreco.textContent = '';
+  if(elPrecoPromo){elPrecoPromo.classList.remove('show');elPrecoPromo.textContent='';}
 
   if (!cfg.url) {
     el.textContent = 'Configure a URL do Apps Script primeiro';
@@ -2805,13 +2808,9 @@ async function buscarDescricao(ean) {
     el.className = 'prod-desc-val';
     descricaoAtual = resultado.descricao;
 
-    if (resultado.preco !== undefined && resultado.preco !== null && resultado.preco !== '') {
-      var precoNum = Number(resultado.preco);
-      if (!isNaN(precoNum)) {
-        elPreco.textContent = 'R$ ' + precoNum.toFixed(2).replace('.', ',');
-        elPreco.classList.add('show');
-      }
-    }
+    // Exibe venda e preço por validade; a promoção vem dos lotes ativos,
+    // respeitando a validade até 21h e a faixa de até 15 dias.
+    if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(resultado.preco,resultado.lotes||[],'atualizando');
 
     // Lotes vêm na MESMA resposta do produto. O modal ganha prioridade sobre
     // foto/catálogos externos para não competir com a etapa operacional.
@@ -3386,7 +3385,7 @@ function _buildTarefaCards(prefixo) {
       +     (t.cod ? '<div class="tarefa-cod">' + t.cod + '</div>' : '')
       +     (_fmtValidadeTarefa(t.validade) || '')
       +     (t.descricao ? '<div class="tarefa-desc">' + t.descricao + '</div>' : '')
-      +     (Number(t.precoAcao)>0 ? '<div style="margin-top:7px;display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:11px;font-weight:900;background:rgba(29,158,117,.14);color:#1D9E75;border-radius:7px;padding:4px 8px">Preço validade: R$ '+Number(t.precoAcao).toFixed(2).replace('.',',')+'</span>'+(Number(t.precoNormal)>0?'<span style="font-size:10px;color:var(--tx2)">normal R$ '+Number(t.precoNormal).toFixed(2).replace('.',',')+'</span>':'')+'</div>' : '')
+      +     (window._auraTarefaBadgesPrecoHtml_?window._auraTarefaBadgesPrecoHtml_(t):'')
       +   '</div>'
       + '</div>'
       + bodyHtml
@@ -3471,37 +3470,22 @@ function alterarTarefaQty(id, delta) {
   el.value = Math.max(0, Math.min(999, v + delta));
 }
 
-function tarefaSalvarUi_(idx, salvar) {
-  ['m','s'].forEach(function(prefixo) {
-    var card=document.getElementById('tarefa_'+prefixo+idx);
-    if(!card)return;
-    Array.prototype.forEach.call(card.querySelectorAll('button'),function(btn){btn.disabled=!!salvar;});
-    var principal=card.querySelector('.tarefa-confirm-btn');
-    if(principal){
-      if(salvar){principal.dataset.auraTaskHtml=principal.innerHTML;principal.innerHTML='<i class="ti ti-loader-2"></i> Salvando…';}
-      else if(principal.dataset.auraTaskHtml){principal.innerHTML=principal.dataset.auraTaskHtml;delete principal.dataset.auraTaskHtml;}
-    }
-  });
-}
-
 async function confirmarTarefa(idx) {
   var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
   if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo confirmada.'};
   var elModal=document.getElementById('tarefaQty_m'+idx),elInline=document.getElementById('tarefaQty_s'+idx),qty=parseInt((elModal||elInline||{}).value)||0;
   var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta tarefa.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
-  t._auraTaskSaving=true;tarefaSalvarUi_(idx,true);
+  t._auraTaskSaving=true;
   try{
     var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarTarefa',tarefaId:t.id,quantidade:qty,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da tarefa.');
-  }catch(e){var err=String(e&&e.message||e||'Falha ao confirmar a tarefa.');t._auraTaskSaving=false;tarefaSalvarUi_(idx,false);mostrarToast('Falha ao gravar a tarefa: '+err,'err');return {ok:false,error:err};}
+  }catch(e){var err=String(e&&e.message||e||'Falha ao confirmar a tarefa.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a tarefa: '+err,'err');return {ok:false,error:err};}
   t._localConfirmada=true;t._qtdeLocal=qty;t.quantidadeConfirmada=qty;t.status='concluida';t.confirmadoEm=new Date().toISOString();t.email=cfg.email;
   try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{status:'concluida',quantidadeConfirmada:qty,confirmadoEm:t.confirmadoEm,email:cfg.email,_localConfirmada:true,_qtdeLocal:qty});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Confirmação gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
-  t._auraTaskSaving=false;
-  if(qty===0)_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});
-  renderTarefas();
+  t._auraTaskSaving=false;renderTarefas();
   if(qty>0)mostrarToast('Tarefa confirmada! Qtde: '+qty,'ok');
-  else mostrarToast('Tarefa concluída: sem estoque restante.','ok');
+  else{mostrarToast('Tarefa confirmada! Sem estoque restante.','ok');setTimeout(function(){_tarefasPendentes=_tarefasPendentes.filter(function(x){return String(x.id)!==String(t.id);});renderTarefas();},3000);}
   return {ok:true};
 }
 
@@ -3509,12 +3493,12 @@ async function responderCarrinhoTarefa(idx, resposta) {
   var t=_tarefasPendentes[idx];if(!t)return {ok:false,error:'Tarefa não encontrada.'};
   if(t._auraTaskSaving)return {ok:false,error:'Esta tarefa já está sendo atualizada.'};
   var cfg=loadCfg();if(!cfg.url||!cfg.email){var semCfg='A conexão com a AURA não está configurada para gravar esta resposta.';mostrarToast(semCfg,'err');return {ok:false,error:semCfg};}
-  t._auraTaskSaving=true;tarefaSalvarUi_(idx,true);
+  t._auraTaskSaving=true;
   try{
     var resp=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarCarrinhoTarefa',tarefaId:t.id,carrinho:resposta==='sim',quantidade:Number(t._qtdeLocal||t.quantidadeConfirmada)||0,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var result=await resp.json();if(!result||!result.ok)throw new Error((result&&result.erro)||'A AURA não confirmou a gravação da resposta.');
-  }catch(e){var err=String(e&&e.message||e||'Falha ao registrar a resposta.');t._auraTaskSaving=false;tarefaSalvarUi_(idx,false);mostrarToast('Falha ao gravar a resposta: '+err,'err');return {ok:false,error:err};}
+  }catch(e){var err=String(e&&e.message||e||'Falha ao registrar a resposta.');t._auraTaskSaving=false;mostrarToast('Falha ao gravar a resposta: '+err,'err');return {ok:false,error:err};}
   t._carrinhoStatus=resposta;t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t._auraTaskSaving=false;
   try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(locais))locais=[];var idxLocal=locais.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||cfg.email).toLowerCase()===String(cfg.email).toLowerCase();});var salvo=Object.assign({},idxLocal>=0?locais[idxLocal]:t,t,{carrinhoStatus:resposta,carrinhoRespondidoEm:t.carrinhoRespondidoEm,email:cfg.email});if(idxLocal>=0)locais[idxLocal]=salvo;else locais.push(salvo);localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}catch(eCache){console.warn('[AURA Tarefas] Resposta gravada na AURA, mas não foi possível atualizar o cache local.',eCache);}
   renderTarefas();var ehRefrig=_tarefaAutoRefrigerada_(t);
@@ -3598,7 +3582,7 @@ function renderTarefasHistorico(){
   dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
 }
 function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return String(v||'');var d=String(h).replace(/<[^>]+>/g,'').replace(/^\s*Validade:\s*/i,'').trim();return d||String(v||'');}
-function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
+function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
 async function tarefasHistFinalizar_(id,resposta){
   var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return {ok:false,error:'A tarefa não está mais na lista. Atualize o histórico e tente novamente.'};var cfg=loadCfg();
   if(!cfg.url||!cfg.email)return {ok:false,error:'A conexão com a AURA não está configurada.'};
@@ -3945,10 +3929,9 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
 var _vencPendente = null;
 
 function vencAlertCorrigir() {
-  // Mantém o seletor que originou a data disponível para correção.
+  // Fecha o popup e mantém o drum aberto para o colaborador corrigir a data
   document.getElementById('vencAlertBg').classList.remove('open');
-  var pendente=_vencPendente;_vencPendente=null;
-  if(pendente&&pendente.origem==='calendar')nfeAbrirValidadeColeta_(pendente.valFormatada);
+  _vencPendente = null;
 }
 
 function vencAlertContinuar() {
@@ -4545,7 +4528,7 @@ function selecionarUsuarioTablet(nome, email) {
   // Cada seleção explícita é uma nova entrada para popup/auditoria.
   try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
   setTimeout(function(){verificarAniversario(email,nome);},250);
-  setTimeout(function(){buscarTarefas(false);},0);
+  setTimeout(function(){buscarTarefas(true);},0);
   setTimeout(nfeAtualizarCardPendente_,80);
   setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
@@ -5159,6 +5142,37 @@ function nfeMarcarConferido_(i,v){
   nfeSalvarRascunho_();
   nfeAtualizarVisualConferenciaItem_(i);
 }
+var _nfeEscudoCatalogo_=[];
+var _nfeEscudoCatalogoKey_='';
+var _nfeEscudoCatalogoBusy_='';
+function nfeEscudoOptions_(it){
+  var atual=String(it&&it.escudoCodigo||'').trim(),html='<option value="">Não vincular ao Escudo</option>';
+  if(!_nfeEscudoCatalogo_.length&&atual)html+='<option value="'+nfeEsc_(atual)+'" selected>'+nfeEsc_(atual+(it.escudoNome?' · '+it.escudoNome:''))+'</option>';
+  _nfeEscudoCatalogo_.forEach(function(p){var c=String(p.codigo||'').trim();if(!c)return;html+='<option value="'+nfeEsc_(c)+'" '+(c===atual?'selected':'')+'>'+nfeEsc_(p.nome||c)+' · código '+nfeEsc_(c)+' · '+nfeEsc_(p.unidade||'kg')+'</option>';});
+  return html;
+}
+function nfeEscudoGarantirCatalogo_(){
+  var n=_nfeColetaNota;if(!n||!n.chave)return;
+  var key=nfeDigitos_(n.cnpjFornecedor)+'|'+String(n.chave),self=this;
+  if(_nfeEscudoCatalogoKey_===key||_nfeEscudoCatalogoBusy_===key)return;
+  _nfeEscudoCatalogoBusy_=key;
+  nfePost_({action:'nfeEscudoCatalogo',cnpjFornecedor:n.cnpjFornecedor||'',itens:(n.itens||[]).map(function(it){return {nItem:it.nItem,cProd:it.cProd};})}).then(function(j){
+    if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';
+    if(!j||!j.ok){console.warn('[NF-e] Catálogo Escudo indisponível:',j&&j.erro);return;}
+    _nfeEscudoCatalogo_=Array.isArray(j.produtos)?j.produtos:[];_nfeEscudoCatalogoKey_=key;
+    (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v&&!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}});
+    if(_nfeColetaNota===n){nfeSalvarRascunho_();nfeRenderNota_();}
+  }).catch(function(e){if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';console.warn('[NF-e] Falha ao consultar produtos do Escudo:',e);});
+}
+function nfeEscudoSelecionarProduto_(i,codigo){
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
+  codigo=String(codigo||'').trim();var p=_nfeEscudoCatalogo_.filter(function(x){return String(x.codigo||'').trim()===codigo;})[0];
+  var tinhaVinculo=!!String(it.escudoCodigo||'');it.escudoCodigo=codigo;it.escudoRemoverVinculo=!codigo&&tinhaVinculo;it.escudoNome=p?String(p.nome||''):'';it.escudoUnidade=p?String(p.unidade||'kg'):'kg';
+  it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
+  var hint=document.getElementById('nfeEscudoHint_'+i);if(hint)hint.textContent=codigo?'Vinculado a '+it.escudoNome+' ('+codigo+'). Os lotes conferidos serão enviados como peso em kg. O sistema memoriza este vínculo para as próximas notas deste fornecedor.':'Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados como peso em kg.';
+  nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);
+}
+
 function nfeRenderNota_(){
   var n=_nfeColetaNota;if(!n)return nfeColetaNova();
   document.getElementById('nfeHeadSub').textContent='NF '+(n.numero||'—')+' · '+(n.fornecedor||'Fornecedor');
@@ -5172,6 +5186,7 @@ function nfeRenderNota_(){
   document.getElementById('nfeActions').style.display='block';
   var b=document.getElementById('nfeSaveBtn');if(b){b.disabled=!!n.jaProcessada;b.innerHTML=n.jaProcessada?'<i class="ti ti-lock"></i> NF-e JÁ PROCESSADA':'<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}
   setTimeout(nfeCarregarFotosPendentes_,0);
+  setTimeout(nfeEscudoGarantirCatalogo_,0);
 }
 function nfeThumbHtml_(it,i){
   if(it&&it.fotoDataUrl)return '<div class="nfe-thumb" id="nfeThumb'+i+'"><img src="'+nfeEsc_(it.fotoDataUrl)+'" alt="Produto"></div>';
@@ -5250,7 +5265,7 @@ function nfeItemHtml_(it,i){
         +'</div>'
       +'</div>'
     +'</div>'
-    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
+    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-field" style="grid-column:1/-1"><label>Vínculo com o estoque do Escudo Padaria</label><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados como peso em kg.</small></div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
   +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+(it.controlar===false?'disabled ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>'+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
   +'</div>';
 }
@@ -5280,7 +5295,7 @@ function nfeCarregarFotosPendentes_(){
 }
 function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
-function nfeSetEan_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var novo=nfeDigitos_(v),atual=nfeDigitos_(it.eanAura||''),status=String(it.status||'');if(novo&&novo===atual&&(status==='encontrado'||status==='aguardando_cadastro'))return;it._campoBusca=String(v||'');it.eanAura=novo;it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
 // v6.57 — busca no Banco AURA/Telecon por código ou nome durante o vínculo da NF-e
 var _nfeBuscaProdutoTimer_={};
@@ -5332,11 +5347,7 @@ function nfeCampoCodigoKey_(ev,i,el){
 }
 function nfeCampoCodigoBlur_(i,el){
   setTimeout(function(){nfeFecharSugestoes_(i);},180);
-  var v=String(el&&el.value||'').trim();if(!/^\d+$/.test(v))return;
-  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_(v),atual=nfeDigitos_(it&&it.eanAura||''),status=String(it&&it.status||'');
-  if(atual===ean&&(status==='encontrado'||status==='aguardando_cadastro'))return;
-  if(atual!==ean)nfeSetEan_(i,v);
-  nfeValidarEan_(i);
+  var v=String(el&&el.value||'').trim();if(/^\d+$/.test(v))nfeSetEan_(i,v);
 }
 
 function nfeAjustarConversao_(i,v){
@@ -5432,9 +5443,7 @@ function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function nfeFmtDataPicker_(iso){var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};nfeDateAbrirComValor_(lotes[li].validade||'');}
-function nfeAbrirValidadeColeta_(valor){_nfeDateTarget={modo:'coleta'};nfeDateAbrirComValor_(valor||document.getElementById('fValidade').value||'');}
-function nfeDateAbrirComValor_(valor){var raw=String(valor||''),m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/),br=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/),now=new Date();if(!m&&br)m=[raw,br[3],String(br[2]).padStart(2,'0'),String(br[1]).padStart(2,'0')];_nfeDateSelected=m?m[1]+'-'+m[2]+'-'+m[3]:'';_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
+function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};_nfeDateSelected=lotes[li].validade||'';var m=_nfeDateSelected.match(/^(\d{4})-(\d{2})-(\d{2})$/),now=new Date();_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
 function nfeDateRenderMonths_(){var h=document.getElementById('nfeDateMonths');if(h)h.innerHTML=_nfeDateShort.map(function(n,i){return '<button type="button" class="nfe-date-month'+(i===_nfeDateMonth?' selected':'')+'" onclick="nfeDateEscolherMes_('+i+')">'+n+'</button>';}).join('');}
 function nfeDateRenderYears_(){var h=document.getElementById('nfeDateYears');if(!h)return;var now=(new Date()).getFullYear(),start=Math.min(2020,now-5,_nfeDateYear),end=Math.max(now+20,_nfeDateYear),html='';for(var y=start;y<=end;y++)html+='<button type="button" class="nfe-date-year'+(y===_nfeDateYear?' selected':'')+'" onclick="nfeDateEscolherAno_('+y+')">'+y+'</button>';h.innerHTML=html;}
 function nfeDateEscolherAno_(y){_nfeDateYear=y;nfeDateRenderYears_();}
@@ -5442,7 +5451,7 @@ function nfeDateEscolherMes_(m){_nfeDateMonth=m;document.getElementById('nfeDate
 function nfeDateVoltarMeses_(){document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();}
 function nfeDateMoverMes_(d){_nfeDateMonth+=d;if(_nfeDateMonth<0){_nfeDateMonth=11;_nfeDateYear--;}else if(_nfeDateMonth>11){_nfeDateMonth=0;_nfeDateYear++;}nfeDateRenderCalendar_();}
 function nfeDateRenderCalendar_(){var label=document.getElementById('nfeDateCalLabel'),h=document.getElementById('nfeDateDays');if(!h)return;label.textContent=_nfeDateMonthNames[_nfeDateMonth]+' '+_nfeDateYear;var first=new Date(_nfeDateYear,_nfeDateMonth,1),offset=(first.getDay()+6)%7,total=new Date(_nfeDateYear,_nfeDateMonth+1,0).getDate(),html='';for(var x=0;x<offset;x++)html+='<button class="nfe-date-day empty" tabindex="-1" aria-hidden="true"></button>';for(var d=1;d<=total;d++){var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');html+='<button type="button" class="nfe-date-day'+(iso===_nfeDateSelected?' selected':'')+'" onclick="nfeDateEscolherDia_('+d+')">'+d+'</button>';}h.innerHTML=html;}
-function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;if(t.modo==='coleta'){var fmt=nfeFmtDataPicker_(iso),partes=auraValidadePartes21h_(fmt);if(auraValidadeVencida21h_(fmt)){_vencPendente={dd:String(partes.d).padStart(2,'0'),mm:String(partes.m).padStart(2,'0'),yy:partes.y,valFormatada:fmt,origem:'calendar'};var alerta=document.getElementById('vencAlertData');if(alerta)alerta.textContent=fmt;nfeFecharSeletorValidade_();document.getElementById('vencAlertBg').classList.add('open');return;}_aplicarValidade(String(partes.d).padStart(2,'0'),String(partes.m).padStart(2,'0'),partes.y,fmt);nfeFecharSeletorValidade_();return;}nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
+function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
 function nfeFecharSeletorValidade_(){var o=document.getElementById('nfeDatePicker');if(o){o.classList.remove('open');o.setAttribute('aria-hidden','true');}document.body.style.overflow='';_nfeDateTarget=null;}
 function nfeDateOutside_(e){if(e.target&&e.target.id==='nfeDatePicker')nfeFecharSeletorValidade_();}document.addEventListener('keydown',function(e){if(e.key==='Escape')nfeFecharSeletorValidade_();});
 
@@ -5607,6 +5616,7 @@ function nfeTabletColetarPayload_(){
       conversaoDecisao:it.conversaoDecisao||'',
       unidadeNFe:it.uCom||'',
       unidadeAura:it.unidadeAura||it.unidadeDestinoSugerida||it.uCom,
+      escudoCodigo:String(it.escudoCodigo||''),escudoNome:String(it.escudoNome||''),escudoUnidade:String(it.escudoUnidade||'kg'),escudoRemoverVinculo:!!it.escudoRemoverVinculo,
       setor:it.setor||it.setorSugerido||'Outros',
       origemVinculo:it.origemVinculo||'',
       lotes:lotes
@@ -6439,12 +6449,12 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   var buscarServidor=window.buscarDescricao;
   window.buscarDescricao=async function(ean){
     var p=hit(ean);if(!p){return buscarServidor(ean);}
-    var el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco');
+    var el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco'),elPromo=document.getElementById('descPrecoPromo');
     if((codigoAtual||'')!==ean)return;
-    el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';elPreco.classList.remove('show');if(p.preco!==''&&p.preco!=null&&!isNaN(Number(p.preco))){elPreco.textContent='R$ '+Number(p.preco).toFixed(2).replace('.',',');elPreco.classList.add('show');}
+    el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');else{elPreco.classList.remove('show');if(elPromo)elPromo.classList.remove('show');}
     // A tela responde já. Lotes/setor e eventual dado mais novo chegam depois.
     setTimeout(function(){if((codigoAtual||'')===ean)buscarFotoCompleta(p.ean||ean,p.descricao||'');},0);
-    var cfg=loadCfg();if(!cfg.url)return;try{var r=await tentarBuscaCompleta(cfg.url,p.ean||ean);if((codigoAtual||'')!==ean)return;if(r&&r.suportado&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}if(r.preco!==undefined&&r.preco!==null&&r.preco!==''&&!isNaN(Number(r.preco))){elPreco.textContent='R$ '+Number(r.preco).toFixed(2).replace('.',',');elPreco.classList.add('show');}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(lotes.length){_loteEanAtual=p.ean||ean;_lotesEncontrados=lotes;abrirLoteModal();}}}catch(e){}
+    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var r=await tentarBuscaCompleta(cfg.url,p.ean||ean);if((codigoAtual||'')!==ean)return;if(r&&r.suportado&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco,lotes,'atualizando');if(lotes.length){_loteEanAtual=p.ean||ean;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
   };
 
   // NF-e: autocomplete local com 90ms; EAN completo é imediato.
@@ -6454,7 +6464,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
       if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco};});_nfeBuscaProdutoResultados_[i]=arr;if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');},ms);
   };
   var validarServidor=window.nfeValidarEan_;
-  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||''),p=hit(ean);if(!it||!p)return validarServidor(i);it.eanAura=nfeDigitos_(p.ean||ean);it._campoBusca=String(p.ean||ean);var input=document.getElementById('nfeEan_'+i);if(input)input.value=it._campoBusca;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur._campoBusca=String(cur.eanAura);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
+  window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||'');var p=hit(ean);if(!it||!p){return validarServidor(i);}it.eanAura=p.ean;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
   };
 })();
 </script>
@@ -6509,20 +6519,14 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function fecharAviso_(){var e=document.getElementById('auraTaskNotice');if(e)e.remove();}
   function atualizarBadge_(){var b=document.getElementById('tarefaBadge'),q=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;if(b){b.textContent=q;if(q)b.classList.add('show');else b.classList.remove('show');}var s=document.getElementById('tarefasSection');if(s){s.classList.remove('show');s.style.display='none';}return q;}
   // Não renderiza mais a lista de tarefas atrás do app. Só badge.
-  window.renderTarefas=function(){
-    var qtd=atualizarBadge_(),modal=document.getElementById('tarefasModal');
-    if(modal&&modal.classList.contains('open'))window.auraRenderTarefasModal_();
-    return qtd;
-  };
+  window.renderTarefas=function(){return atualizarBadge_();};
   window.auraRenderTarefasModal_=function(){
     var modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(!modal||!body)return;
     var pend=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});
-    if(cnt)cnt.textContent=pend.length;
-    if(!pend.length){body.innerHTML='<div class="tarefas-hist-empty"><i class="ti ti-circle-check"></i>Tudo certo! Não há tarefas pendentes.</div>';modal.classList.add('open');return;}
-    body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');try{carregarFotosTarefas('m');}catch(e){}
+    if(cnt)cnt.textContent=pend.length;body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');if(pend.length)try{carregarFotosTarefas('m');}catch(e){}
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
   };
   function htmlAviso_(nome,cached){
     var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
@@ -6619,7 +6623,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     if(fase==='respondida')answer='<div class="tarefas-hist-answer"><b>Quantidade respondida:</b> '+(q||0)+' un.<br>Falta concluir a ação comercial indicada.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-circle-check"></i> Concluído</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-clock"></i> Ainda não</button></div>';
     else if(fase==='pendente')answer='<div class="tarefas-hist-actions"><button class="tarefas-hist-action primary" onclick="tarefasHistResponderPendente_(\''+idJs+'\')"><i class="ti ti-player-play"></i> Executar tarefa</button></div>';
     else {var res=q===0?'Sem estoque restante':(t.carrinhoStatus==='sim'?'Ação comercial concluída':(t.carrinhoStatus==='nao'?'Ação ainda não concluída':'Tarefa finalizada'));answer='<div class="tarefas-hist-answer"><b>Quantidade confirmada:</b> '+(q===null?'—':q+' un.')+'<br><b>Resultado:</b> '+tarefasHistEsc_(res)+(t.carrinhoRespondidoEm?'<br><b>Finalizada em:</b> '+tarefasHistEsc_(tarefasHistData_(t.carrinhoRespondidoEm)):'')+'</div>';}
-    var preco=Number(t.precoAcao)>0?'<div class="aura-task-price-suggest"><i class="ti ti-tag"></i> Preço sugerido '+fmtMoney(t.precoAcao)+'</div>':'';
+    var preco=window._auraTarefaBadgesPrecoHtml_?window._auraTarefaBadgesPrecoHtml_(t):'';
     return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_g'+idx+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div><span class="aura-task-days-badge '+diasClasse(t)+'"><i class="ti ti-calendar-time"></i> '+tarefasHistEsc_(diasLabel(t))+'</span><span class="aura-task-sector-badge"><i class="ti ti-building-store"></i> '+tarefasHistEsc_(setor)+'</span></div><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+preco+(t.descricao?'<div class="tarefas-hist-desc"><div class="tarefas-hist-desc-label"><i class="ti ti-message-circle"></i> Orientação</div>'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
   }
   var originalAbrir=window.abrirCentralTarefas;
@@ -6642,7 +6646,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     fotos.forEach(function(x){_carregarFotoTarefa('g'+x.idx,x.t.cod,x.t.produto);});
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
   };
   console.info('[AURA] tarefas v4 — filtros por setor + dias para vencer; agrupamento por vencimento exato');
 })();
@@ -6699,7 +6703,72 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 })(window,document);</script>
 
 <script id="aura-process-loader-hooks">
-(function(){if(!window.AuraLoader)return;var ops=[["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
+(function(){if(!window.AuraLoader)return;var ops=[["tarefasHistFinalizar_", "Registrando a resposta da tarefa…", "Resposta da tarefa registrada"], ["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["carregarTarefasHistorico", "Consultando o histórico de tarefas…", "Histórico de tarefas carregado"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarTarefa", "Gravando a conferência do estoque da tarefa…", "Estoque da tarefa confirmado"], ["responderCarrinhoTarefa", "Registrando a situação da tarefa…", "Situação da tarefa registrada"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
+</script>
+<style id="auraPriceBadgesV1">
+.prod-price-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prod-preco,.prod-preco-promo{display:none;align-self:flex-start;white-space:normal;flex-shrink:1;font-family:var(--mono);font-size:11px;font-weight:900;line-height:1.2;padding:6px 9px;border-radius:9px}
+.prod-preco.show{display:inline-flex;color:#B42318;background:rgba(226,75,74,.11);border:1.5px solid #E24B4A}
+.prod-preco-promo.show{display:inline-flex;color:#755700;background:rgba(255,193,7,.16);border:1.5px solid #D9A400}
+.aura-price-badges{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin-top:7px}
+.aura-price-badge{display:inline-flex;flex-direction:column;justify-content:center;gap:2px;min-width:105px;padding:5px 8px;border:1.5px solid;border-radius:8px;line-height:1.15}
+.aura-price-badge small{font-family:inherit;font-size:8px;font-weight:900;letter-spacing:.045em;text-transform:uppercase;opacity:.88}
+.aura-price-badge b{font-family:var(--mono);font-size:12px;font-weight:950}
+.aura-price-badge.sale{color:#B42318;background:rgba(226,75,74,.11);border-color:#E24B4A}
+.aura-price-badge.promo{color:#755700;background:rgba(255,193,7,.16);border-color:#D9A400}
+.aura-price-badge.na{font-size:9px;min-width:0;padding:6px 8px}
+.aura-price-context{width:100%;font-size:9px;color:var(--tx2);line-height:1.3}
+.aura-validade-price{margin-top:8px;padding:0;background:transparent;border:0;font-size:10px;line-height:1.35}
+.aura-validade-price.urgent{background:transparent;border:0}
+@media(max-width:390px){.prod-price-row{gap:5px}.prod-preco,.prod-preco-promo{font-size:10px;padding:5px 7px}.aura-price-badge{min-width:96px;padding:5px 7px}.aura-price-badge b{font-size:11px}}
+</style>
+<script id="auraPriceBadgesLogicV1">
+(function(){
+  'use strict';
+  function num(v){var n=Number(v);return isFinite(n)&&n>0?n:0;}
+  function brl(v){return num(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+  function badgeHtml(sale,promo,status,context){
+    var s=num(sale),p=num(promo),h='<div class="aura-price-badges">';
+    h+='<span class="aura-price-badge sale"><small>Preço de venda</small><b>'+(s?brl(s):'Não cadastrado')+'</b></span>';
+    h+='<span class="aura-price-badge promo'+(p?'':' na')+'"><small>Promoção por validade</small><b>'+(p?brl(p):(status||'Não aplicável'))+'</b></span>';
+    if(context)h+='<div class="aura-price-context">'+context+'</div>';
+    return h+'</div>';
+  }
+  function roundCharm(value,floor,ceiling){
+    value=Number(value)||0;floor=Math.max(0,Number(floor)||0);ceiling=Number(ceiling)||0;if(!(value>0))return 0;
+    var cent=Math.round(value*100)/100,whole=Math.floor(cent),candidates=[whole-.01,whole+.99,whole+1.99];
+    if(Math.abs((cent-Math.floor(cent))-.99)<.0001)candidates.unshift(cent);
+    candidates=candidates.filter(function(x){return x>0&&x+.0001>=floor&&(!(ceiling>0)||x<=ceiling+.0001);});
+    if(!candidates.length){if(ceiling>0&&ceiling+.0001>=floor)return Math.round(ceiling*100)/100;var up=Math.floor(floor)+.99;if(up+.0001<floor)up+=1;return Math.round(up*100)/100;}
+    candidates.sort(function(a,b){var da=Math.abs(a-value),db=Math.abs(b-value);return da===db?a-b:da-db;});return Math.round(candidates[0]*100)/100;
+  }
+  function lookup(code){try{var c=window.AURASearchCore,p=c&&c.ready&&code?c.lookup(code):null;return p||{};}catch(e){return {};}}
+  function promoFor(sale,cost,days){
+    sale=num(sale);cost=num(cost);days=Number(days);if(!isFinite(days)||days<0||days>15)return 0;
+    if(!cost)return sale?roundCharm(sale*.7,0,sale):0;
+    var target,markup;
+    if(days<=10)target=cost;
+    else{markup=sale>cost?sale/cost-1:.1;target=cost*(1+markup*Math.max(0,Math.min(1,(days-10)/5)));if(sale)target=Math.min(target,sale);}
+    return roundCharm(target,cost,sale);
+  }
+  function daysInfo(t){var d=t&&t.diasParaVencer;if(d!==null&&d!==undefined&&d!==''&&isFinite(Number(d)))return Number(d);return null;}
+  function taskPriceData(t){t=t||{};var p=lookup(t.cod),sale=num(t.precoNormal)||num(p.preco)||num(p.precoNormal),cost=num(t.custoGerencial)||num(p.custo),days=daysInfo(t),promo=0;
+    if(days!==null&&days>=0&&days<=15)promo=num(t.precoAcao)||promoFor(sale,cost,days);
+    var status=days===null?'Aguardando validade':(days<0?'Validade encerrada':(days>15?'Fora da faixa de promoção':(!sale&&!cost?'Preço de referência indisponível':'Promoção indisponível')));
+    return {sale:sale,promo:promo,days:days,status:status};
+  }
+  window._auraTarefaBadgesPrecoHtml_=function(t){var x=taskPriceData(t),context=x.days!==null&&x.days>=0&&x.days<=15?'Válido para lotes a até 15 dias do vencimento; preço ativo até 21h no dia da validade.':'';return badgeHtml(x.sale,x.promo,x.status,context);};
+  function promoLot(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15?(num(l.precoSugerido)||promoFor(l.precoNormal,l.custo,d)):0;}
+  window._auraAtualizarBadgesConsulta_=function(sale,lotes,mode){
+    lotes=Array.isArray(lotes)?lotes:[];var saleN=num(sale);if(!saleN){for(var i=0;i<lotes.length;i++){saleN=num(lotes[i]&&lotes[i].precoNormal);if(saleN)break;}}
+    var elegiveis=lotes.filter(function(l){return promoLot(l)>0;});elegiveis.sort(function(a,b){return Number(a.diasParaVencer)-Number(b.diasParaVencer);});
+    var promo=elegiveis.length?promoLot(elegiveis[0]):0,el=document.getElementById('descPreco'),ep=document.getElementById('descPrecoPromo');
+    if(el){el.textContent='VENDA · '+(saleN?brl(saleN):'Não cadastrada');el.classList.add('show');}
+    if(ep){var inRange=lotes.some(function(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15;}),st=mode==='consultando'?'Consultando validade…':(mode==='indisponivel'?'Consulta de validade indisponível':(inRange?'Preço não disponível':'Sem lote elegível'));ep.textContent='PROMOÇÃO · '+(promo?brl(promo):st);ep.classList.add('show');}
+  };
+  window._auraPrecoValidadeLoteHtml_=function(l){l=l||{};var d=Number(l.diasParaVencer),eligible=isFinite(d)&&d>=0&&d<=15,promo=eligible?promoLot(l):0,status=eligible?'Preço indisponível':'Sem promoção por validade',sale=num(l.precoNormal),context=eligible?d+' dia'+(d===1?'':'s')+' para vencer · promoção válida até 21h no dia da validade':(isFinite(d)?(d<0?'Validade encerrada':'Vencimento fora da faixa de promoção'):'');
+    return '<div class="aura-validade-price'+(eligible&&d<=10?' urgent':'')+'">'+badgeHtml(sale,promo,status,context)+'</div>';};
+})();
 </script>
 </body>
 </html>
