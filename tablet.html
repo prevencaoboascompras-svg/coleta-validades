@@ -5,6 +5,7 @@
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
 <!-- v7.02 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
 <!-- v7.13 — seleção de produto por código interno/descrição sem perder o vínculo ao sair do campo -->
+<!-- v7.14 — histórico de NF-e visível a todos; retomar/editar restrito ao responsável -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1473,7 +1474,7 @@ html,body{overscroll-behavior-y:none!important;}
   <div class="nfe-hist-shell">
     <div class="nfe-hist-head">
       <button class="nfe-hist-back" type="button" onclick="nfeHistVoltar_()" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
-      <div class="nfe-hist-head-main"><div class="nfe-hist-title" id="nfeHistTitle">Histórico de NF-e</div><div class="nfe-hist-sub" id="nfeHistUsuario">Notas lançadas por você</div></div>
+      <div class="nfe-hist-head-main"><div class="nfe-hist-title" id="nfeHistTitle">Histórico de NF-e</div><div class="nfe-hist-sub" id="nfeHistUsuario">Histórico de notas de todos os usuários</div></div>
       <button class="nfe-hist-refresh" type="button" onclick="nfeHistAtualizar_()" title="Atualizar"><i class="ti ti-refresh"></i></button>
     </div>
     <div class="nfe-hist-body">
@@ -6117,7 +6118,7 @@ function nfeHistEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(
 function nfeHistNorm_(v){v=String(v==null?'':v);try{v=v.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}return v.toLowerCase();}
 function nfeHistDataFmt_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime())){var m=String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);if(m)d=new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0));}return isNaN(d.getTime())?String(v):d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 function nfeHistStatusClass_(s){s=String(s||'').toUpperCase();return s==='COMPLETA'?'ok':(['AGUARDANDO_CADASTRO','AGUARDANDO_CADASTRO_COM_DIVERGENCIA','REGISTRADA_COM_DIVERGENCIA','PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(s)>=0?'wait':'');}
-function abrirHistoricoNFe(){var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione o colaborador primeiro','warn');return;}try{fecharCentralTarefas();}catch(e){}try{fecharRetiradas();}catch(e){} _nfeHistAberto=true;_nfeHistScanner=!!scannerAtivo;try{pararScanner();}catch(e){}var v=document.getElementById('nfeHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}document.body.classList.add('nfe-hist-aberta');var u=document.getElementById('nfeHistUsuario');if(u)u.textContent=(nomeDoEmail(cfg.email)||cfg.email)+' · notas lançadas';_nfeHistDetalhe=null;nfeHistMostrarLista_();carregarHistoricoNFe(false);}
+function abrirHistoricoNFe(){var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione o colaborador primeiro','warn');return;}try{fecharCentralTarefas();}catch(e){}try{fecharRetiradas();}catch(e){} _nfeHistAberto=true;_nfeHistScanner=!!scannerAtivo;try{pararScanner();}catch(e){}var v=document.getElementById('nfeHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}document.body.classList.add('nfe-hist-aberta');var u=document.getElementById('nfeHistUsuario');if(u)u.textContent='Histórico geral · consulta de todos os usuários';_nfeHistDetalhe=null;nfeHistMostrarLista_();carregarHistoricoNFe(false);}
 function fecharHistoricoNFe(){if(!_nfeHistAberto)return;_nfeHistAberto=false;_nfeHistToken++;var v=document.getElementById('nfeHistView');if(v){v.classList.remove('open');v.setAttribute('aria-hidden','true');}document.body.classList.remove('nfe-hist-aberta');if(_nfeHistScanner)setTimeout(function(){if(!_nfeHistAberto){try{iniciarScanner();}catch(e){}}},120);_nfeHistScanner=false;}
 function nfeHistVoltar_(){if(_nfeHistDetalhe){_nfeHistDetalhe=null;nfeHistMostrarLista_();return;}fecharHistoricoNFe();}
 function nfeHistMostrarLista_(){var w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');if(w)w.classList.remove('hide');if(d){d.classList.remove('open');d.innerHTML='';}if(t)t.textContent='Histórico de NF-e';}
@@ -6129,14 +6130,27 @@ async function carregarHistoricoNFe(manual){
   var token=++_nfeHistToken;if(st){st.className='nfe-hist-status show';st.innerHTML='<i class="ti ti-loader-2 nfe-spin"></i> Consultando histórico…';}if(list)list.innerHTML='';
   try{
     var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},60000):null;
-    var resp=await fetch(cfg.url+'?action=nfeHistoricoUsuario&email='+encodeURIComponent(cfg.email)+'&limite=150&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
+    var resp=await fetch(cfg.url+'?action=nfeHistoricoUsuario&email='+encodeURIComponent(cfg.email)+'&limite=2000&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
     if(!resp.ok)throw new Error('HTTP '+resp.status);var data=await resp.json();if(token!==_nfeHistToken)return {ok:true,cancelled:true};if(!data||!data.ok)throw new Error((data&&data.erro)||'Falha ao consultar o histórico de NF-e.');
     _nfeHistNotas=Array.isArray(data.notas)?data.notas:[];if(st){st.className='nfe-hist-status';st.textContent='';}renderHistoricoNFe_();return {ok:true,total:_nfeHistNotas.length};
   }catch(e){
     if(token!==_nfeHistToken)return {ok:true,cancelled:true};var erro=String(e&&e.message||e||'Falha ao carregar histórico de NF-e.');if(st){st.className='nfe-hist-status show err';st.textContent='Falha ao carregar histórico: '+erro;}return {ok:false,error:erro};
   }
 }
-function renderHistoricoNFe_(){var list=document.getElementById('nfeHistList');if(!list)return;var q=nfeHistNorm_(_nfeHistBusca),dados=_nfeHistNotas.filter(function(n){if(!q)return true;var h=nfeHistNorm_([n.numero,n.fornecedor,n.chave,n.status,n.emissao,n.processadaEm].join(' '));return q.split(/\s+/).filter(Boolean).every(function(x){return h.indexOf(x)>=0;});});if(!dados.length){list.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-file-search"></i>'+(q?'Nenhuma NF-e encontrada para esta pesquisa.':'Você ainda não lançou NF-e neste usuário.')+'</div>';return;}list.innerHTML=dados.map(function(n){var sc=nfeHistStatusClass_(n.status);return '<div class="nfe-hist-card" onclick="abrirDetalheNFe_(\''+nfeHistEsc_(n.chave)+'\')"><div class="nfe-hist-card-top"><div class="nfe-hist-card-icon"><i class="ti ti-file-invoice"></i></div><div class="nfe-hist-card-main"><div class="nfe-hist-forn">NF '+nfeHistEsc_(n.numero||'—')+' · '+nfeHistEsc_(n.fornecedor||'Fornecedor')+'</div><div class="nfe-hist-meta">'+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+' · '+nfeHistEsc_(n.itens||0)+' item(ns) · '+nfeHistEsc_(n.lotes||0)+' lote(s)<br><span style="font-family:var(--mono)">'+nfeHistEsc_(n.chave)+'</span></div><span class="nfe-hist-status-badge '+sc+'">'+nfeHistEsc_(n.status||'—')+'</span>'+((['PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(String(n.status||'').toUpperCase())>=0)?'<button type="button" class="nfe-hist-resume-chip" onclick="event.stopPropagation();nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave)+'\')"><i class="ti ti-player-play"></i> CONTINUAR</button>':'')+'</div><i class="ti ti-chevron-right" style="color:var(--tx2);margin-top:10px"></i></div></div>';}).join('');}
+function renderHistoricoNFe_(){
+  var list=document.getElementById('nfeHistList');if(!list)return;
+  var cfg=loadCfg(),q=nfeHistNorm_(_nfeHistBusca),dados=_nfeHistNotas.filter(function(n){
+    if(!q)return true;
+    var h=nfeHistNorm_([n.numero,n.fornecedor,n.chave,n.status,n.emissao,n.processadaEm,n.operador,nomeDoEmail(n.operador||'')].join(' '));
+    return q.split(/\s+/).filter(Boolean).every(function(x){return h.indexOf(x)>=0;});
+  });
+  if(!dados.length){list.innerHTML='<div class="nfe-hist-empty"><i class="ti ti-file-search"></i>'+(q?'Nenhuma NF-e encontrada para esta pesquisa.':'Nenhuma NF-e disponível no histórico.')+'</div>';return;}
+  list.innerHTML=dados.map(function(n){
+    var sc=nfeHistStatusClass_(n.status),dono=!!cfg.email&&nfeHistNorm_(n.operador)===nfeHistNorm_(cfg.email),autor=n.operador?(nomeDoEmail(n.operador)||n.operador):'Usuário não identificado';
+    var retomar=dono&&(['PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(String(n.status||'').toUpperCase())>=0);
+    return '<div class="nfe-hist-card" onclick="abrirDetalheNFe_(\''+nfeHistEsc_(n.chave)+'\')"><div class="nfe-hist-card-top"><div class="nfe-hist-card-icon"><i class="ti ti-file-invoice"></i></div><div class="nfe-hist-card-main"><div class="nfe-hist-forn">NF '+nfeHistEsc_(n.numero||'—')+' · '+nfeHistEsc_(n.fornecedor||'Fornecedor')+'</div><div class="nfe-hist-meta">'+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+' · '+nfeHistEsc_(n.itens||0)+' item(ns) · '+nfeHistEsc_(n.lotes||0)+' lote(s)<br>Registrada por: '+nfeHistEsc_(autor)+'<br><span style="font-family:var(--mono)">'+nfeHistEsc_(n.chave)+'</span></div><span class="nfe-hist-status-badge '+sc+'">'+nfeHistEsc_(n.status||'—')+'</span>'+(retomar?'<button type="button" class="nfe-hist-resume-chip" onclick="event.stopPropagation();nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave)+'\')"><i class="ti ti-player-play"></i> CONTINUAR</button>':'')+'</div><i class="ti ti-chevron-right" style="color:var(--tx2);margin-top:10px"></i></div></div>';
+  }).join('');
+}
 async function abrirDetalheNFe_(chave,refresh){
   var cfg=loadCfg(),w=document.getElementById('nfeHistListWrap'),d=document.getElementById('nfeHistDetail'),t=document.getElementById('nfeHistTitle');
   if(!cfg.url||!cfg.email)return {ok:false,error:'Selecione um colaborador para abrir esta NF-e.'};
@@ -6180,9 +6194,11 @@ function renderDetalheNFe_(){
   var cadastrados=it.filter(function(x){return !!x.cadastrado;}).length;
   var aguardando=it.length-cadastrados;
   var html='<div class="nfe-note"><div class="nfe-note-top"><div class="nfe-note-icon"><i class="ti ti-file-invoice"></i></div><div><div class="nfe-note-name">'+nfeHistEsc_(n.fornecedor||'Fornecedor não informado')+'</div><div class="nfe-note-meta">NF '+nfeHistEsc_(n.numero||'—')+(n.serie?' · Série '+nfeHistEsc_(n.serie):'')+(n.emissao?' · Emissão '+nfeHistEsc_(n.emissao):'')+'<br>'+(n.cnpjFornecedor?'CNPJ '+nfeHistEsc_(n.cnpjFornecedor)+' · ':'')+'Chave '+nfeHistEsc_(n.chave||'')+'<br>Status: <b>'+nfeHistEsc_(n.status||'—')+'</b> · Lançada em '+nfeHistEsc_(nfeHistDataFmt_(n.processadaEm))+'</div></div></div><div class="nfe-note-kpis"><div class="nfe-note-kpi"><b>'+it.length+'</b><span>Itens</span></div><div class="nfe-note-kpi"><b>'+cadastrados+'</b><span>Reconhecidos</span></div><div class="nfe-note-kpi"><b>'+aguardando+'</b><span>Vincular</span></div></div></div>';
-  var podeRetomar=nfeHistEhPendente_(n,it);
-  if(podeRetomar){
-    html='<div class="nfe-hist-resume-bar"><div class="txt"><b><i class="ti ti-alert-circle"></i> Conferência pendente</b><br>Abra esta NF-e para continuar apenas os itens que ainda faltam.</div><button type="button" class="nfe-hist-resume-btn" onclick="nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave||'')+'\')"><i class="ti ti-player-play"></i> RETOMAR CONFERÊNCIA</button></div>'+html;
+  var precisaRetomar=nfeHistEhPendente_(n,it),cfgLeitor=loadCfg(),souDono=!!cfgLeitor.email&&nfeHistNorm_(n.operador)===nfeHistNorm_(cfgLeitor.email);
+  if(precisaRetomar&&souDono){
+    html='<div class="nfe-hist-resume-bar"><div class="txt"><b><i class="ti ti-alert-circle"></i> Conferência pendente</b><br>Revise os itens que faltam e grave a conferência para concluir.</div><button type="button" class="nfe-hist-resume-btn" onclick="nfeHistRetomarPendente_(\''+nfeHistEsc_(n.chave||'')+'\')"><i class="ti ti-player-play"></i> RETOMAR CONFERÊNCIA</button></div>'+html;
+  }else if(precisaRetomar){
+    html='<div class="nfe-hist-resume-bar"><div class="txt"><b><i class="ti ti-eye"></i> Conferência pendente</b><br>Você pode consultar os itens. Para retomar e alterar o lançamento, entre com o usuário que iniciou esta nota.</div></div>'+html;
   }
   html+=it.map(function(x,idx){
     var nomeBanco=String(x.nomeBanco||'').trim(),nomeNF=String(x.nomeNFe||'').trim(),nome=nomeBanco||nomeNF||('Item '+(x.nItem||''));
@@ -6215,7 +6231,7 @@ function renderDetalheNFe_(){
         +(x.podeEditar?'<button class="nfe-hist-edit-btn" onclick="nfeHistAbrirEdicao_('+idx+')"><i class="ti ti-edit"></i> CONFERIR / EDITAR PRODUTO</button><div class="nfe-hist-editbox" id="nfeHistEdit'+idx+'"><div style="font-size:10px;font-weight:900">Vincular ao produto do BANCO DE DADOS</div><div class="nfe-hist-warning">A edição exige que o novo EAN já exista no banco Telecon. Toda alteração fica registrada em auditoria.</div><label>Código de barras / EAN</label><input id="nfeHistEan'+idx+'" inputmode="numeric" value="'+nfeHistEsc_(ean||'')+'"><label>Setor</label><select id="nfeHistSetor'+idx+'">'+nfeHistSetoresOptions_(x.setor||'Outros')+'</select><div class="nfe-hist-edit-actions"><button onclick="nfeHistFecharEdicao_('+idx+')">Cancelar</button><button class="save" onclick="nfeHistSalvarEdicao_('+idx+')"><i class="ti ti-device-floppy"></i> Salvar vínculo</button></div></div>':'')
       +'</div></div>';
   }).join('');
-  html+='<div class="nfe-hist-audit"><i class="ti ti-shield-check"></i> Consulta vinculada ao colaborador que lançou a nota. Edições ficam registradas na aba <b>NF-e Histórico Edições</b>.</div>';
+  html+='<div class="nfe-hist-audit"><i class="ti ti-shield-check"></i> Histórico visível para todos os usuários do Coleta. Edições e retomadas da conferência ficam restritas ao responsável pelo lançamento.</div>';
   d.innerHTML=html;
   setTimeout(nfeHistCarregarFotosPendentes_,0);
 }
@@ -6227,6 +6243,8 @@ function nfeHistEhPendente_(n,itens){
 }
 async function nfeHistRetomarPendente_(chave){
   chave=nfeDigitos_(chave);if(chave.length!==44){mostrarToast('Chave da NF-e inválida','warn');return;}
+  var cfg=loadCfg(),nota=(_nfeHistDetalhe&&_nfeHistDetalhe.nota&&String(_nfeHistDetalhe.nota.chave||'')===chave)?_nfeHistDetalhe.nota:_nfeHistNotas.filter(function(n){return String(n.chave||'')===chave;})[0];
+  if(!nota||nfeHistNorm_(nota.operador)!==nfeHistNorm_(cfg.email)){mostrarToast('Você pode visualizar esta nota, mas somente o usuário responsável pode retomar a conferência.','warn');return;}
   try{fecharHistoricoNFe();}catch(e){}
   await nfeColetaBuscarChave(chave);
 }
