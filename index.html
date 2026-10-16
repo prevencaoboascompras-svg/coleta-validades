@@ -3,6 +3,7 @@
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
 <!-- v7.01 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
+<!-- v7.13 — seleção de produto por código interno/descrição sem perder o vínculo ao sair do campo -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4598,7 +4599,7 @@ function nfeDraftResumo_(nota){
   try{
     if(typeof nfeConferenciaResumo_==='function')return nfeConferenciaResumo_(nota);
   }catch(e){}
-  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&it.controlar!==false;}):[];
+  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&it.controlar!==false&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO';}):[];
   var ok=itens.filter(function(it){return it&&it.conferenciaManual===true;}).length;
   return {total:itens.length,conferidos:ok,pendentes:Math.max(0,itens.length-ok),pct:itens.length?Math.round(ok*100/itens.length):0};
 }
@@ -4746,7 +4747,7 @@ async function nfeConsultarStatus_(chave){
 function nfeLinhasEsperadasLocal_(nota){
   var total=0;
   ((nota&&Array.isArray(nota.itens))?nota.itens:[]).forEach(function(it){
-    if(!it||it.controlar===false)return;
+    if(!it||it.controlar===false||String(it.recebimentoStatus||'RECEBIDO').toUpperCase()==='NAO_RECEBIDO')return;
     (Array.isArray(it.lotes)?it.lotes:[]).forEach(function(l){
       if(String(l&&l.validade||'').trim()&&(Number(l&&l.quantidade)||0)>0)total++;
     });
@@ -4761,11 +4762,12 @@ function nfeConfirmacaoCompleta_(info,nota){
   if(esperadasServidor>esperadas)esperadas=esperadasServidor;
   var fisicas=Number(info.linhasRespostas)||0;
   var st=String(info.status||'').toUpperCase();
-  var statusFinal=['REGISTRADA','COMPLETA','AGUARDANDO_CADASTRO'].indexOf(st)>=0;
+  var statusFinal=['REGISTRADA','REGISTRADA_COM_DIVERGENCIA','AGUARDANDO_CADASTRO_COM_DIVERGENCIA','COMPLETA','AGUARDANDO_CADASTRO'].indexOf(st)>=0;
   var parcial=info.parcial===true||['PARCIAL','PENDENTE_ITENS','PROCESSANDO'].indexOf(st)>=0;
   var pendServidor=Array.isArray(info.pendentes)?info.pendentes.length:0;
-  var localCompleto=!!(resumo&&resumo.total>0&&Number(resumo.pendentes||0)===0);
-  var linhasCompletas=esperadas>0&&fisicas>=esperadas;
+  var soDivergencias=info.divergenciasRegistradas===true&&esperadas===0;
+  var localCompleto=!!(resumo&&Number(resumo.pendentes||0)===0&&(resumo.total>0||soDivergencias));
+  var linhasCompletas=soDivergencias||(esperadas>0&&fisicas>=esperadas);
   var confirmada=info.confirmacaoRespostas===true;
   return {
     ok:!!(confirmada&&linhasCompletas&&localCompleto&&statusFinal&&!parcial&&!pendServidor),
@@ -4794,6 +4796,7 @@ function nfeConcluirRecebimento_(info,confirmado){
   }
 
   var linhasFisicas=ck.fisicas;
+  var alertaRecebimento=String(info.mensagem||'').indexOf('divergências de recebimento')>=0?info.mensagem:'';
   var aguard=Array.isArray(info.aguardandoCadastro)?info.aguardandoCadastro:[];
   var st=String(info.status||'').toUpperCase();
   var esperaTelecon=aguard.length>0||st==='AGUARDANDO_CADASTRO'||info.aguardandoCadastro===true;
@@ -4802,13 +4805,13 @@ function nfeConcluirRecebimento_(info,confirmado){
   if(diag){
     diag.className='nfe-ind-diag show ok';
     diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados estão em Respostas ao formulário 1 e todos os itens locais estão conferidos.</span>'
-      +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'');
+      +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'')+(alertaRecebimento?'<br><span class="new">'+nfeEsc_(alertaRecebimento)+'</span>':'');
   }
 
   mostrarToast(
     esperaTelecon
       ?('NF-e confirmada na planilha. '+(aguard.length||'Produto(s)')+' aguardando cadastro Telecon.')
-      :(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)'),
+      :(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)')+(alertaRecebimento?' · divergência registrada'+(String(info.mensagem||'').indexOf('Canhoto retido sinalizado')>=0?' · canhoto retido':''):''),
     esperaTelecon?'warn':'ok'
   );
 
@@ -5065,7 +5068,7 @@ function nfeConferenciaConfirmada_(it){
   return !!(e.pronto&&it&&it.conferenciaManual===true&&String(it.conferenciaAssinatura||'')===nfeConferenciaAssinatura_(it));
 }
 function nfeConferenciaResumo_(nota){
-  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&it.controlar!==false;}):[];
+  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&it.controlar!==false&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO';}):[];
   var ok=itens.filter(nfeConferenciaConfirmada_).length;
   return {total:itens.length,conferidos:ok,pendentes:Math.max(0,itens.length-ok),pct:itens.length?Math.round(ok*100/itens.length):0};
 }
@@ -5112,6 +5115,9 @@ function nfeMarcarConferido_(i,v){
 var _nfeEscudoCatalogo_=[];
 var _nfeEscudoCatalogoKey_='';
 var _nfeEscudoCatalogoBusy_='';
+function nfeEscudoFatorPadrao_(it){var d=String(it&&it.nome||'').toUpperCase().replace(/,/g,'.'),m=d.match(/(?:^|[^0-9])(\d+(?:\.\d+)?)\s*KG(?:\b|$)/);if(m&&Number(m[1])>0)return Number(m[1]);var u=String(it&&(it.uCom||it.unidadeNFe)||'').trim().toUpperCase();return /^(KG|KGM|QUILO|QUILOGRAMA)$/.test(u)?1:'';}
+function nfeEscudoFatorValor_(it){return it&&it.escudoFatorKg!==undefined&&it.escudoFatorKg!==null&&it.escudoFatorKg!==''?it.escudoFatorKg:nfeEscudoFatorPadrao_(it);}
+function nfeEscudoFatorAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var raw=String(v||'').replace(',','.');it.escudoFatorKg=raw===''?'':Math.max(0,Number(raw)||0);nfeSalvarRascunho_();}
 function nfeEscudoOptions_(it){
   var atual=String(it&&it.escudoCodigo||'').trim(),html='<option value="">Não vincular ao Escudo</option>';
   if(!_nfeEscudoCatalogo_.length&&atual)html+='<option value="'+nfeEsc_(atual)+'" selected>'+nfeEsc_(atual+(it.escudoNome?' · '+it.escudoNome:''))+'</option>';
@@ -5127,14 +5133,14 @@ function nfeEscudoGarantirCatalogo_(){
     if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';
     if(!j||!j.ok){console.warn('[NF-e] Catálogo Escudo indisponível:',j&&j.erro);return;}
     _nfeEscudoCatalogo_=Array.isArray(j.produtos)?j.produtos:[];_nfeEscudoCatalogoKey_=key;
-    (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v&&!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}});
+    (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v){if(!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}if(it.escudoFatorKg===undefined||it.escudoFatorKg==='')it.escudoFatorKg=Number(v.fatorKg)||nfeEscudoFatorPadrao_(it);}});
     if(_nfeColetaNota===n){nfeSalvarRascunho_();nfeRenderNota_();}
   }).catch(function(e){if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';console.warn('[NF-e] Falha ao consultar produtos do Escudo:',e);});
 }
 function nfeEscudoSelecionarProduto_(i,codigo){
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   codigo=String(codigo||'').trim();var p=_nfeEscudoCatalogo_.filter(function(x){return String(x.codigo||'').trim()===codigo;})[0];
-  var tinhaVinculo=!!String(it.escudoCodigo||'');it.escudoCodigo=codigo;it.escudoRemoverVinculo=!codigo&&tinhaVinculo;it.escudoNome=p?String(p.nome||''):'';it.escudoUnidade=p?String(p.unidade||'kg'):'kg';
+  var tinhaVinculo=!!String(it.escudoCodigo||'');it.escudoCodigo=codigo;it.escudoRemoverVinculo=!codigo&&tinhaVinculo;it.escudoNome=p?String(p.nome||''):'';it.escudoUnidade=p?String(p.unidade||'kg'):'kg';it.escudoFatorKg=nfeEscudoFatorPadrao_(it);
   it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
   var hint=document.getElementById('nfeEscudoHint_'+i);if(hint)hint.textContent=codigo?'Vinculado a '+it.escudoNome+' ('+codigo+'). Os lotes conferidos serão enviados como peso em kg. O sistema memoriza este vínculo para as próximas notas deste fornecedor.':'Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados como peso em kg.';
   nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);
@@ -5142,9 +5148,12 @@ function nfeEscudoSelecionarProduto_(i,codigo){
 
 function nfeRenderNota_(){
   var n=_nfeColetaNota;if(!n)return nfeColetaNova();
+  if(typeof n.canhotoRetido==='undefined')n.canhotoRetido=false;
+  (n.itens||[]).forEach(function(it){if(typeof it.recebimentoStatus==='undefined')it.recebimentoStatus='RECEBIDO';if(typeof it.qtdRecebida==='undefined')it.qtdRecebida=Number(it.qCom)||0;});
   document.getElementById('nfeHeadSub').textContent='NF '+(n.numero||'—')+' · '+(n.fornecedor||'Fornecedor');
   var html='<div class="nfe-note"><div class="nfe-note-top"><div class="nfe-note-icon"><i class="ti ti-file-invoice"></i></div><div><div class="nfe-note-name">'+nfeEsc_(n.fornecedor||'Fornecedor não informado')+'</div><div class="nfe-note-meta">NF '+nfeEsc_(n.numero||'—')+' · Série '+nfeEsc_(n.serie||'—')+' · Emissão '+nfeEsc_(n.emissao||'—')+'<br>CNPJ '+nfeEsc_(n.cnpjFornecedor||'—')+' · Chave '+nfeEsc_(n.chave||'')+'</div></div></div><div class="nfe-note-kpis"><div class="nfe-note-kpi"><b>'+Number(n.totalItens||0)+'</b><span>Itens</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalEncontrados||0)+'</b><span>Reconhecidos</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalNaoEncontrados||0)+'</b><span>Vincular</span></div></div></div>';
   if(n.jaProcessada)html+='<div class="nfe-warn danger"><b>Esta NF-e já foi concluída anteriormente.</b><br>Para evitar duplicidade, a AURA não fará novo lançamento por padrão.</div>';
+  html+='<div class="nfe-warn" style="display:flex;align-items:center;gap:10px"><input id="nfeCanhotoRetido" type="checkbox" '+(n.canhotoRetido?'checked':'')+' onchange="_nfeColetaNota.canhotoRetido=this.checked;nfeSalvarRascunho_()"><label for="nfeCanhotoRetido"><b>Canhoto retido</b> · sinalizar retenção por divergência no recebimento</label></div>';
   var confResumo=nfeConferenciaResumo_(n);
   html+='<div class="nfe-warn"><b>Conferência:</b> vincule o código, confirme o setor, informe validade/quantidade e feche a divisão. Quando estiver tudo certo, marque <b>Conferido</b>; o item ganha uma aura azul.'
     +'<div class="nfe-conf-progress"><div class="nfe-conf-progress-top"><span>Progresso da conferência</span><span id="nfeConfCount">'+confResumo.conferidos+' / '+confResumo.total+' conferidos</span></div><div class="nfe-conf-progress-bar"><div class="nfe-conf-progress-fill" id="nfeConfFill" style="width:'+confResumo.pct+'%"></div></div></div></div>';
@@ -5232,7 +5241,7 @@ function nfeItemHtml_(it,i){
         +'</div>'
       +'</div>'
     +'</div>'
-    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-field" style="grid-column:1/-1"><label>Vínculo com o estoque do Escudo Padaria</label><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados como peso em kg.</small></div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
+    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2" style="margin-bottom:9px"><div class="nfe-field"><label>Recebimento</label><select id="nfeRecebimento_'+i+'" onchange="nfeSetRecebimento_('+i+',this.value)"><option value="RECEBIDO" '+((it.recebimentoStatus||'RECEBIDO')==='RECEBIDO'?'selected':'')+'>Recebido integral</option><option value="PARCIAL" '+(it.recebimentoStatus==='PARCIAL'?'selected':'')+'>Recebimento parcial</option><option value="NAO_RECEBIDO" '+(it.recebimentoStatus==='NAO_RECEBIDO'?'selected':'')+'>Item faltante / não recebido</option></select></div><div class="nfe-field"><label>Quantidade recebida ('+nfeEsc_(it.uCom||'un')+')</label><input id="nfeQtdRecebida_'+i+'" type="number" min="0" step="any" value="'+(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)+'" oninput="nfeQtdRecebidaAlterar_('+i+',this.value)"></div></div>'+((it.recebimentoStatus==='PARCIAL'||it.recebimentoStatus==='NAO_RECEBIDO')?'<div class="nfe-field" style="margin-bottom:9px"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: entrega incompleta" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-field" style="grid-column:1/-1"><label>Vínculo com o estoque do Escudo Padaria</label><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
   +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+(it.controlar===false?'disabled ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>'+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
   +'</div>';
 }
@@ -5280,8 +5289,14 @@ function nfeTrocarTeclado_(i,btn){
 }
 function nfeBuscaProdutoInput_(i,el){
   var q=String(el&&el.value||'').trim(),box=document.getElementById('nfeAuto_'+i);
-  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(it){it._campoBusca=q;if(/^\d+$/.test(q)){it.eanAura=q;it.status=it.status==='encontrado'?'nao_encontrado':it.status;}nfeAgendarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
-  if(_nfeBuscaProdutoTimer_[i])clearTimeout(_nfeBuscaProdutoTimer_[i]);
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];
+  if(it){
+    it._campoBusca=q;
+    var codigoDigitado=nfeDigitos_(q),codigoVinculado=nfeDigitos_(it.eanAura||'');
+    if(!codigoDigitado||codigoDigitado!==codigoVinculado){it.eanAura='';it.status='nao_encontrado';it.origemVinculo='';it.nomeAura='';it.fornecedorBanco='';}
+    nfeAgendarRascunho_();nfeAtualizarVisualConferenciaItem_(i);
+  }
+  if(_nfeBuscaProdutoTimer_[i])clearTimeout(_nfeBuscaProdutoTimer_[i]);_nfeBuscaProdutoResultados_[i]=[];
   if(!box)return;
   if(!q||(!/^\d+$/.test(q)&&q.length<2)){nfeFecharSugestoes_(i);return;}
   var seq=(_nfeBuscaProdutoSeq_[i]||0)+1;_nfeBuscaProdutoSeq_[i]=seq;
@@ -5295,26 +5310,49 @@ function nfeBuscaProdutoInput_(i,el){
       var arr=j&&j.ok&&Array.isArray(j.resultados)?j.resultados:[];_nfeBuscaProdutoResultados_[i]=arr;
       if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}
       box.innerHTML=arr.map(function(p){
-        return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';
+        return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault()" onclick="nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';
       }).join('');box.classList.add('open');
     }catch(e){if(_nfeBuscaProdutoSeq_[i]===seq){box.innerHTML='<div class="nfe-auto-empty">Não foi possível consultar o banco agora</div>';box.classList.add('open');}}
-  },260);
+  },180);
+}
+function nfeAplicarProdutoSelecionado_(i,p){
+  if(!p)return false;
+  var ean=String(p.ean||p.cod||p.codigo||'').trim();if(!ean)return false;
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return false;
+  it.eanAura=nfeDigitos_(ean)||ean;it._campoBusca=it.eanAura;it.nomeAura=String(p.descricao||p.nome||'');
+  it.fornecedorBanco=String(p.fornecedor||'');it.unidadeAura=String(p.unidade||it.unidadeAura||it.uCom||'');
+  it.unidadeDestinoSugerida=String(p.unidade||it.unidadeDestinoSugerida||it.unidadeAura||'');
+  it.status='encontrado';it.origemVinculo='manual_busca';if(p.setor&&p.setor!=='Outros'){it.setor=p.setor;it.setorSugerido=p.setor;it.setorOrigem='banco_dados';}it.fotoDataUrl='';it.fotoCarregando=false;
+  if(nfeEhEmbalagemFront_(it.uCom)){it.conversaoExigirDecisao=true;if(it.conversaoDecisao!=='converter'&&it.conversaoDecisao!=='nao_converter')it.conversaoDecisao='';}
+  var inp=document.getElementById('nfeEan_'+i);if(inp)inp.value=it.eanAura;
+  _nfeBuscaProdutoSeq_[i]=(_nfeBuscaProdutoSeq_[i]||0)+1;
+  nfeFecharSugestoes_(i);nfeSalvarRascunho_();nfeRenderNota_();
+  // Enriquecimento assíncrono de setor e cadastro sem reabrir o vínculo.
+  try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(it.eanAura)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||nfeDigitos_(cur.eanAura)!==nfeDigitos_(ean)||!j||!j.ok)return;cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();nfeRenderNota_();}).catch(function(){});}catch(e){}
+  mostrarToast('Produto vinculado: '+(it.nomeAura||it.eanAura),'ok');return true;
 }
 function nfeSelecionarSugestao_(i,ean){
   ean=String(ean||'').trim();if(!ean)return;
-  var itSel=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(itSel)itSel._campoBusca=ean;
+  var arr=_nfeBuscaProdutoResultados_[i]||[],p=arr.find(function(x){return nfeDigitos_(x.ean||x.cod||'')===nfeDigitos_(ean);});
+  if(p&&nfeAplicarProdutoSelecionado_(i,p))return;
   var inp=document.getElementById('nfeEan_'+i);if(inp)inp.value=ean;
-  nfeFecharSugestoes_(i);nfeSetEan_(i,ean);setTimeout(function(){nfeValidarEan_(i);},40);
+  nfeFecharSugestoes_(i);nfeSetEan_(i,ean);nfeValidarEan_(i);
 }
 function nfeCampoCodigoKey_(ev,i,el){
   if(ev.key!=='Enter')return;
-  ev.preventDefault();var v=String(el&&el.value||'').trim();var arr=_nfeBuscaProdutoResultados_[i]||[];
+  ev.preventDefault();var v=String(el&&el.value||'').trim(),arr=_nfeBuscaProdutoResultados_[i]||[];
+  if(arr.length){
+    var q=nfeDigitos_(v),p=q?arr.find(function(x){return nfeDigitos_(x.ean||'')===q;}):null;
+    if(!p&&v)p=arr.find(function(x){return String(x.descricao||'').trim().toLocaleLowerCase('pt-BR')===v.toLocaleLowerCase('pt-BR');});
+    if(!p&&arr.length===1)p=arr[0];
+    if(p){nfeAplicarProdutoSelecionado_(i,p);return;}
+  }
   if(/^\d+$/.test(v)){nfeSetEan_(i,v);nfeFecharSugestoes_(i);nfeValidarEan_(i);return;}
-  if(arr.length)nfeSelecionarSugestao_(i,arr[0].ean);else mostrarToast('Escolha uma sugestão do Banco AURA ou use a câmera','warn');
+  mostrarToast('Escolha o produto correspondente na lista de sugestões.','warn');
 }
 function nfeCampoCodigoBlur_(i,el){
+  // Sair do campo nunca converte uma busca parcial em vínculo nem invalida um vínculo escolhido.
   setTimeout(function(){nfeFecharSugestoes_(i);},180);
-  var v=String(el&&el.value||'').trim();if(/^\d+$/.test(v))nfeSetEan_(i,v);
 }
 
 function nfeAjustarConversao_(i,v){
@@ -5505,6 +5543,8 @@ function nfeAplicarResultadoParcial_(j){
   },120);
 }
 
+function nfeSetRecebimento_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.recebimentoStatus=String(v||'RECEBIDO').toUpperCase();if(it.recebimentoStatus==='NAO_RECEBIDO')it.qtdRecebida=0;else if(it.recebimentoStatus==='RECEBIDO')it.qtdRecebida=Number(it.qCom)||0;else if(!(Number(it.qtdRecebida)>0))it.qtdRecebida=Number(it.qCom)||0;it.motivoDivergencia=it.motivoDivergencia||'';var q=document.getElementById('nfeQtdRecebida_'+i);if(q)q.value=it.qtdRecebida;nfeSalvarRascunho_();nfeRenderNota_();}
+function nfeQtdRecebidaAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.qtdRecebida=Math.max(0,Number(v)||0);if(it.qtdRecebida<=0)it.recebimentoStatus='NAO_RECEBIDO';else if(it.qtdRecebida<(Number(it.qCom)||0))it.recebimentoStatus='PARCIAL';else it.recebimentoStatus='RECEBIDO';var sel=document.getElementById('nfeRecebimento_'+i);if(sel)sel.value=it.recebimentoStatus;var dec=String(it.conversaoDecisao||'').toLowerCase(),f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;it.qtdEstoque=dec==='converter'?it.qtdRecebida*f:it.qtdRecebida;if(it.lotes&&it.lotes.length===1)it.lotes[0].quantidade=it.qtdEstoque;nfeSalvarRascunho_();}
 function nfeIndividualColetarPayload_(){
   var n=_nfeColetaNota;
   var cfg=loadCfg(),email=cfg.email||'';
@@ -5513,6 +5553,7 @@ function nfeIndividualColetarPayload_(){
 
   var itens=(n.itens||[]).map(function(it,i){
     var controlar=it.controlar!==false;
+    var recebimento=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(), qtdRecebida=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;
     var inp=document.getElementById('nfeEan_'+i);
     var ean=nfeDigitos_((inp&&inp.value)||it.eanAura||'');
     if(ean)it.eanAura=ean;
@@ -5528,15 +5569,19 @@ function nfeIndividualColetarPayload_(){
       :(fatorSugerido>0?fatorSugerido:(fatorAplicado>0?fatorAplicado:1)));
 
     var qtdFinal=Number(it.qtdEstoque||it.qCom||0)||0;
-    if(decFinal==='converter'&&qComFinal>0&&fatorFinal>0)qtdFinal=qComFinal*fatorFinal;
-    else if(decFinal==='nao_converter'&&qComFinal>0)qtdFinal=qComFinal;
+    if(recebimento==='NAO_RECEBIDO')qtdRecebida=0;
+    if(decFinal==='converter'&&qtdRecebida>0&&fatorFinal>0)qtdFinal=qtdRecebida*fatorFinal;
+    else if(decFinal==='nao_converter'&&qtdRecebida>0)qtdFinal=qtdRecebida;
+    else if(recebimento==='PARCIAL')qtdFinal=qtdRecebida;
     it.qtdEstoque=qtdFinal;
 
     var lotes=(it.lotes||[]).map(function(l){
       return {validade:String(l.validade||''),quantidade:Number(l.quantidade)||0,lote:l.lote||''};
     });
 
-    if(controlar){
+    if(recebimento==='PARCIAL'&&qComFinal>0&&qtdRecebida>=qComFinal)erros.push((it.nomeAura||it.nome||'Item')+': em recebimento parcial, a quantidade recebida precisa ser menor que a quantidade da NF-e.');
+    if(controlar&&qtdRecebida>0&&String(it.escudoCodigo||'').trim()&&String(it.escudoUnidade||'kg').toLowerCase()==='kg'&&!/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(String(it.uCom||'').trim().toUpperCase())&&!(Number(it.escudoFatorKg)>0))erros.push((it.nomeAura||it.nome||'Item')+': informe quantos kg há em cada pacote/unidade para lançar no Escudo Padaria.');
+    if(controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0){
       diag.controlados++;
       if(ean)diag.comCodigo++;
       else erros.push((it.nomeAura||it.nome||'Item')+': informe o código de barras.');
@@ -5544,7 +5589,7 @@ function nfeIndividualColetarPayload_(){
       var ehNovo=String(it.status||'').toLowerCase()==='aguardando_cadastro'||String(it.origemVinculo||'')==='manual_novo';
       if(ehNovo)diag.novos++; else if(ean)diag.reconhecidos++;
 
-      if(typeof nfeConferenciaConfirmada_==='function'&&!nfeConferenciaConfirmada_(it)){
+      if(recebimento!=='NAO_RECEBIDO'&&typeof nfeConferenciaConfirmada_==='function'&&!nfeConferenciaConfirmada_(it)){
         erros.push((it.nomeAura||it.nome||ean||'Item')+': marque CONFERIDO depois de revisar este item.');
       }
 
@@ -5576,14 +5621,14 @@ function nfeIndividualColetarPayload_(){
 
     return {
       controlar:controlar,nItem:it.nItem,cProd:it.cProd,nome:it.nome,
-      ean:ean,qCom:it.qCom,qtdEstoque:qtdFinal,
+      ean:ean,qCom:it.qCom,qtdRecebida:qtdRecebida,recebimentoStatus:recebimento,motivoDivergencia:it.motivoDivergencia||'',qtdEstoque:qtdFinal,
       fatorConversao:it.fatorConversao||1,
       fatorConversaoSugerido:it.fatorConversaoSugerido||it.fatorConversao||1,
       conversaoExigirDecisao:!!it.conversaoExigirDecisao,
       conversaoDecisao:it.conversaoDecisao||'',
       unidadeNFe:it.uCom||'',
       unidadeAura:it.unidadeAura||it.unidadeDestinoSugerida||it.uCom,
-      escudoCodigo:String(it.escudoCodigo||''),escudoNome:String(it.escudoNome||''),escudoUnidade:String(it.escudoUnidade||'kg'),escudoRemoverVinculo:!!it.escudoRemoverVinculo,
+      escudoCodigo:String(it.escudoCodigo||''),escudoNome:String(it.escudoNome||''),escudoUnidade:String(it.escudoUnidade||'kg'),escudoFatorKg:Number(it.escudoFatorKg)||0,escudoRemoverVinculo:!!it.escudoRemoverVinculo,
       setor:it.setor||it.setorSugerido||'Outros',
       origemVinculo:it.origemVinculo||'',
       lotes:lotes
@@ -5599,7 +5644,7 @@ function nfeIndividualColetarPayload_(){
       action:'nfeRegistrarValidades',
       chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,
       numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',
-      operador:email,itens:itens,
+      operador:email,itens:itens,canhotoRetido:!!(document.getElementById('nfeCanhotoRetido')&&document.getElementById('nfeCanhotoRetido').checked),
       aceitarProdutoNovo:true,
       exigirDecisaoConversao:true
     }
@@ -5662,7 +5707,7 @@ async function nfeColetaSalvar(){
   try{
     var j=await nfePost_(c.payload);
 
-    if(j&&j.ok&&j.confirmacaoRespostas===true&&Number(j.linhasRespostas)>0){
+    if(j&&j.ok&&j.confirmacaoRespostas===true&&(Number(j.linhasRespostas)>0||j.divergenciasRegistradas===true)){
       restaurar();
       nfeConcluirRecebimento_(j,false);
       return {ok:true};
@@ -6037,7 +6082,7 @@ var _nfeHistNotas=[],_nfeHistBusca='',_nfeHistAberto=false,_nfeHistDetalhe=null,
 function nfeHistEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function nfeHistNorm_(v){v=String(v==null?'':v);try{v=v.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}return v.toLowerCase();}
 function nfeHistDataFmt_(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime())){var m=String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);if(m)d=new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0));}return isNaN(d.getTime())?String(v):d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
-function nfeHistStatusClass_(s){s=String(s||'').toUpperCase();return s==='COMPLETA'?'ok':(['AGUARDANDO_CADASTRO','PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(s)>=0?'wait':'');}
+function nfeHistStatusClass_(s){s=String(s||'').toUpperCase();return s==='COMPLETA'?'ok':(['AGUARDANDO_CADASTRO','AGUARDANDO_CADASTRO_COM_DIVERGENCIA','REGISTRADA_COM_DIVERGENCIA','PENDENTE_ITENS','PARCIAL','RASCUNHO'].indexOf(s)>=0?'wait':'');}
 function abrirHistoricoNFe(){var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione o colaborador primeiro','warn');return;}try{fecharCentralTarefas();}catch(e){}try{fecharRetiradas();}catch(e){} _nfeHistAberto=true;_nfeHistScanner=!!scannerAtivo;try{pararScanner();}catch(e){}var v=document.getElementById('nfeHistView');if(v){v.classList.add('open');v.setAttribute('aria-hidden','false');v.scrollTop=0;}document.body.classList.add('nfe-hist-aberta');var u=document.getElementById('nfeHistUsuario');if(u)u.textContent=(nomeDoEmail(cfg.email)||cfg.email)+' · notas lançadas';_nfeHistDetalhe=null;nfeHistMostrarLista_();carregarHistoricoNFe(false);}
 function fecharHistoricoNFe(){if(!_nfeHistAberto)return;_nfeHistAberto=false;_nfeHistToken++;var v=document.getElementById('nfeHistView');if(v){v.classList.remove('open');v.setAttribute('aria-hidden','true');}document.body.classList.remove('nfe-hist-aberta');if(_nfeHistScanner)setTimeout(function(){if(!_nfeHistAberto){try{iniciarScanner();}catch(e){}}},120);_nfeHistScanner=false;}
 function nfeHistVoltar_(){if(_nfeHistDetalhe){_nfeHistDetalhe=null;nfeHistMostrarLista_();return;}fecharHistoricoNFe();}
@@ -6306,9 +6351,19 @@ async function nfeHistSalvarEdicao_(idx){
 
   // NF-e: autocomplete local com 90ms; EAN completo é imediato.
   window.nfeBuscaProdutoInput_=function(i,el){
-    var q=String(el&&el.value||'').trim(),box=document.getElementById('nfeAuto_'+i),it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(it){it._campoBusca=q;if(/^\d+$/.test(q)){it.eanAura=q;if(it.status==='encontrado')it.status='nao_encontrado';}nfeAgendarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}if(_nfeBuscaProdutoTimer_[i])clearTimeout(_nfeBuscaProdutoTimer_[i]);if(!box)return;if(!q||(!/^\d+$/.test(q)&&q.length<2)){nfeFecharSugestoes_(i);return;}var seq=(_nfeBuscaProdutoSeq_[i]||0)+1;_nfeBuscaProdutoSeq_[i]=seq;
-    var ms=core.isFullCode(q)?0:90;_nfeBuscaProdutoTimer_[i]=setTimeout(async function(){if(_nfeBuscaProdutoSeq_[i]!==seq)return;var arr=core.ready?core.search(q,8):[];if(!arr.length){try{var url=nfeCfgUrl_();if(url){var sep=url.indexOf('?')>=0?'&':'?';var rr=await fetch(url+sep+'action=buscarProdutosCompra&q='+encodeURIComponent(q)+'&limite=8&_='+Date.now(),{cache:'no-store'}),jj=await rr.json();arr=jj&&jj.ok&&Array.isArray(jj.resultados)?jj.resultados:[];}}catch(e){}}
-      if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco};});_nfeBuscaProdutoResultados_[i]=arr;if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault();nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');},ms);
+    // Usa o índice local quando disponível, sem gravar texto/código parcial como vínculo confirmado.
+    var q=String(el&&el.value||'').trim(),box=document.getElementById('nfeAuto_'+i),it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];
+    if(it){it._campoBusca=q;var cd=nfeDigitos_(q),vinc=nfeDigitos_(it.eanAura||'');if(!cd||cd!==vinc){it.eanAura='';it.status='nao_encontrado';it.origemVinculo='';it.nomeAura='';it.fornecedorBanco='';}nfeAgendarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+    if(_nfeBuscaProdutoTimer_[i])clearTimeout(_nfeBuscaProdutoTimer_[i]);_nfeBuscaProdutoResultados_[i]=[];if(!box)return;
+    if(!q||(!/^\d+$/.test(q)&&q.length<2)){nfeFecharSugestoes_(i);return;}
+    var seq=(_nfeBuscaProdutoSeq_[i]||0)+1;_nfeBuscaProdutoSeq_[i]=seq;box.innerHTML='<div class="nfe-auto-empty"><i class="ti ti-loader-2 nfe-spin"></i> Buscando no banco…</div>';box.classList.add('open');
+    var ms=core.isFullCode(q)?0:90;_nfeBuscaProdutoTimer_[i]=setTimeout(async function(){
+      if(_nfeBuscaProdutoSeq_[i]!==seq)return;var arr=core.ready?core.search(q,8):[];
+      if(!arr.length){try{var url=nfeCfgUrl_();if(url){var sep=url.indexOf('?')>=0?'&':'?';var rr=await fetch(url+sep+'action=buscarProdutosCompra&q='+encodeURIComponent(q)+'&limite=8&_='+Date.now(),{cache:'no-store'}),jj=await rr.json();arr=jj&&jj.ok&&Array.isArray(jj.resultados)?jj.resultados:[];}}catch(e){}}
+      if(_nfeBuscaProdutoSeq_[i]!==seq)return;arr=arr.map(function(p){return {ean:p.ean||p.cod||'',descricao:p.descricao||p.nome||'',unidade:p.unidade||'',fornecedor:p.fornecedor||'',custo:p.custo,preco:p.preco,setor:p.setor||''};});_nfeBuscaProdutoResultados_[i]=arr;
+      if(!arr.length){box.innerHTML='<div class="nfe-auto-empty">Nenhum produto encontrado no Banco AURA</div>';box.classList.add('open');return;}
+      box.innerHTML=arr.map(function(p){return '<button type="button" class="nfe-auto-item" data-ean="'+nfeEsc_(p.ean||'')+'" onmousedown="event.preventDefault()" onclick="nfeSelecionarSugestao_('+i+',this.dataset.ean)"><div class="nfe-auto-name">'+nfeEsc_(p.descricao||'Produto')+'</div><div class="nfe-auto-meta">Código '+nfeEsc_(p.ean||'—')+(p.unidade?' · '+nfeEsc_(p.unidade):'')+(p.fornecedor?' · '+nfeEsc_(p.fornecedor):'')+'</div></button>';}).join('');box.classList.add('open');
+    },ms);
   };
   var validarServidor=window.nfeValidarEan_;
   window.nfeValidarEan_=function(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i],ean=nfeDigitos_((document.getElementById('nfeEan_'+i)||{}).value||(it&&it.eanAura)||'');var p=hit(ean);if(!it||!p){return validarServidor(i);}it.eanAura=p.ean;it.nomeAura=p.descricao||'';it.fornecedorBanco=p.fornecedor||'';it.unidadeAura=p.unidade||it.uCom||'';it.unidadeDestinoSugerida=p.unidade||it.unidadeDestinoSugerida||it.unidadeAura;it.status='encontrado';it.origemVinculo='manual_local';it.fotoDataUrl='';it.fotoCarregando=false;nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto localizado instantaneamente no índice local.','ok');try{var url=nfeCfgUrl_(),sep=url.indexOf('?')>=0?'&':'?';fetch(url+sep+'action=buscarEANCompleto&ean='+encodeURIComponent(p.ean)+'&_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){var cur=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!cur||!j||!j.ok)return;cur.eanAura=nfeDigitos_(j.ean||p.ean);cur.nomeAura=j.descricao||cur.nomeAura;cur.unidadeAura=j.unidade||cur.unidadeAura;cur.fornecedorBanco=j.fornecedor||cur.fornecedorBanco;if(j.setor&&j.setor!=='Outros'){cur.setor=j.setor;cur.setorSugerido=j.setor;cur.setorOrigem=j.setorOrigem||'banco_dados';}nfeSalvarRascunho_();}).catch(function(){});}catch(e){};
