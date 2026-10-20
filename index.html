@@ -859,7 +859,7 @@ body{
 .nfe-auto-name{font-size:10.5px;font-weight:850;line-height:1.25}
 .nfe-auto-meta{font-size:8.5px;color:var(--tx2);margin-top:3px;line-height:1.25}
 .nfe-auto-empty{padding:10px;color:var(--tx2);font-size:9px;text-align:center}
-.nfe-lotes-title{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2);margin:11px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}.nfe-add-lote{border:none;background:none;color:#378ADD;font-size:9px;font-weight:800;cursor:pointer}.nfe-lote{display:grid;grid-template-columns:1fr 86px 28px;gap:6px;margin-bottom:6px}.nfe-lote input{height:34px;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 7px;font-size:10.5px;min-width:0}.nfe-lote-del{height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--err);cursor:pointer}
+.nfe-lotes-title{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2);margin:11px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}.nfe-add-lote{border:none;background:none;color:#378ADD;font-size:9px;font-weight:800;cursor:pointer}.nfe-lote{display:grid;grid-template-columns:minmax(68px,1fr) auto 76px 28px;gap:5px;margin-bottom:6px}.nfe-lote input{height:34px;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 7px;font-size:10.5px;min-width:0}.nfe-lote-del{height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--err);cursor:pointer}.nfe-indeterminada-btn{height:34px;padding:0 8px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.14);color:#9a6a00;font-size:8px;font-weight:900;white-space:nowrap;cursor:pointer}.nfe-indeterminada-btn i{font-size:11px;vertical-align:-1px}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) 76px 28px;align-items:center}.nfe-indeterminada-tag{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 9px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.14);color:#9a6a00;font-size:9px;font-weight:900}.nfe-review-static{font-size:10px;font-weight:900;color:#9a6a00}.nfe-lote-indeterminada-summary{display:flex;align-items:center;gap:7px;padding:10px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.12);color:#9a6a00;font-size:10px;font-weight:900}
 /* Seletor rápido de validade para conferência NF-e */
 .nfe-validade-input{cursor:pointer!important;font-size:16px!important;min-height:44px!important;background:var(--bg)!important}
 .nfe-date-picker{display:none;position:fixed;inset:0;z-index:100900;background:rgba(8,15,28,.62);align-items:flex-end;justify-content:center;padding:12px}
@@ -868,11 +868,11 @@ body{
 .nfe-date-pick{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:10px;min-height:250px}.nfe-date-months{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,1fr);gap:8px}.nfe-date-month{min-height:58px;border:1px solid var(--bd);border-radius:12px;background:var(--surf);color:var(--tx);font-size:14px;font-weight:850;cursor:pointer;touch-action:manipulation}.nfe-date-month.selected{background:rgba(55,138,221,.14);border-color:#378ADD;color:#378ADD}
 .nfe-date-years{height:100%;max-height:278px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--bd);border-radius:12px;scrollbar-width:thin;scroll-snap-type:y proximity}.nfe-date-year{display:block;width:100%;height:42px;border:0;border-bottom:1px solid var(--bd);background:var(--bg);color:var(--tx2);font-size:14px;font-weight:750;scroll-snap-align:center;cursor:pointer}.nfe-date-year.selected{background:#378ADD;color:#fff;font-weight:900}.nfe-date-hint{margin:9px 0 0;text-align:center;font-size:11px;color:var(--tx2)}
 .nfe-date-calendar{display:none}.nfe-date-calendar.show{display:block}.nfe-date-months-step.hidden{display:none}.nfe-date-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.nfe-date-nav{width:42px;height:42px;border:1px solid var(--bd);border-radius:12px;background:var(--surf);color:var(--tx);font-size:20px;cursor:pointer}.nfe-date-cal-label{font-size:16px;font-weight:900;text-transform:capitalize}.nfe-date-week,.nfe-date-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center}.nfe-date-week{margin-bottom:5px}.nfe-date-week span{padding:5px 0;color:var(--tx2);font-size:10px;font-weight:850}.nfe-date-day{aspect-ratio:1;border:1px solid transparent;border-radius:11px;background:var(--surf);color:var(--tx);font-size:14px;font-weight:750;cursor:pointer;touch-action:manipulation}.nfe-date-day:active{background:#378ADD;color:#fff}.nfe-date-day.selected{border-color:#378ADD;background:rgba(55,138,221,.16);color:#378ADD;font-weight:900}.nfe-date-day.empty{visibility:hidden}.nfe-date-back{height:44px;margin-top:12px;border:1px solid var(--bd);border-radius:11px;background:var(--surf);color:var(--tx);font-size:13px;font-weight:800;cursor:pointer}
-.nfe-lote{grid-template-columns:minmax(0,1fr) 86px 36px;gap:7px}.nfe-lote input.nfe-validade-input{padding:0 10px!important}.nfe-review-row.nfe-review-bottom{margin:14px 0 0;min-height:48px;padding:9px 11px}
+.nfe-lote{grid-template-columns:minmax(68px,1fr) auto 76px 36px;gap:5px}.nfe-lote input.nfe-validade-input{padding:0 10px!important}.nfe-review-row.nfe-review-bottom{margin:14px 0 0;min-height:48px;padding:9px 11px}
 @media(min-width:700px){.nfe-date-picker{align-items:center}.nfe-date-panel{border-radius:20px}.nfe-date-pick{min-height:278px}.nfe-date-year{height:44px}}
-@media(max-width:390px){.nfe-date-picker{padding:8px}.nfe-date-panel{padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}.nfe-date-pick{grid-template-columns:minmax(0,1fr) 72px;gap:7px}.nfe-date-month{min-height:54px;font-size:13px}.nfe-date-days{gap:3px}.nfe-date-day{font-size:13px;border-radius:9px}.nfe-lote{grid-template-columns:minmax(0,1fr) 74px 34px}}
+@media(max-width:390px){.nfe-date-picker{padding:8px}.nfe-date-panel{padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}.nfe-date-pick{grid-template-columns:minmax(0,1fr) 72px;gap:7px}.nfe-date-month{min-height:54px;font-size:13px}.nfe-date-days{gap:3px}.nfe-date-day{font-size:13px;border-radius:9px}.nfe-lote{grid-template-columns:minmax(56px,1fr) auto 68px 34px;gap:4px}.nfe-indeterminada-btn{padding:0 5px;font-size:7px}}
 .nfe-xml-box{margin-top:12px;border:1px dashed var(--bds);border-radius:12px;padding:13px}.nfe-xml-box input{max-width:100%;font-size:11px}.nfe-actions{position:fixed;left:0;right:0;bottom:0;z-index:100001;background:var(--bg);border-top:1px solid var(--bd);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none}.nfe-overlay.open .nfe-actions{display:block}.nfe-save{display:block;width:min(732px,100%);margin:0 auto;border:none;border-radius:11px;background:#1D9E75;color:#fff;font-size:12px;font-weight:900;padding:13px 14px;cursor:pointer}.nfe-save:disabled{opacity:.5}.nfe-ind-diag{display:none;width:min(732px,100%);margin:0 auto 8px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--surf);font-size:10px;line-height:1.4;color:var(--tx2)}.nfe-ind-diag.show{display:block}.nfe-ind-diag.ok{border-color:rgba(29,158,117,.35);background:rgba(29,158,117,.08)}.nfe-ind-diag.err{border-color:rgba(226,75,74,.4);background:rgba(226,75,74,.08)}.nfe-ind-diag.warn{border-color:rgba(186,117,23,.4);background:rgba(186,117,23,.08)}.nfe-ind-diag .oktxt{color:#1D9E75;font-weight:800}.nfe-ind-diag .new{color:#B76E00;font-weight:800}.nfe-ind-diag .bad{color:var(--err);font-weight:850}.nfe-keybox{padding:20px 14px}.nfe-key-row{display:flex;gap:7px}.nfe-key-row input{flex:1;min-width:0;height:42px;border:1px solid var(--bds);border-radius:10px;padding:0 10px;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:10px}.nfe-key-row button{border:none;border-radius:10px;background:#378ADD;color:#fff;font-weight:900;padding:0 13px}.nfe-hint{font-size:10px;color:var(--tx2);line-height:1.45;margin-top:9px}
-@media(max-width:480px){.nfe-grid2{grid-template-columns:1fr}.nfe-note-kpis{grid-template-columns:repeat(3,1fr)}.nfe-lote{grid-template-columns:1fr 78px 28px}.nfe-entry{margin-left:12px;margin-right:12px}.nfe-entry-sub{font-size:9px}}
+@media(max-width:480px){.nfe-grid2{grid-template-columns:1fr}.nfe-note-kpis{grid-template-columns:repeat(3,1fr)}.nfe-lote{grid-template-columns:minmax(52px,1fr) auto 66px 28px;gap:4px}.nfe-indeterminada-btn{padding:0 4px;font-size:7px}.nfe-entry{margin-left:12px;margin-right:12px}.nfe-entry-sub{font-size:9px}}
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -938,7 +938,7 @@ body{
   .nfe-ean-row{grid-template-columns:minmax(0,1fr) 104px;gap:7px}
   .nfe-mini-btn{height:44px;font-size:9.5px}
   .nfe-lotes-title{align-items:flex-start;gap:6px}
-  .nfe-lote{grid-template-columns:minmax(0,1fr) 84px 34px;gap:6px}
+  .nfe-lote{grid-template-columns:minmax(58px,1fr) auto 72px 34px;gap:5px}
   .nfe-lote input,.nfe-lote-del{height:42px}
   .nfe-actions{padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
   .nfe-save{min-height:52px;font-size:12px}
@@ -5010,7 +5010,14 @@ function nfePrepararLotes_(nota){
 }
 function nfeConferenciaEstado_(it){
   var faltas=[];
-  if(!it||it.controlar===false)return {pronto:false,faltas:['item fora do controle de validade']};
+  if(!it)return {pronto:false,faltas:['item não identificado']};
+  var recebimento=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
+  var qtdRecebida=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;
+  if(it.controlar===false){
+    if(recebimento==='NAO_RECEBIDO'||qtdRecebida<=0)return {pronto:false,faltas:['confirmação de recebimento'],semValidade:true};
+    if(it.validadeIndeterminada!==true||it.conferenciaSemValidade!==true)return {pronto:false,faltas:['marque Validade indeterminada'],semValidade:true};
+    return {pronto:true,faltas:[],semValidade:true,recebimentoOk:true};
+  }
 
   var setor=String(it.setor||it.setorSugerido||'').trim();
   var setorManual=String(it.setorOrigem||'')==='manual';
@@ -5026,7 +5033,7 @@ function nfeConferenciaEstado_(it){
   var conversaoOk=!it.conversaoExigirDecisao||decisao==='converter'||decisao==='nao_converter';
   if(!conversaoOk)faltas.push('decisão da conversão');
 
-  var recebimento=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),qtdRecebida=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0,qCom=Number(it.qCom)||0;
+  var qCom=Number(it.qCom)||0;
   if(recebimento==='PARCIAL'&&qCom>0&&qtdRecebida>=qCom)faltas.push('quantidade do recebimento parcial');
   if(recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&String(it.escudoCodigo||'').trim()&&String(it.escudoUnidade||'kg').toLowerCase()==='kg'&&!/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(String(it.uCom||'').trim().toUpperCase())&&!(Number(it.escudoFatorKg)>0))faltas.push('fator kg por pacote do Escudo');
 
@@ -5041,39 +5048,21 @@ function nfeConferenciaEstado_(it){
   var divisaoOk=esperado>0&&datasOk&&Math.abs(soma-esperado)<=0.001;
   if(!divisaoOk)faltas.push('divisão da quantidade');
 
-  return {
-    pronto:faltas.length===0,
-    faltas:faltas,
-    setorOk:setorOk,
-    eanOk:eanOk,
-    conversaoOk:conversaoOk,
-    datasOk:datasOk,
-    divisaoOk:divisaoOk,
-    soma:soma,
-    esperado:esperado
-  };
+  return {pronto:faltas.length===0,faltas:faltas,setorOk:setorOk,eanOk:eanOk,conversaoOk:conversaoOk,datasOk:datasOk,divisaoOk:divisaoOk,soma:soma,esperado:esperado,semValidade:false};
 }
 function nfeConferenciaAssinatura_(it){
-  var lotes=(Array.isArray(it&&it.lotes)?it.lotes:[]).map(function(l){
-    return [String(l.validade||''),Math.round((Number(l.quantidade)||0)*1000)/1000];
-  });
-  return JSON.stringify([
-    String((it&&it.setor)||(it&&it.setorSugerido)||''),
-    String((it&&it.setorOrigem)||''),
-    nfeDigitos_(it&&it.eanAura||''),
-    String((it&&it.status)||''),
-    String((it&&it.conversaoDecisao)||''),
-    Math.round((Number(it&&it.fatorConversao)||0)*1000)/1000,
-    Math.round((Number(it&&it.qtdEstoque)||0)*1000)/1000,
-    lotes
-  ]);
+  if(it&&it.controlar===false){
+    return JSON.stringify(['sem_controle_validade',!!it.validadeIndeterminada,!!it.conferenciaSemValidade,String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),Math.round((Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0)*1000)/1000,Math.round((Number(it.qCom)||0)*1000)/1000]);
+  }
+  var lotes=(Array.isArray(it&&it.lotes)?it.lotes:[]).map(function(l){return [String(l.validade||''),Math.round((Number(l.quantidade)||0)*1000)/1000];});
+  return JSON.stringify([!!(it&&it.controlar!==false),String((it&&it.setor)||(it&&it.setorSugerido)||''),String((it&&it.setorOrigem)||''),nfeDigitos_(it&&it.eanAura||''),String((it&&it.status)||''),String((it&&it.conversaoDecisao)||''),Math.round((Number(it&&it.fatorConversao)||0)*1000)/1000,Math.round((Number(it&&it.qtdEstoque)||0)*1000)/1000,lotes]);
 }
 function nfeConferenciaConfirmada_(it){
   var e=nfeConferenciaEstado_(it);
   return !!(e.pronto&&it&&it.conferenciaManual===true&&String(it.conferenciaAssinatura||'')===nfeConferenciaAssinatura_(it));
 }
 function nfeConferenciaResumo_(nota){
-  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&it.controlar!==false&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO';}):[];
+  var itens=(nota&&Array.isArray(nota.itens))?nota.itens.filter(function(it){return it&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO';}):[];
   var ok=itens.filter(nfeConferenciaConfirmada_).length;
   return {total:itens.length,conferidos:ok,pendentes:Math.max(0,itens.length-ok),pct:itens.length?Math.round(ok*100/itens.length):0};
 }
@@ -5114,7 +5103,7 @@ function nfeDestacarCampoConferencia_(i,faltas){
 }
 function nfeRolarProximaPendencia_(apos){
   var itens=_nfeColetaNota&&_nfeColetaNota.itens||[];if(!itens.length)return;
-  var indices=[];itens.forEach(function(it,i){if(it&&it.controlar!==false&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO'&&!nfeConferenciaConfirmada_(it))indices.push(i);});
+  var indices=[];itens.forEach(function(it,i){if(it&&String(it.recebimentoStatus||'RECEBIDO').toUpperCase()!=='NAO_RECEBIDO'&&!nfeConferenciaConfirmada_(it))indices.push(i);});
   var alvo=indices.find(function(i){return i>apos;});if(alvo===undefined)alvo=indices.find(function(i){return i!==apos;});
   if(alvo!==undefined)setTimeout(function(){nfeRolarItemConferencia_(alvo);},140);
 }
@@ -5125,9 +5114,11 @@ function nfeAtualizarVisualConferenciaItem_(i){
   var card=document.getElementById('nfeItem'+i),box=document.getElementById('nfeConfBox'+i),cb=document.getElementById('nfeConfCheck'+i),msg=document.getElementById('nfeConfText'+i);
   if(card){card.classList.toggle('conferido',confirmado);card.classList.toggle('pronto-conferencia',estado.pronto&&!confirmado);}
   if(box){box.classList.toggle('ok',confirmado);box.classList.toggle('ready',estado.pronto&&!confirmado);}
-  if(cb){cb.checked=confirmado;cb.disabled=it.controlar===false;}
+  if(cb){cb.checked=confirmado;cb.disabled=it.controlar===false&&!estado.pronto;}
+  var lbl=cb&&cb.parentElement?cb.parentElement.querySelector('span'):null;
+  if(lbl)lbl.innerHTML=it.controlar===false?'<i class="ti ti-circle-minus"></i> NÃO CONTROLAR VALIDADE':'<i class="ti ti-circle-check"></i> CONFERIDO';
   if(msg){
-    msg.textContent=confirmado?'Item conferido · não precisa revisar novamente':(estado.pronto?'Tudo certo · marque Conferido':('Falta: '+estado.faltas.join(' · ')));
+    msg.textContent=confirmado?(it.controlar===false?'Validade indeterminada · mercadoria conferida':'Item conferido · não precisa revisar novamente'):(it.controlar===false?(estado.pronto?'Validade indeterminada · mercadoria conferida':'Use o botão ao lado da validade para marcar como indeterminada'):(estado.pronto?'Tudo certo · marque Conferido':'Falta: '+estado.faltas.join(' · ')));
   }
   nfeAtualizarResumoConferencia_();
 }
@@ -5150,7 +5141,7 @@ function nfeMarcarConferido_(i,v){
     it.conferenciaManual=true;
     it.conferenciaAssinatura=nfeConferenciaAssinatura_(it);
     it.conferenciaEm=new Date().toISOString();
-    mostrarToast('Item conferido. A borda azul indica que ele está fechado.','ok');
+    mostrarToast(it.controlar===false?'Validade indeterminada: item conferido sem gerar lote de validade.':'Item conferido. A borda azul indica que ele está fechado.','ok');
   }else{
     it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
   }
@@ -5201,7 +5192,7 @@ function nfeRenderNota_(){
   if(n.jaProcessada)html+='<div class="nfe-warn danger"><b>Esta NF-e já foi concluída anteriormente.</b><br>Para evitar duplicidade, a AURA não fará novo lançamento por padrão.</div>';
   html+='<div class="nfe-warn" style="display:flex;align-items:center;gap:10px"><input id="nfeCanhotoRetido" type="checkbox" '+(n.canhotoRetido?'checked':'')+' onchange="_nfeColetaNota.canhotoRetido=this.checked;nfeSalvarRascunho_()"><label for="nfeCanhotoRetido"><b>Canhoto retido</b> · sinalizar retenção por divergência no recebimento</label></div>';
   var confResumo=nfeConferenciaResumo_(n);
-  html+='<div class="nfe-warn"><b>Conferência:</b> vincule o código, confirme o setor, informe validade/quantidade e feche a divisão. Quando estiver tudo certo, marque <b>Conferido</b>; o item ganha uma aura azul.'
+  html+='<div class="nfe-warn"><b>Conferência:</b> nos itens com validade, confirme vínculo, setor, lotes e quantidade. Nos demais, toque em <b>Validade indeterminada</b> ao lado da data para fechar o item sem criar lote. A nota só conclui após confirmar todos os itens recebidos.'
     +'<div class="nfe-conf-progress"><div class="nfe-conf-progress-top"><span>Progresso da conferência</span><span id="nfeConfCount">'+confResumo.conferidos+' / '+confResumo.total+' conferidos</span></div><div class="nfe-conf-progress-bar"><div class="nfe-conf-progress-fill" id="nfeConfFill" style="width:'+confResumo.pct+'%"></div></div></div></div>';
   (n.itens||[]).forEach(function(it,i){html+=nfeItemHtml_(it,i);});
   document.getElementById('nfeBody').innerHTML=html;
@@ -5219,7 +5210,7 @@ function nfeItemHtml_(it,i){
   var ok=it.status==='encontrado'&&it.eanAura;
   var confEstado=nfeConferenciaEstado_(it);
   var confConfirmado=nfeConferenciaConfirmada_(it);
-  var confMsg=confConfirmado?'Item conferido · não precisa revisar novamente':(confEstado.pronto?'Tudo certo · marque Conferido':('Falta: '+confEstado.faltas.join(' · ')));
+  var confMsg=confConfirmado?(it.controlar===false?'Mercadoria conferida · sem controle de validade':'Item conferido · não precisa revisar novamente'):(it.controlar===false?(confEstado.pronto?'Validade indeterminada · mercadoria conferida':'Use o botão Validade indeterminada ao lado da data'):(confEstado.pronto?'Tudo certo · marque Conferido':('Falta: '+confEstado.faltas.join(' · '))));
   var aguardando=it.status==='aguardando_cadastro'&&it.eanAura;
   var qtd=Number(it.qtdEstoque||it.qCom||0)||0;
   var nomeAURA=String(it.nomeAura||'').trim();
@@ -5261,7 +5252,15 @@ function nfeItemHtml_(it,i){
       +'</div>';
   }
 
-  var lotes=(it.lotes||[]).map(function(l,li){return '<div class="nfe-lote"><input id="nfeLoteVal_'+i+'_'+li+'" class="nfe-validade-input" type="text" inputmode="none" readonly placeholder="DD/MM/AAAA" value="'+nfeEsc_(nfeFmtDataPicker_(l.validade||''))+'" onclick="nfeAbrirSeletorValidade_('+i+','+li+')" aria-label="Selecionar validade"><input type="number" step="0.001" min="0" value="'+nfeEsc_(l.quantidade||'')+'" oninput="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" onchange="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" title="Quantidade"><button class="nfe-lote-del" onclick="nfeRemoverLote_('+i+','+li+')"><i class="ti ti-x"></i></button></div>';}).join('');
+  var lotes=(it.lotes||[]).map(function(l,li){
+    var qtd='<input type="number" step="0.001" min="0" value="'+nfeEsc_(l.quantidade||'')+'" oninput="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" onchange="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" title="Quantidade">';
+    var remover='<button class="nfe-lote-del" onclick="nfeRemoverLote_('+i+','+li+')"><i class="ti ti-x"></i></button>';
+    if(it.validadeIndeterminada===true)return '<div class="nfe-lote nfe-lote-indeterminada"><div class="nfe-indeterminada-tag"><i class="ti ti-infinity"></i> Validade indeterminada</div>'+qtd+remover+'</div>';
+    var data='<input id="nfeLoteVal_'+i+'_'+li+'" class="nfe-validade-input" type="text" inputmode="none" readonly placeholder="DD/MM/AAAA" value="'+nfeEsc_(nfeFmtDataPicker_(l.validade||''))+'" onclick="nfeAbrirSeletorValidade_('+i+','+li+')" aria-label="Selecionar validade">';
+    var indef=li===0?'<button type="button" class="nfe-indeterminada-btn" onclick="nfeDefinirValidadeIndeterminada_('+i+')" title="Concluir este item sem criar lote de validade"><i class="ti ti-infinity"></i> Validade indeterminada</button>':'<span></span>';
+    return '<div class="nfe-lote">'+data+indef+qtd+remover+'</div>';
+  }).join('');
+  if(it.validadeIndeterminada===true)lotes='<div class="nfe-lote-indeterminada-summary"><i class="ti ti-infinity"></i> Validade indeterminada · item conferido sem lote de validade</div>';
   var infoNF=(nomeAURA&&nomeNF&&nomeAURA!==nomeNF)?('<div class="nfe-info-line"><span class="lbl">Descrição na NF-e</span>'+nfeEsc_(nomeNF)+'</div>'):'';
   var gravacaoHtml=it._erroGravacao
     ?('<div style="margin:0 0 10px;padding:10px 12px;border:1px solid #e24b4a;border-radius:9px;background:rgba(226,75,74,.10);color:#e24b4a;font-size:11px;font-weight:800"><i class="ti ti-alert-triangle"></i> PENDENTE: '+nfeEsc_(it._erroGravacao)+'</div>')
@@ -5287,8 +5286,8 @@ function nfeItemHtml_(it,i){
         +'</div>'
       +'</div>'
     +'</div>'
-    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2" style="margin-bottom:9px"><div class="nfe-field"><label>Recebimento</label><select id="nfeRecebimento_'+i+'" onchange="nfeSetRecebimento_('+i+',this.value)"><option value="RECEBIDO" '+((it.recebimentoStatus||'RECEBIDO')==='RECEBIDO'?'selected':'')+'>Recebido integral</option><option value="PARCIAL" '+(it.recebimentoStatus==='PARCIAL'?'selected':'')+'>Recebimento parcial</option><option value="NAO_RECEBIDO" '+(it.recebimentoStatus==='NAO_RECEBIDO'?'selected':'')+'>Item faltante / não recebido</option></select></div><div class="nfe-field"><label>Quantidade recebida ('+nfeEsc_(it.uCom||'un')+')</label><input id="nfeQtdRecebida_'+i+'" type="number" min="0" step="any" value="'+(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)+'" oninput="nfeQtdRecebidaAlterar_('+i+',this.value)"></div></div>'+((it.recebimentoStatus==='PARCIAL'||it.recebimentoStatus==='NAO_RECEBIDO')?'<div class="nfe-field" style="margin-bottom:9px"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: entrega incompleta" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select id="nfeSetor_'+i+'" onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-field" style="grid-column:1/-1"><label>Vínculo com o estoque do Escudo Padaria</label><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div><div class="nfe-lotes-title"><span>Validade(s) · total a gravar '+nfeFmtQtd_(qtd)+'</span><button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button></div>'+lotes+'</div>'
-  +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+(it.controlar===false?'disabled ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>'+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
+    +'<div class="nfe-item-body">'+gravacaoHtml+convHtml+(!embalagem?'<div style="margin:0 0 9px"><button type="button" class="nfe-mini-btn" style="background:var(--surf);color:#378ADD;border:1px solid rgba(55,138,221,.35)" onclick="nfeForcarConversao_('+i+')"><i class="ti ti-arrows-exchange"></i> AJUSTAR / CONVERTER UNIDADE</button></div>':'')+'<div class="nfe-grid2" style="margin-bottom:9px"><div class="nfe-field"><label>Recebimento</label><select id="nfeRecebimento_'+i+'" onchange="nfeSetRecebimento_('+i+',this.value)"><option value="RECEBIDO" '+((it.recebimentoStatus||'RECEBIDO')==='RECEBIDO'?'selected':'')+'>Recebido integral</option><option value="PARCIAL" '+(it.recebimentoStatus==='PARCIAL'?'selected':'')+'>Recebimento parcial</option><option value="NAO_RECEBIDO" '+(it.recebimentoStatus==='NAO_RECEBIDO'?'selected':'')+'>Item faltante / não recebido</option></select></div><div class="nfe-field"><label>Quantidade recebida ('+nfeEsc_(it.uCom||'un')+')</label><input id="nfeQtdRecebida_'+i+'" type="number" min="0" step="any" value="'+(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)+'" oninput="nfeQtdRecebidaAlterar_('+i+',this.value)"></div></div>'+((it.recebimentoStatus==='PARCIAL'||it.recebimentoStatus==='NAO_RECEBIDO')?'<div class="nfe-field" style="margin-bottom:9px"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: entrega incompleta" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div>':'')+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select id="nfeSetor_'+i+'" onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-field" style="grid-column:1/-1"><label>Vínculo com o estoque do Escudo Padaria</label><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div><div class="nfe-lotes-title"><span>'+(it.validadeIndeterminada===true?'Conferência sem lote de validade · recebido '+nfeFmtQtd_(Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0):'Validade(s) · total a gravar '+nfeFmtQtd_(qtd))+'</span>'+(it.validadeIndeterminada===true?'':'<button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button>')+'</div>'+lotes+'</div>'
+  +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+(it.controlar===false?'<span class="nfe-review-static"><i class="ti ti-infinity"></i> '+(confConfirmado?'VALIDADE INDETERMINADA · CONFERIDA':'AGUARDANDO VALIDADE INDETERMINADA')+'</span>':'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>')+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
   +'</div>';
 }
 function nfeAtualizarThumb_(i){
@@ -5315,7 +5314,8 @@ function nfeCarregarFotosPendentes_(){
   var n=_nfeColetaNota; if(!n||!Array.isArray(n.itens)) return;
   n.itens.forEach(function(it,i){ if(it&&it.eanAura) nfeCarregarFotoItem_(i); });
 }
-function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+function nfeToggleItem_(i,v){var it=_nfeColetaNota.itens[i];if(!it)return;it.controlar=!!v;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(v&&(!Array.isArray(it.lotes)||!it.lotes.length))it.lotes=[{validade:'',quantidade:Number(it.qtdEstoque||it.qtdRecebida||it.qCom)||0,lote:''}];var el=document.getElementById('nfeItem'+i);if(el)el.classList.toggle('off',!v);nfeSalvarRascunho_();nfeRenderNota_();}
+function nfeDefinirValidadeIndeterminada_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var rec=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),q=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;if(rec==='NAO_RECEBIDO'||q<=0){mostrarToast('Este item está marcado como não recebido. Ajuste o recebimento antes de concluir.','warn');return;}it.controlar=false;it.validadeIndeterminada=true;it.conferenciaSemValidade=true;it.conferenciaManual=true;it.conferenciaEm=new Date().toISOString();(it.lotes||[]).forEach(function(l){l.validade='';});it.conferenciaAssinatura=nfeConferenciaAssinatura_(it);nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Validade indeterminada: item conferido sem criar lote de validade.','ok');nfeRolarProximaPendencia_(i);}
 function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
 function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
@@ -5571,7 +5571,7 @@ function nfeAplicarResultadoParcial_(j){
     var alvo=(n.itens||[]).find(function(it){
       return String(it.nItem||'')===String(x.nItem||'')&&String(it.cProd||'')===String(x.cProd||'');
     });
-    if(alvo){alvo._erroGravacao=x.motivo||'Revise este item.';alvo.controlar=true;}
+    if(alvo){alvo._erroGravacao=x.motivo||'Revise este item.';alvo.controlar=x.controlar===false?false:true;}
   });
   nfeSalvarRascunho_();
   nfeRenderNota_();
@@ -5586,8 +5586,8 @@ function nfeAplicarResultadoParcial_(j){
   setTimeout(function(){var idx=(n.itens||[]).findIndex(function(it){return !!it._erroGravacao;});if(idx>=0){var st=nfeConferenciaEstado_(n.itens[idx]);nfeVibrarPendencia_();nfeRolarItemConferencia_(idx);setTimeout(function(){nfeDestacarCampoConferencia_(idx,st.faltas);},120);}},120);
 }
 
-function nfeSetRecebimento_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.recebimentoStatus=String(v||'RECEBIDO').toUpperCase();if(it.recebimentoStatus==='NAO_RECEBIDO')it.qtdRecebida=0;else if(it.recebimentoStatus==='RECEBIDO')it.qtdRecebida=Number(it.qCom)||0;else if(!(Number(it.qtdRecebida)>0))it.qtdRecebida=Number(it.qCom)||0;it.motivoDivergencia=it.motivoDivergencia||'';var q=document.getElementById('nfeQtdRecebida_'+i);if(q)q.value=it.qtdRecebida;nfeSalvarRascunho_();nfeRenderNota_();}
-function nfeQtdRecebidaAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.qtdRecebida=Math.max(0,Number(v)||0);if(it.qtdRecebida<=0)it.recebimentoStatus='NAO_RECEBIDO';else if(it.qtdRecebida<(Number(it.qCom)||0))it.recebimentoStatus='PARCIAL';else it.recebimentoStatus='RECEBIDO';var sel=document.getElementById('nfeRecebimento_'+i);if(sel)sel.value=it.recebimentoStatus;var dec=String(it.conversaoDecisao||'').toLowerCase(),f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;it.qtdEstoque=dec==='converter'?it.qtdRecebida*f:it.qtdRecebida;if(it.lotes&&it.lotes.length===1)it.lotes[0].quantidade=it.qtdEstoque;nfeSalvarRascunho_();}
+function nfeSetRecebimento_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.recebimentoStatus=String(v||'RECEBIDO').toUpperCase();it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(it.recebimentoStatus==='NAO_RECEBIDO')it.qtdRecebida=0;else if(it.recebimentoStatus==='RECEBIDO')it.qtdRecebida=Number(it.qCom)||0;else if(!(Number(it.qtdRecebida)>0))it.qtdRecebida=Number(it.qCom)||0;it.motivoDivergencia=it.motivoDivergencia||'';var q=document.getElementById('nfeQtdRecebida_'+i);if(q)q.value=it.qtdRecebida;nfeSalvarRascunho_();nfeRenderNota_();}
+function nfeQtdRecebidaAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.qtdRecebida=Math.max(0,Number(v)||0);if(it.controlar===false){it.validadeIndeterminada=false;it.conferenciaSemValidade=false;}it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(it.qtdRecebida<=0)it.recebimentoStatus='NAO_RECEBIDO';else if(it.qtdRecebida<(Number(it.qCom)||0))it.recebimentoStatus='PARCIAL';else it.recebimentoStatus='RECEBIDO';var sel=document.getElementById('nfeRecebimento_'+i);if(sel)sel.value=it.recebimentoStatus;var dec=String(it.conversaoDecisao||'').toLowerCase(),f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;it.qtdEstoque=dec==='converter'?it.qtdRecebida*f:it.qtdRecebida;if(it.lotes&&it.lotes.length===1)it.lotes[0].quantidade=it.qtdEstoque;nfeSalvarRascunho_();}
 function nfeIndividualColetarPayload_(){
   var n=_nfeColetaNota;
   var cfg=loadCfg(),email=cfg.email||'';
@@ -5623,6 +5623,7 @@ function nfeIndividualColetarPayload_(){
     });
 
     if(recebimento==='PARCIAL'&&qComFinal>0&&qtdRecebida>=qComFinal)erros.push((it.nomeAura||it.nome||'Item')+': em recebimento parcial, a quantidade recebida precisa ser menor que a quantidade da NF-e.');
+    if(!controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&!nfeConferenciaConfirmada_(it))erros.push((it.nomeAura||it.nome||'Item')+': toque em VALIDADE INDETERMINADA ao lado do campo de data para conferir sem criar lote.');
     if(controlar&&qtdRecebida>0&&String(it.escudoCodigo||'').trim()&&String(it.escudoUnidade||'kg').toLowerCase()==='kg'&&!/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(String(it.uCom||'').trim().toUpperCase())&&!(Number(it.escudoFatorKg)>0))erros.push((it.nomeAura||it.nome||'Item')+': informe quantos kg há em cada pacote/unidade para lançar no Escudo Padaria.');
     if(controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0){
       diag.controlados++;
@@ -5663,7 +5664,7 @@ function nfeIndividualColetarPayload_(){
     }
 
     return {
-      controlar:controlar,nItem:it.nItem,cProd:it.cProd,nome:it.nome,
+      controlar:controlar,conferenciaSemValidade:!controlar&&nfeConferenciaConfirmada_(it),nItem:it.nItem,cProd:it.cProd,nome:it.nome,
       ean:ean,qCom:it.qCom,qtdRecebida:qtdRecebida,recebimentoStatus:recebimento,motivoDivergencia:it.motivoDivergencia||'',qtdEstoque:qtdFinal,
       fatorConversao:it.fatorConversao||1,
       fatorConversaoSugerido:it.fatorConversaoSugerido||it.fatorConversao||1,
