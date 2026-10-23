@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual v7.22 — conversão na quantidade gravada -->
+<!-- Coleta Individual v7.23 — setor e recebimento lado a lado -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
@@ -1182,6 +1182,20 @@ body.tarefas-hist-aberta{overflow:hidden}
 
 @media(min-width:520px){.nfe-lote{grid-template-columns:minmax(0,1fr) 96px 38px!important}}
 @media(max-width:519px){.nfe-lote{grid-template-columns:minmax(0,1fr) 82px 36px!important}}</style>
+<style id="nfe-sector-receipt-inline-layout">
+.nfe-item-body>.nfe-grid2{grid-template-columns:minmax(0,1fr)!important}
+.nfe-item-statusrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nfe-item-statusleft{flex:0 0 auto}
+.nfe-status-controls{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));align-items:center;gap:7px;flex:1 1 360px;min-width:0}
+.nfe-item-receipt,.nfe-item-sector{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:5px;min-width:0}
+.nfe-item-receipt label,.nfe-item-sector>label{margin:0!important;white-space:nowrap;font-size:8px!important;font-weight:850;color:var(--tx2);text-transform:uppercase}
+.nfe-item-receipt select,.nfe-item-sector select{height:34px!important;min-width:0;width:100%;padding:0 7px!important;font-size:10px!important;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx)}
+.nfe-item-sector .nfe-setor-note{display:none}
+.nfe-item-sector .nfe-setor-note.warn{display:block;grid-column:1/-1;margin:0!important;font-size:8px!important;line-height:1.2}
+.nfe-item-statusrow>.nfe-badge{margin-left:auto}
+@media(max-width:520px){.nfe-item-statusrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}.nfe-item-statusleft{grid-column:1}.nfe-item-statusrow>.nfe-badge{grid-column:2;grid-row:1;margin-left:0}.nfe-status-controls{grid-column:1/-1;grid-row:2;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nfe-item-receipt,.nfe-item-sector{grid-template-columns:1fr;gap:3px}.nfe-item-receipt label,.nfe-item-sector>label{font-size:7px!important}.nfe-item-receipt select,.nfe-item-sector select{height:38px!important;font-size:9px!important;padding:0 5px!important}}
+@media(max-width:350px){.nfe-status-controls{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
@@ -4838,13 +4852,14 @@ function nfeConfirmacaoCompleta_(info,nota){
   var parcial=info.parcial===true||['PARCIAL','PENDENTE_ITENS'].indexOf(st)>=0;
   var pendServidor=Array.isArray(info.pendentes)?info.pendentes.length:0;
   var soDivergencias=info.divergenciasRegistradas===true&&esperadas===0;
+  var somenteSemValidade=esperadas===0&&Number(info.itensSemValidade||0)>0;
   var localCompleto=!!(resumo&&Number(resumo.pendentes||0)===0&&(resumo.total>0||soDivergencias));
-  var linhasCompletas=soDivergencias||(esperadas>0&&fisicas>=esperadas);
+  var linhasCompletas=soDivergencias||somenteSemValidade||(esperadas>0&&fisicas>=esperadas);
   var confirmada=info.confirmacaoRespostas===true;
   return {
     ok:!!(confirmada&&linhasCompletas&&localCompleto&&statusFinal&&!parcial&&!pendServidor),
     esperadas:esperadas,fisicas:fisicas,resumo:resumo||{total:0,conferidos:0,pendentes:0},status:st,
-    confirmada:confirmada,statusFinal:statusFinal,parcial:parcial,pendServidor:pendServidor
+    confirmada:confirmada,statusFinal:statusFinal,parcial:parcial,pendServidor:pendServidor,somenteSemValidade:somenteSemValidade
   };
 }
 function nfeConcluirRecebimento_(info,confirmado){
@@ -4868,6 +4883,10 @@ function nfeConcluirRecebimento_(info,confirmado){
   }
 
   var linhasFisicas=ck.fisicas;
+  var itensSemValidade=Number(info.itensSemValidade||0);
+  var textoConfirmacao=ck.somenteSemValidade
+    ?itensSemValidade+' item(ns) recebidos e conferidos sem controle de validade; nenhum lote de validade foi criado.'
+    :linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados foram confirmados fisicamente em Respostas ao formulário 1.';
   var alertaRecebimento=String(info.mensagem||'').indexOf('divergências de recebimento')>=0?info.mensagem:'';
   var aguard=Array.isArray(info.aguardandoCadastro)?info.aguardandoCadastro:[];
   var st=String(info.status||'').toUpperCase();
@@ -4877,19 +4896,19 @@ function nfeConcluirRecebimento_(info,confirmado){
   var diag=document.getElementById('nfeIndDiag');
   if(diag){
     diag.className='nfe-ind-diag show ok';
-    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados estão em Respostas ao formulário 1 e todos os itens locais estão conferidos.</span>'
+    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+textoConfirmacao+' Todos os itens locais estão conferidos.</span>'
       +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'')+(estoqueProcessando?'<br><span class="new">Recebimento confirmado; o estoque anual está sendo atualizado em segundo plano.</span>':'')+(alertaRecebimento?'<br><span class="new">'+nfeEsc_(alertaRecebimento)+'</span>':'');
   }
 
   mostrarToast(
     esperaTelecon
       ?('NF-e confirmada na planilha. '+(aguard.length||'Produto(s)')+' aguardando cadastro Telecon.')
-      :(estoqueProcessando?'NF-e confirmada. Estoque atualizando em segundo plano.':(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)'))+(alertaRecebimento?' · divergência registrada'+(String(info.mensagem||'').indexOf('Canhoto retido sinalizado')>=0?' · canhoto retido':''):''),
+      :(estoqueProcessando?'NF-e confirmada. Estoque atualizando em segundo plano.':(ck.somenteSemValidade?'NF-e concluída: '+itensSemValidade+' item(ns) sem controle de validade.':(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)')))+(alertaRecebimento?' · divergência registrada'+(String(info.mensagem||'').indexOf('Canhoto retido sinalizado')>=0?' · canhoto retido':''):''),
     (esperaTelecon||estoqueProcessando)?'warn':'ok'
   );
 
   var body=document.getElementById('nfeBody');
-  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+((esperaTelecon||estoqueProcessando)?'ti-hourglass':'ti-circle-check')+'" style="color:'+((esperaTelecon||estoqueProcessando)?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades confirmadas · aguardando Telecon':(estoqueProcessando?'Recebimento confirmado · atualizando estoque':'Recebimento concluído'))+'</b><div style="font-size:10px;margin-top:6px"><b>'+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s)</b> foram confirmados fisicamente em Respostas ao formulário 1. O rascunho local só será removido agora, após esta confirmação completa.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+(estoqueProcessando?' O lançamento já está confirmado; a atualização da aba anual segue em segundo plano.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
+  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+((esperaTelecon||estoqueProcessando)?'ti-hourglass':'ti-circle-check')+'" style="color:'+((esperaTelecon||estoqueProcessando)?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades confirmadas · aguardando Telecon':(estoqueProcessando?'Recebimento confirmado · atualizando estoque':'Recebimento concluído'))+'</b><div style="font-size:10px;margin-top:6px"><b>'+textoConfirmacao+'</b> O rascunho local só será removido após a confirmação completa.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+(estoqueProcessando?' O lançamento já está confirmado; a atualização da aba anual segue em segundo plano.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
   var actions=document.getElementById('nfeActions');if(actions)actions.style.display='none';
   nfeLimparRascunho_();
   _nfeColetaNota=null;
@@ -5306,6 +5325,7 @@ function nfeItemHtml_(it,i){
   var escudoHtml='<details class="nfe-field nfe-escudo-field" style="grid-column:1/-1" '+(String(it.escudoCodigo||'').trim()?'open':'')+'><summary class="nfe-escudo-summary"><span><i class="ti ti-shield-check"></i> Vínculo com o estoque do Escudo Padaria</span><span class="nfe-escudo-optional">'+(String(it.escudoCodigo||'').trim()?nfeEsc_(it.escudoNome||it.escudoCodigo):'Opcional')+' <i class="ti ti-chevron-down"></i></span></summary><div class="nfe-escudo-content"><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div></details>';
   var recebimentoStatus=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
   var recebimentoHtml='<div class="nfe-item-receipt"><label for="nfeRecebimento_'+i+'">Recebimento</label><select id="nfeRecebimento_'+i+'" onchange="nfeSetRecebimento_('+i+',this.value)"><option value="RECEBIDO" '+(recebimentoStatus==='RECEBIDO'?'selected':'')+'>Recebido integral</option><option value="PARCIAL" '+(recebimentoStatus==='PARCIAL'?'selected':'')+'>Recebimento parcial</option><option value="NAO_RECEBIDO" '+(recebimentoStatus==='NAO_RECEBIDO'?'selected':'')+'>Item faltante / não recebido</option></select></div>';
+  var setorHtml='<div class="nfe-item-sector"><label for="nfeSetor_'+i+'">Setor</label><select id="nfeSetor_'+i+'" onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div>';
   var recebimentoExtra='';
   if(recebimentoStatus==='PARCIAL') recebimentoExtra='<div class="nfe-grid2 nfe-recebimento-extra"><div class="nfe-field"><label>Quantidade recebida ('+nfeEsc_(it.uCom||'un')+')</label><input id="nfeQtdRecebida_'+i+'" type="number" min="0" step="any" value="'+(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)+'" oninput="nfeQtdRecebidaAlterar_('+i+',this.value)" onchange="nfeRenderNota_()"></div><div class="nfe-field"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: entrega incompleta" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div></div>';
   else if(recebimentoStatus==='NAO_RECEBIDO') recebimentoExtra='<div class="nfe-field nfe-recebimento-extra"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: item faltante" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div>';
@@ -5327,7 +5347,7 @@ function nfeItemHtml_(it,i){
     +'<div class="nfe-item-hd">'
       +'<div class="nfe-item-statusrow">'
         +'<div class="nfe-item-statusleft"><input class="nfe-check" type="checkbox" id="nfeControlar_'+i+'" '+(it.controlar===false?'':'checked')+' onchange="nfeToggleItem_('+i+',this.checked)"><span class="nfe-item-status-label">Controlar validade</span></div>'
-        +recebimentoHtml
+        +'<div class="nfe-status-controls">'+recebimentoHtml+setorHtml+'</div>'
         +'<span class="nfe-badge '+(ok?'ok':(aguardando?'wait':'err'))+'">'+(ok?'VINCULADO':(aguardando?'AGUARDA TELECON':'EAN / CADASTRO'))+'</span>'
       +'</div>'
       +'<div class="nfe-product-wrap">'
@@ -5344,7 +5364,7 @@ function nfeItemHtml_(it,i){
         +'</div>'
       +'</div>'
     +'</div>'
-    +'<div class="nfe-item-body">'+gravacaoHtml+escudoHtml+recebimentoExtra+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" aria-label="Abrir câmera para ler o EAN" title="Ler EAN pela câmera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-field"><label>Setor</label><select id="nfeSetor_'+i+'" onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div><div class="nfe-lotes-title"><span>'+(it.validadeIndeterminada===true?'Conferência sem lote de validade':'Validade(s) · distribuir a quantidade gravada')+'</span>'+(it.validadeIndeterminada===true?'':'<button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button>')+'</div>'+lotes+'</div>'
+    +'<div class="nfe-item-body">'+gravacaoHtml+escudoHtml+recebimentoExtra+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" aria-label="Abrir câmera para ler o EAN" title="Ler EAN pela câmera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-lotes-title"><span>'+(it.validadeIndeterminada===true?'Conferência sem lote de validade':'Validade(s) · distribuir a quantidade gravada')+'</span>'+(it.validadeIndeterminada===true?'':'<button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button>')+'</div>'+lotes+'</div>'
   +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+(it.controlar===false?'<span class="nfe-review-static"><i class="ti ti-infinity"></i> '+(confConfirmado?'VALIDADE INDETERMINADA · CONFERIDA':'AGUARDANDO VALIDADE INDETERMINADA')+'</span>':'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>')+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
   +'</div>';
 }
@@ -5646,7 +5666,7 @@ function nfeIndividualColetarPayload_(){
   var n=_nfeColetaNota;
   var cfg=loadCfg(),email=cfg.email||'';
   var erros=[];
-  var diag={controlados:0,comCodigo:0,comValidade:0,quantidadesOk:0,novos:0,reconhecidos:0,conversoesPendentes:0,lotes:0};
+  var diag={controlados:0,semValidade:0,comCodigo:0,comValidade:0,quantidadesOk:0,novos:0,reconhecidos:0,conversoesPendentes:0,lotes:0};
 
   var itens=(n.itens||[]).map(function(it,i){
     var controlar=it.controlar!==false;
@@ -5677,6 +5697,7 @@ function nfeIndividualColetarPayload_(){
     });
 
     if(recebimento==='PARCIAL'&&qComFinal>0&&qtdRecebida>=qComFinal)erros.push((it.nomeAura||it.nome||'Item')+': em recebimento parcial, a quantidade recebida precisa ser menor que a quantidade da NF-e.');
+    if(!controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&nfeConferenciaConfirmada_(it))diag.semValidade++;
     if(!controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&!nfeConferenciaConfirmada_(it))erros.push((it.nomeAura||it.nome||'Item')+': toque em VALIDADE INDETERMINADA ao lado do campo de data para conferir sem criar lote.');
     if(controlar&&qtdRecebida>0&&String(it.escudoCodigo||'').trim()&&String(it.escudoUnidade||'kg').toLowerCase()==='kg'&&!/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(String(it.uCom||'').trim().toUpperCase())&&!(Number(it.escudoFatorKg)>0))erros.push((it.nomeAura||it.nome||'Item')+': informe quantos kg há em cada pacote/unidade para lançar no Escudo Padaria.');
     if(controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0){
@@ -5772,7 +5793,7 @@ function nfeIndividualMostrarDiagnostico_(c,tipo,extra){
   var el=document.getElementById('nfeIndDiag');if(!el)return;
   var d=(c&&c.diagnostico)||{},ok=!c||!c.erros||!c.erros.length;
   var linhas=[];
-  linhas.push('<b>'+Number(d.controlados||0)+' item(ns)</b> · '+Number(d.comCodigo||0)+' com código · '+Number(d.comValidade||0)+' com validade · '+Number(d.quantidadesOk||0)+' com quantidade correta');
+  linhas.push('<b>'+Number(d.controlados||0)+' item(ns) com validade controlada</b> · '+Number(d.semValidade||0)+' conferido(s) sem controle de validade · '+Number(d.comCodigo||0)+' com código · '+Number(d.comValidade||0)+' com validade · '+Number(d.quantidadesOk||0)+' com quantidade correta');
   if(Number(d.novos||0)>0){
     linhas.push('<span class="new"><i class="ti ti-hourglass"></i> '+Number(d.novos||0)+' produto(s) novo(s): serão gravados em Respostas e vinculados depois.</span>');
   }else if(ok){
@@ -5794,7 +5815,7 @@ async function nfeColetaSalvar(){
   nfeIndividualMostrarDiagnostico_(c,c.erros.length?'err':'ok',
     c.erros.length
       ?'<span class="bad">Corrija os itens abaixo. Nenhuma linha será enviada enquanto existir pendência.</span>'
-      :'<span class="oktxt">Enviando ao servidor e conferindo fisicamente a aba Respostas ao formulário 1…</span>'
+      :'<span class="oktxt">Enviando ao servidor para confirmar os lotes e os itens sem controle de validade…</span>'
   );
 
   if(c.erros.length){
@@ -5825,7 +5846,7 @@ async function nfeColetaSalvar(){
   try{
     var j=await nfePost_(c.payload);
 
-    if(j&&j.ok&&j.confirmacaoRespostas===true&&(Number(j.linhasRespostas)>0||j.divergenciasRegistradas===true)){
+    if(j&&j.ok&&j.confirmacaoRespostas===true&&(Number(j.linhasRespostas)>0||j.divergenciasRegistradas===true||(Number(j.itensSemValidade)>0&&Number(j.lotesEsperados||0)===0))){
       restaurar();
       nfeConcluirRecebimento_(j,false);
       return {ok:true};
@@ -5835,7 +5856,7 @@ async function nfeColetaSalvar(){
       nfeIndividualMostrarDiagnostico_(c,'warn','<b>O servidor respondeu, mas ainda falta confirmar as linhas físicas. Consultando novamente…</b>');
       var stOk=await nfeConsultarStatus_(n.chave);
       restaurar();
-      if(stOk&&stOk.segura&&stOk.confirmacaoRespostas===true&&Number(stOk.linhasRespostas)>0){
+      if(stOk&&stOk.segura&&stOk.confirmacaoRespostas===true&&(Number(stOk.linhasRespostas)>0||(Number(stOk.itensSemValidade)>0&&Number(stOk.lotesEsperados||0)===0))){
         nfeConcluirRecebimento_(stOk,true);
         return {ok:true};
       }
@@ -5865,7 +5886,7 @@ async function nfeColetaSalvar(){
       nfeIndividualMostrarDiagnostico_(c,'warn','<b>A resposta demorou. Confirmando diretamente na aba Respostas…</b>');
       mostrarToast('A resposta demorou. Conferindo a gravação em Respostas…','warn');
       var st=await nfeConsultarStatus_(n.chave);
-      if(st&&st.segura&&st.confirmacaoRespostas===true&&Number(st.linhasRespostas)>0){
+      if(st&&st.segura&&st.confirmacaoRespostas===true&&(Number(st.linhasRespostas)>0||(Number(st.itensSemValidade)>0&&Number(st.lotesEsperados||0)===0))){
         restaurar();
         nfeConcluirRecebimento_(st,true);
         return;
