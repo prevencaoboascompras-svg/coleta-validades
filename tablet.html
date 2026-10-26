@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.25 — setor e recebimento lado a lado -->
+<!-- Coleta Tablet v7.26 — conversão prática e quantidade automática -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -7,8 +7,6 @@
 <!-- v7.02 — NF-e: memória local primeiro + limpeza somente após confirmação completa -->
 <!-- v7.13 — seleção de produto por código interno/descrição sem perder o vínculo ao sair do campo -->
 <!-- v7.14 — histórico de NF-e visível a todos; retomar/editar restrito ao responsável -->
-<!-- AURA Mobile Tablet: tarefas v5 — ações rápidas, avanço por vencimento e feedback de gravação sem percentual estimado -->
-<!-- AuraLoader 2.1: overlay após 650 ms; sucesso só quando a tela do processo foi exibida -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1108,7 +1106,7 @@ body.tarefas-hist-aberta{overflow:hidden}
 .nfe-conv-box.pendente{border-color:rgba(239,159,39,.75);background:rgba(239,159,39,.10)}
 .nfe-conv-box.decidida{border-color:rgba(29,158,117,.55);background:rgba(29,158,117,.06)}
 .nfe-conv-source{font-size:9px;line-height:1.45;color:var(--tx);margin-bottom:7px}
-.nfe-conv-choices{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.nfe-conv-choices{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.nfe-conv-manual{margin-top:7px}.nfe-conv-manual>.nfe-conv-choice{width:100%}.nfe-conv-manual .nfe-conv-row{margin-top:7px}.nfe-conv-manual .nfe-conv-row input{width:100px;min-height:38px}
 .nfe-conv-choice{min-height:38px;border:1px solid var(--bds);border-radius:8px;background:var(--surf);color:var(--tx);font-size:9px;font-weight:900;cursor:pointer}
 .nfe-conv-choice.yes.selected{border-color:#1D9E75;background:rgba(29,158,117,.14);color:#1D9E75}
 .nfe-conv-choice.no.selected{border-color:#B76E00;background:rgba(239,159,39,.15);color:#B76E00}
@@ -3633,7 +3631,7 @@ function fecharCentralTarefas(){
 async function carregarTarefasHistorico(manual){
   var cfg=loadCfg(),st=document.getElementById('tarefasHistStatus'),lista=document.getElementById('tarefasHistList');
   if(!cfg.url||!cfg.email){var semCfg='Configuração ou colaborador não informado.';if(st){st.className='tarefas-hist-status show err';st.textContent=semCfg;}return {ok:false,error:semCfg};}
-  var token=++_tarefasHistToken;if(!manual){var emailAtual=String(cfg.email||'').toLowerCase();_tarefasHistorico=(_tarefasPendentes||[]).filter(function(t){return String(t.email||'').toLowerCase()===emailAtual;}).map(function(t){var x=Object.assign({},t);x.fase=x.fase||tarefasHistFaseLocal_(x);return x;});if(lista&&_tarefasHistorico.length)renderTarefasHistorico();}if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> '+(!manual&&_tarefasHistorico.length?'Atualizando o histórico; tarefas pendentes já disponíveis.':'Consultando o histórico de tarefas…');}
+  var token=++_tarefasHistToken;if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> Consultando o histórico de tarefas…';}if(lista)lista.innerHTML='';
   try{
     var ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctrl?setTimeout(function(){ctrl.abort();},45000):null;
     var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),ctrl?{cache:'no-store',signal:ctrl.signal}:{cache:'no-store'});if(timer)clearTimeout(timer);
@@ -3669,7 +3667,7 @@ function renderTarefasHistorico(){
   dados.forEach(function(t,i){_carregarFotoTarefa('h'+i,t.cod,t.produto);});
 }
 function _fmtValidadeTarefaTexto_(v){var h=_fmtValidadeTarefa(v);if(!h)return String(v||'');var d=String(h).replace(/<[^>]+>/g,'').replace(/^\s*Validade:\s*/i,'').trim();return d||String(v||'');}
-function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
+function tarefasHistResponderPendente_(id){fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var m=document.getElementById('tarefasModal');if(m)m.classList.add('open');},80);});}
 async function tarefasHistFinalizar_(id,resposta){
   var t=_tarefasHistorico.find(function(x){return String(x.id)===String(id);});if(!t)return {ok:false,error:'A tarefa não está mais na lista. Atualize o histórico e tente novamente.'};var cfg=loadCfg();
   if(!cfg.url||!cfg.email)return {ok:false,error:'A conexão com a AURA não está configurada.'};
@@ -3679,7 +3677,7 @@ async function tarefasHistFinalizar_(id,resposta){
     t.carrinhoStatus=resposta;t.carrinhoRespondidoEm=new Date().toISOString();t.fase=resposta==='sim'?'concluida':'respondida';
     if(resposta==='sim')_tarefasPendentes=(_tarefasPendentes||[]).filter(function(x){return String(x.id)!==String(t.id);});
     try{var locais=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(Array.isArray(locais)){locais=locais.map(function(x){return String(x.id)===String(t.id)?Object.assign({},x,{carrinhoStatus:resposta,carrinhoRespondidoEm:t.carrinhoRespondidoEm}):x;});localStorage.setItem('coleta_tarefas',JSON.stringify(locais));}}catch(eCache){}
-    mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Tarefa continua pendente; resposta registrada.','ok');renderTarefasHistorico();renderTarefas();if(resposta==='sim'&&window.auraTaskFocusNext_)window.auraTaskFocusNext_();return {ok:true};
+    mostrarToast(resposta==='sim'?'Tarefa concluída: produto etiquetado.':'Tarefa continua pendente; resposta registrada.','ok');renderTarefasHistorico();renderTarefas();return {ok:true};
   }catch(e){var erro=String(e&&e.message||e||'Não foi possível finalizar.');mostrarToast('Falha ao finalizar tarefa: '+erro,'err');return {ok:false,error:erro};}
 }
 
@@ -4615,7 +4613,7 @@ function selecionarUsuarioTablet(nome, email) {
   // Cada seleção explícita é uma nova entrada para popup/auditoria.
   try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
   setTimeout(function(){verificarAniversario(email,nome);},250);
-  setTimeout(function(){buscarTarefas(false);},0);
+  setTimeout(function(){buscarTarefas(true);},0);
   setTimeout(nfeAtualizarCardPendente_,80);
   setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
@@ -4885,14 +4883,13 @@ function nfeConfirmacaoCompleta_(info,nota){
   var parcial=info.parcial===true||['PARCIAL','PENDENTE_ITENS'].indexOf(st)>=0;
   var pendServidor=Array.isArray(info.pendentes)?info.pendentes.length:0;
   var soDivergencias=info.divergenciasRegistradas===true&&esperadas===0;
-  var somenteSemValidade=esperadas===0&&Number(info.itensSemValidade||0)>0;
   var localCompleto=!!(resumo&&Number(resumo.pendentes||0)===0&&(resumo.total>0||soDivergencias));
-  var linhasCompletas=soDivergencias||somenteSemValidade||(esperadas>0&&fisicas>=esperadas);
+  var linhasCompletas=soDivergencias||(esperadas>0&&fisicas>=esperadas);
   var confirmada=info.confirmacaoRespostas===true;
   return {
     ok:!!(confirmada&&linhasCompletas&&localCompleto&&statusFinal&&!parcial&&!pendServidor),
     esperadas:esperadas,fisicas:fisicas,resumo:resumo||{total:0,conferidos:0,pendentes:0},status:st,
-    confirmada:confirmada,statusFinal:statusFinal,parcial:parcial,pendServidor:pendServidor,somenteSemValidade:somenteSemValidade
+    confirmada:confirmada,statusFinal:statusFinal,parcial:parcial,pendServidor:pendServidor
   };
 }
 function nfeConcluirRecebimento_(info,confirmado){
@@ -4916,10 +4913,6 @@ function nfeConcluirRecebimento_(info,confirmado){
   }
 
   var linhasFisicas=ck.fisicas;
-  var itensSemValidade=Number(info.itensSemValidade||0);
-  var textoConfirmacao=ck.somenteSemValidade
-    ?itensSemValidade+' item(ns) recebidos e conferidos sem controle de validade; nenhum lote de validade foi criado.'
-    :linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados foram confirmados fisicamente em Respostas ao formulário 1.';
   var alertaRecebimento=String(info.mensagem||'').indexOf('divergências de recebimento')>=0?info.mensagem:'';
   var aguard=Array.isArray(info.aguardandoCadastro)?info.aguardandoCadastro:[];
   var st=String(info.status||'').toUpperCase();
@@ -4929,19 +4922,19 @@ function nfeConcluirRecebimento_(info,confirmado){
   var diag=document.getElementById('nfeTabletDiag');
   if(diag){
     diag.className='nfe-tablet-diag show ok';
-    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+textoConfirmacao+' Todos os itens locais estão conferidos.</span>'
+    diag.innerHTML='<span class="oktxt"><i class="ti ti-circle-check"></i> <b>Gravação completa confirmada.</b> '+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s) esperados estão em Respostas ao formulário 1 e todos os itens locais estão conferidos.</span>'
       +(esperaTelecon?'<br><span class="new">'+(aguard.length||'Produto(s)')+' produto(s) novo(s) aguardam cadastro, sem perder a validade lançada.</span>':'')+(estoqueProcessando?'<br><span class="new">Recebimento confirmado; o estoque anual está sendo atualizado em segundo plano.</span>':'')+(alertaRecebimento?'<br><span class="new">'+nfeEsc_(alertaRecebimento)+'</span>':'');
   }
 
   mostrarToast(
     esperaTelecon
       ?('NF-e confirmada na planilha. '+(aguard.length||'Produto(s)')+' aguardando cadastro Telecon.')
-      :(estoqueProcessando?'NF-e confirmada. Estoque atualizando em segundo plano.':(ck.somenteSemValidade?'NF-e concluída: '+itensSemValidade+' item(ns) sem controle de validade.':(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)')))+(alertaRecebimento?' · divergência registrada'+(String(info.mensagem||'').indexOf('Canhoto retido sinalizado')>=0?' · canhoto retido':''):''),
+      :(estoqueProcessando?'NF-e confirmada. Estoque atualizando em segundo plano.':(confirmado?'NF-e confirmada na planilha e concluída':'NF-e concluída: '+linhasFisicas+' linha(s) confirmada(s)'))+(alertaRecebimento?' · divergência registrada'+(String(info.mensagem||'').indexOf('Canhoto retido sinalizado')>=0?' · canhoto retido':''):''),
     (esperaTelecon||estoqueProcessando)?'warn':'ok'
   );
 
   var body=document.getElementById('nfeBody');
-  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+((esperaTelecon||estoqueProcessando)?'ti-hourglass':'ti-circle-check')+'" style="color:'+((esperaTelecon||estoqueProcessando)?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades confirmadas · aguardando Telecon':(estoqueProcessando?'Recebimento confirmado · atualizando estoque':'Recebimento concluído'))+'</b><div style="font-size:10px;margin-top:6px"><b>'+textoConfirmacao+'</b> O rascunho local só será removido após a confirmação completa.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+(estoqueProcessando?' O lançamento já está confirmado; a atualização da aba anual segue em segundo plano.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
+  if(body)body.innerHTML='<div class="nfe-state"><i class="ti '+((esperaTelecon||estoqueProcessando)?'ti-hourglass':'ti-circle-check')+'" style="color:'+((esperaTelecon||estoqueProcessando)?'#B76E00':'#1D9E75')+'"></i><b>'+(esperaTelecon?'Validades confirmadas · aguardando Telecon':(estoqueProcessando?'Recebimento confirmado · atualizando estoque':'Recebimento concluído'))+'</b><div style="font-size:10px;margin-top:6px"><b>'+linhasFisicas+' de '+ck.esperadas+' linha(s)/lote(s)</b> foram confirmados fisicamente em Respostas ao formulário 1. O rascunho local só será removido agora, após esta confirmação completa.'+(esperaTelecon?' Os EANs novos serão vinculados quando entrarem no Banco AURA/Telecon.':'')+(estoqueProcessando?' O lançamento já está confirmado; a atualização da aba anual segue em segundo plano.':'')+'</div><div style="font-size:9px;margin-top:5px;color:var(--tx2)">Voltando para a coleta…</div></div>';
   var actions=document.getElementById('nfeActions');if(actions)actions.style.display='none';
   nfeLimparRascunho_();
   _nfeColetaNota=null;
@@ -5213,7 +5206,7 @@ function nfeDestacarCampoConferencia_(i,faltas){
   faltas.forEach(function(f){f=String(f||'').toLowerCase();var x=null;
     if(f==='setor')x=campoPorLabel(/^setor$/i);
     else if(f.indexOf('código de barras')>=0)x=campoPorLabel(/ean|código de barras/i);
-    else if(f.indexOf('decisão da conversão')>=0)x=card.querySelector('.nfe-qtd-gravada-edit input');
+    else if(f.indexOf('decisão da conversão')>=0)x=card.querySelector('.nfe-conv-box');
     else if(f.indexOf('fator kg')>=0)x=campoPorLabel(/kg por unidade/i);
     else if(f.indexOf('quantidade do recebimento parcial')>=0)x=campoPorLabel(/quantidade recebida/i);
     else if(f.indexOf('validade/quantidade dos lotes')>=0){var rows=card.querySelectorAll('.nfe-lote');for(var r=0;r<rows.length;r++){var ins=rows[r].querySelectorAll('input');if(ins.length>=2&&(!String(ins[0].value||'').trim()||!(Number(ins[1].value)>0))){x=rows[r];break;}}if(!x)x=rows[0];}
@@ -5283,7 +5276,7 @@ function nfeEscudoFatorAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens
 function nfeEscudoOptions_(it){
   var atual=String(it&&it.escudoCodigo||'').trim(),html='<option value="">Não vincular ao Escudo</option>';
   if(!_nfeEscudoCatalogo_.length&&atual)html+='<option value="'+nfeEsc_(atual)+'" selected>'+nfeEsc_(atual+(it.escudoNome?' · '+it.escudoNome:''))+'</option>';
-  _nfeEscudoCatalogo_.forEach(function(p){var c=String(p.codigo||'').trim();if(!c)return;html+='<option value="'+nfeEsc_(c)+'" '+(c===atual?'selected':'')+'>'+nfeEsc_(p.nome||c)+' · código '+nfeEsc_(c)+' · '+nfeEsc_(p.unidade||'kg')+(p.ativo===false?' · ARQUIVADO':'')+'</option>';});
+  _nfeEscudoCatalogo_.forEach(function(p){var c=String(p.codigo||'').trim();if(!c)return;html+='<option value="'+nfeEsc_(c)+'" '+(c===atual?'selected':'')+'>'+nfeEsc_(p.nome||c)+' · código '+nfeEsc_(c)+' · '+nfeEsc_(p.unidade||'kg')+'</option>';});
   return html;
 }
 function nfeEscudoGarantirCatalogo_(){
@@ -5291,20 +5284,13 @@ function nfeEscudoGarantirCatalogo_(){
   var key=nfeDigitos_(n.cnpjFornecedor)+'|'+String(n.chave),self=this;
   if(_nfeEscudoCatalogoKey_===key||_nfeEscudoCatalogoBusy_===key)return;
   _nfeEscudoCatalogoBusy_=key;
-  nfePost_({action:'nfeEscudoCatalogo',cnpjFornecedor:n.cnpjFornecedor||'',itens:(n.itens||[]).map(function(it){return {nItem:it.nItem,cProd:it.cProd,eanAura:it.eanAura||it.ean||it.cEAN||it.cEANTrib||''};})}).then(function(j){
+  nfePost_({action:'nfeEscudoCatalogo',cnpjFornecedor:n.cnpjFornecedor||'',itens:(n.itens||[]).map(function(it){return {nItem:it.nItem,cProd:it.cProd};})}).then(function(j){
     if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';
     if(!j||!j.ok){console.warn('[NF-e] Catálogo Escudo indisponível:',j&&j.erro);return;}
     _nfeEscudoCatalogo_=Array.isArray(j.produtos)?j.produtos:[];_nfeEscudoCatalogoKey_=key;
     (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v){if(!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}if(it.escudoFatorKg===undefined||it.escudoFatorKg==='')it.escudoFatorKg=Number(v.fatorKg)||nfeEscudoFatorPadrao_(it);}});
     if(_nfeColetaNota===n){nfeSalvarRascunho_();nfeRenderNota_();}
   }).catch(function(e){if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';console.warn('[NF-e] Falha ao consultar produtos do Escudo:',e);});
-}
-function nfeEscudoProvisionar_(i){
-  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
-  var sel=document.getElementById('nfeEscudo_'+i),codigo=String((sel&&sel.value)||it.escudoCodigo||'').trim(),p=_nfeEscudoCatalogo_.filter(function(x){return String(x.codigo||'').trim()===codigo;})[0];
-  if(!p){codigo=String(prompt('Código próprio do produto no Escudo Padaria:')||'').trim();if(!codigo)return;var nome=String(prompt('Descrição do produto no Escudo Padaria:',it.nomeAura||it.nome||'')||'').trim();if(!nome)return;p={codigo:codigo,nome:nome,unidade:'kg'};}
-  var btn=document.getElementById('nfeEscudoProvisionar_'+i);if(btn){btn.disabled=true;btn.textContent='Sincronizando…';}
-  nfePost_({action:'nfeEscudoProvisionarProduto',codigo:p.codigo,nome:p.nome||it.nomeAura||it.nome||p.codigo,unidade:p.unidade||'kg',eanAura:it.eanAura||it.ean||'',resp:(document.getElementById('nfeOperador')||{}).value||'Coleta NF-e'}).then(function(r){if(!r||!r.ok)throw new Error(r&&r.erro||'Falha ao habilitar produto no Escudo.');it.escudoCodigo=String(r.produto.codigo||p.codigo);it.escudoNome=String(r.produto.nome||p.nome||'');it.escudoUnidade=String(r.produto.unidade||p.unidade||'kg');it.escudoRemoverVinculo=false;return nfePost_({action:'nfeEscudoCatalogo',cnpjFornecedor:_nfeColetaNota.cnpjFornecedor||'',itens:(_nfeColetaNota.itens||[]).map(function(x){return {nItem:x.nItem,cProd:x.cProd,eanAura:x.eanAura||x.ean||''};})});}).then(function(j){if(j&&j.ok){_nfeEscudoCatalogo_=j.produtos||[];_nfeEscudoCatalogoKey_='';}nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Produto do Escudo habilitado/sincronizado sem alterar saldo.','ok');}).catch(function(e){mostrarToast(e.message||String(e),'erro');}).finally(function(){if(btn){btn.disabled=false;btn.innerHTML='<i class=\'ti ti-refresh\'></i> Habilitar / sincronizar item';}});
 }
 function nfeEscudoSelecionarProduto_(i,codigo){
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
@@ -5349,6 +5335,7 @@ function nfeItemHtml_(it,i){
   var nomeNF=String(it.nome||'Item da NF-e').trim();
   var nomeExibir=nomeAURA||nomeNF||'Item da NF-e';
   var qtdNF=nfeFmtQtd_(it.qCom)+' '+nfeEsc_(it.uCom||'');
+  var recebimentoStatus=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
 
   var embalagem=nfePrecisaConversaoFront_(it);
   var fator=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
@@ -5361,9 +5348,19 @@ function nfeItemHtml_(it,i){
     (convOrig==='xml_tributavel'?'Sugestão calculada pela unidade tributável do XML da NF-e.':
     (convOrig==='total_manual'?'Conversão calculada pela quantidade total informada.':
     (convOrig==='vinculo_fornecedor'?'Sugestão aprendida para este fornecedor/produto.':'Informe o fator correto da embalagem ou a quantidade total.')));
+  var qtdBaseConversao=recebimentoStatus==='NAO_RECEBIDO'?0:(recebimentoStatus==='PARCIAL'?Number(it.qtdRecebida)||0:Number(it.qCom)||0);
+  var totalSugConversao=qtdBaseConversao*fator;
+  var decisaoFeita=['converter','nao_converter'].indexOf(decisao)>=0;
+  var conversionHtml=embalagem?('<div class="nfe-conv-box '+(decisaoFeita?'decidida':'pendente')+'"><div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> Conversão de unidade</div>'
+    +'<div class="nfe-conv-source">'+(fator>1?('Sugestão: '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+' × '+nfeFmtQtd_(fator)+' = <b>'+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</b>'):'A NF-e informa '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+'. Confirme se essa quantidade deve ser convertida para '+nfeEsc_(unDestino)+'.')+'</div>'
+    +(decisaoFeita?('<div class="nfe-conv-decision">'+(decisao==='converter'?'Conversão aplicada: ':'Sem conversão: ')+nfeFmtQtd_(Number(it.qtdEstoque)||qtdBaseConversao)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</div>'):'')
+    +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button></div>'
+    +'<div class="nfe-conv-manual"><button type="button" class="nfe-conv-choice" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL MANUALMENTE</button>'
+    +(it.conversaoManualAberta?('<div class="nfe-conv-row"><label for="nfeQtdManual_'+i+'">Total a gravar ('+nfeEsc_(unDestino)+')</label><input id="nfeQtdManual_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" placeholder="Ex.: '+nfeEsc_(nfeFmtQtd_(totalSugConversao))+'" value="" onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();nfeAplicarQtdManual_('+i+');}"><button type="button" class="nfe-conv-choice yes" onclick="nfeAplicarQtdManual_('+i+')">APLICAR</button></div>'):'')
+    +'</div></div>'):'';
 
-  var escudoHtml='<details class="nfe-field nfe-escudo-field" style="grid-column:1/-1" '+(String(it.escudoCodigo||'').trim()?'open':'')+'><summary class="nfe-escudo-summary"><span><i class="ti ti-shield-check"></i> Vínculo com o estoque do Escudo Padaria</span><span class="nfe-escudo-optional">'+(String(it.escudoCodigo||'').trim()?nfeEsc_(it.escudoNome||it.escudoCodigo):'Opcional')+' <i class="ti ti-chevron-down"></i></span></summary><div class="nfe-escudo-content"><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><button type="button" id="nfeEscudoProvisionar_'+i+'" class="nfe-mini-btn" style="margin-top:6px" onclick="nfeEscudoProvisionar_('+i+')"><i class="ti ti-refresh"></i> Habilitar / sincronizar item</button><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div></details>';
-  var recebimentoStatus=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
+
+  var escudoHtml='<details class="nfe-field nfe-escudo-field" style="grid-column:1/-1" '+(String(it.escudoCodigo||'').trim()?'open':'')+'><summary class="nfe-escudo-summary"><span><i class="ti ti-shield-check"></i> Vínculo com o estoque do Escudo Padaria</span><span class="nfe-escudo-optional">'+(String(it.escudoCodigo||'').trim()?nfeEsc_(it.escudoNome||it.escudoCodigo):'Opcional')+' <i class="ti ti-chevron-down"></i></span></summary><div class="nfe-escudo-content"><select id="nfeEscudo_'+i+'" onchange="nfeEscudoSelecionarProduto_('+i+',this.value)">'+nfeEscudoOptions_(it)+'</select><small id="nfeEscudoHint_'+i+'" style="display:block;margin-top:5px;color:var(--tx2);font-size:10px">Opcional. Selecione o item próprio do Escudo. Os lotes conferidos serão enviados em kg.</small><div class="nfe-field" style="margin-top:8px"><label>Kg por unidade da NF-e</label><input id="nfeEscudoFator_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" value="'+nfeEscudoFatorValor_(it)+'" placeholder="Ex.: 2,8" oninput="nfeEscudoFatorAlterar_('+i+',this.value)"><small style="display:block;margin-top:4px;color:var(--tx2);font-size:10px">Informe o peso de cada pacote/unidade. Ex.: 50 pacotes × 2,8 kg = 140 kg. O fator fica salvo para as próximas notas deste fornecedor.</small></div></div></details>';
   var recebimentoHtml='<div class="nfe-item-receipt"><label for="nfeRecebimento_'+i+'">Recebimento</label><select id="nfeRecebimento_'+i+'" onchange="nfeSetRecebimento_('+i+',this.value)"><option value="RECEBIDO" '+(recebimentoStatus==='RECEBIDO'?'selected':'')+'>Recebido integral</option><option value="PARCIAL" '+(recebimentoStatus==='PARCIAL'?'selected':'')+'>Recebimento parcial</option><option value="NAO_RECEBIDO" '+(recebimentoStatus==='NAO_RECEBIDO'?'selected':'')+'>Item faltante / não recebido</option></select></div>';
   var setorHtml='<div class="nfe-item-sector"><label for="nfeSetor_'+i+'">Setor</label><select id="nfeSetor_'+i+'" onchange="nfeSetSetor_('+i+',this.value)">'+nfeSetorOptions_(it.setor||it.setorSugerido||'Outros')+'</select>'+nfeSetorNotaHtml_(it)+'</div>';
   var recebimentoExtra='';
@@ -5399,8 +5396,9 @@ function nfeItemHtml_(it,i){
             +infoNF
             +'<div class="nfe-info-line"><span class="lbl">Código fornecedor</span>'+nfeEsc_(it.cProd||'—')+'</div>'
             +'<div class="nfe-info-line"><span class="lbl">Recebido na NF</span><b>'+qtdNF+'</b></div>'
-            +'<div class="nfe-info-line nfe-qtd-gravada"><span class="lbl">Quantidade que será gravada</span><span class="nfe-qtd-gravada-edit"><input id="nfeQtdGravada_'+i+'" type="number" min="0" step="0.001" value="'+(embalagem&&['converter','nao_converter'].indexOf(decisao)<0?'':nfeEsc_(qtd))+'" placeholder="'+(embalagem&&['converter','nao_converter'].indexOf(decisao)<0?'Digite o total':'')+'" '+(recebimentoStatus==='NAO_RECEBIDO'?'disabled ':'')+'onchange="nfeDefinirTotalConversao_('+i+',this.value)" title="Informe o total final; o fator por unidade é calculado automaticamente" aria-label="Quantidade final a gravar"><b>'+nfeEsc_(it.unidadeAura||unDestino||it.uCom||'')+'</b></span></div>'
+            +'<div class="nfe-info-line nfe-qtd-gravada"><span class="lbl">Quantidade que será gravada</span><b class="nfe-qtd-gravada-value">'+(recebimentoStatus==='NAO_RECEBIDO'?'0':(embalagem&&!decisaoFeita?'Aguardando escolha':nfeFmtQtd_(qtd)+(it.unidadeAura||unDestino||it.uCom?' '+(it.unidadeAura||unDestino||it.uCom):'')))+'</b></div>'
           +'</div>'
+          +conversionHtml
         +'</div>'
       +'</div>'
     +'</div>'
@@ -5568,7 +5566,7 @@ function nfeDefinirTotalConversao_(i,v){
   it.fatorConversaoSugerido=fator;it.fatorConversao=it.conversaoDecisao==='converter'?fator:1;
   it.qtdConversaoSugerida=total;it.qtdEstoque=total;
   it.unidadeDestinoSugerida=nfeUnidadeDestinoFront_(it);it.unidadeAura=it.unidadeDestinoSugerida;
-  it.conversaoOrigem=it.conversaoDecisao==='converter'?'total_manual':'manual_nao_converter';it.conversaoSugerida=false;
+  it.conversaoOrigem=it.conversaoDecisao==='converter'?'total_manual':'manual_nao_converter';it.conversaoManualAberta=false;it.conversaoSugerida=false;
   nfeSalvarRascunho_();nfeRenderNota_();
 }
 
@@ -5577,7 +5575,9 @@ function nfeEscolherConversao_(i,aplicar){
   var antiga=Number(it.qtdEstoque||it.qCom||0)||0;
   var f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
   var destino=nfeUnidadeDestinoFront_(it);
-  var nova=(Number(it.qCom)||0)*(aplicar?f:1);
+  var recebimento=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
+  var qtdBase=recebimento==='NAO_RECEBIDO'?0:(recebimento==='PARCIAL'?Number(it.qtdRecebida)||0:Number(it.qCom)||0);
+  var nova=qtdBase*(aplicar?f:1);
 
   if(Array.isArray(it.lotes)&&it.lotes.length){
     var soma=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);
@@ -5591,6 +5591,7 @@ function nfeEscolherConversao_(i,aplicar){
 
   it.conversaoExigirDecisao=true;
   it.conversaoDecisao=aplicar?'converter':'nao_converter';
+  it.conversaoManualAberta=false;
   it.fatorConversao=aplicar?f:1;
   it.qtdEstoque=nova;
   it.unidadeAura=destino;
@@ -5604,6 +5605,8 @@ function nfeEscolherConversao_(i,aplicar){
   nfeSalvarRascunho_();
   nfeRenderNota_();
 }
+function nfeAbrirQtdManual_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.conversaoManualAberta=true;nfeRenderNota_();setTimeout(function(){var x=document.getElementById('nfeQtdManual_'+i);if(x){x.focus();x.select();}},40);}
+function nfeAplicarQtdManual_(i){var x=document.getElementById('nfeQtdManual_'+i);if(!x)return;nfeDefinirTotalConversao_(i,x.value);}
 function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.lotes[li])return;it.lotes[li][campo]=campo==='quantidade'?(Number(v)||0):v;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -5701,12 +5704,12 @@ function nfeAplicarResultadoParcial_(j){
 }
 
 function nfeSetRecebimento_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;if(it.controlar===false)it.controlar=true;it.recebimentoStatus=String(v||'RECEBIDO').toUpperCase();it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(it.recebimentoStatus==='NAO_RECEBIDO')it.qtdRecebida=0;else if(it.recebimentoStatus==='RECEBIDO')it.qtdRecebida=Number(it.qCom)||0;else if(!(Number(it.qtdRecebida)>0))it.qtdRecebida=Number(it.qCom)||0;it.motivoDivergencia=it.motivoDivergencia||'';var q=document.getElementById('nfeQtdRecebida_'+i);if(q)q.value=it.qtdRecebida;nfeSalvarRascunho_();nfeRenderNota_();}
-function nfeQtdRecebidaAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.qtdRecebida=Math.max(0,Number(v)||0);if(it.controlar===false){it.controlar=true;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;}it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(it.qtdRecebida<=0)it.recebimentoStatus='NAO_RECEBIDO';else if(it.qtdRecebida<(Number(it.qCom)||0))it.recebimentoStatus='PARCIAL';else it.recebimentoStatus='RECEBIDO';var sel=document.getElementById('nfeRecebimento_'+i);if(sel)sel.value=it.recebimentoStatus;var dec=String(it.conversaoDecisao||'').toLowerCase(),f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;it.qtdEstoque=dec==='converter'?it.qtdRecebida*f:it.qtdRecebida;if(it.lotes&&it.lotes.length===1)it.lotes[0].quantidade=it.qtdEstoque;var finalInp=document.getElementById('nfeQtdGravada_'+i);if(finalInp)finalInp.value=it.qtdEstoque;nfeSalvarRascunho_();}
+function nfeQtdRecebidaAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.qtdRecebida=Math.max(0,Number(v)||0);if(it.controlar===false){it.controlar=true;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;}it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';if(it.qtdRecebida<=0)it.recebimentoStatus='NAO_RECEBIDO';else if(it.qtdRecebida<(Number(it.qCom)||0))it.recebimentoStatus='PARCIAL';else it.recebimentoStatus='RECEBIDO';var sel=document.getElementById('nfeRecebimento_'+i);if(sel)sel.value=it.recebimentoStatus;var dec=String(it.conversaoDecisao||'').toLowerCase(),f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;it.qtdEstoque=dec==='converter'?it.qtdRecebida*f:it.qtdRecebida;if(it.lotes&&it.lotes.length===1)it.lotes[0].quantidade=it.qtdEstoque;nfeSalvarRascunho_();}
 function nfeTabletColetarPayload_(){
   var n=_nfeColetaNota;
   var cfg=loadCfg(),email=cfg.email||'';
   var erros=[];
-  var diag={controlados:0,semValidade:0,comCodigo:0,comValidade:0,quantidadesOk:0,novos:0,reconhecidos:0,conversoesPendentes:0,lotes:0};
+  var diag={controlados:0,comCodigo:0,comValidade:0,quantidadesOk:0,novos:0,reconhecidos:0,conversoesPendentes:0,lotes:0};
 
   var itens=(n.itens||[]).map(function(it,i){
     var controlar=it.controlar!==false;
@@ -5737,7 +5740,6 @@ function nfeTabletColetarPayload_(){
     });
 
     if(recebimento==='PARCIAL'&&qComFinal>0&&qtdRecebida>=qComFinal)erros.push((it.nomeAura||it.nome||'Item')+': em recebimento parcial, a quantidade recebida precisa ser menor que a quantidade da NF-e.');
-    if(!controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&nfeConferenciaConfirmada_(it))diag.semValidade++;
     if(!controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0&&!nfeConferenciaConfirmada_(it))erros.push((it.nomeAura||it.nome||'Item')+': toque em VALIDADE INDETERMINADA ao lado do campo de data para conferir sem criar lote.');
     if(controlar&&qtdRecebida>0&&String(it.escudoCodigo||'').trim()&&String(it.escudoUnidade||'kg').toLowerCase()==='kg'&&!/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(String(it.uCom||'').trim().toUpperCase())&&!(Number(it.escudoFatorKg)>0))erros.push((it.nomeAura||it.nome||'Item')+': informe quantos kg há em cada pacote/unidade para lançar no Escudo Padaria.');
     if(controlar&&recebimento!=='NAO_RECEBIDO'&&qtdRecebida>0){
@@ -5833,7 +5835,7 @@ function nfeTabletMostrarDiagnostico_(c,tipo,extra){
   var el=document.getElementById('nfeTabletDiag');if(!el)return;
   var d=(c&&c.diagnostico)||{},ok=!c||!c.erros||!c.erros.length;
   var linhas=[];
-  linhas.push('<b>'+Number(d.controlados||0)+' item(ns) com validade controlada</b> · '+Number(d.semValidade||0)+' conferido(s) sem controle de validade · '+Number(d.comCodigo||0)+' com código · '+Number(d.comValidade||0)+' com validade · '+Number(d.quantidadesOk||0)+' com quantidade correta');
+  linhas.push('<b>'+Number(d.controlados||0)+' item(ns)</b> · '+Number(d.comCodigo||0)+' com código · '+Number(d.comValidade||0)+' com validade · '+Number(d.quantidadesOk||0)+' com quantidade correta');
   if(Number(d.novos||0)>0){
     linhas.push('<span class="new"><i class="ti ti-hourglass"></i> '+Number(d.novos||0)+' produto(s) novo(s): serão gravados em Respostas e vinculados depois.</span>');
   }else if(ok){
@@ -5855,7 +5857,7 @@ async function nfeColetaSalvar(){
   nfeTabletMostrarDiagnostico_(c,c.erros.length?'err':'ok',
     c.erros.length
       ?'<span class="bad">Corrija os itens abaixo. Nenhuma linha será enviada enquanto existir pendência.</span>'
-      :'<span class="oktxt">Enviando ao servidor para confirmar os lotes e os itens sem controle de validade…</span>'
+      :'<span class="oktxt">Enviando ao servidor e conferindo fisicamente a aba Respostas ao formulário 1…</span>'
   );
 
   if(c.erros.length){
@@ -5887,7 +5889,7 @@ async function nfeColetaSalvar(){
   try{
     var j=await nfePost_(c.payload);
 
-    if(j&&j.ok&&j.confirmacaoRespostas===true&&(Number(j.linhasRespostas)>0||j.divergenciasRegistradas===true||(Number(j.itensSemValidade)>0&&Number(j.lotesEsperados||0)===0))){
+    if(j&&j.ok&&j.confirmacaoRespostas===true&&(Number(j.linhasRespostas)>0||j.divergenciasRegistradas===true)){
       restaurar();
       nfeConcluirRecebimento_(j,false);
       return {ok:true};
@@ -5897,7 +5899,7 @@ async function nfeColetaSalvar(){
       nfeTabletMostrarDiagnostico_(c,'warn','<b>O servidor respondeu, mas ainda falta confirmar as linhas físicas. Consultando novamente…</b>');
       var stOk=await nfeConsultarStatus_(n.chave);
       restaurar();
-      if(stOk&&stOk.segura&&stOk.confirmacaoRespostas===true&&(Number(stOk.linhasRespostas)>0||(Number(stOk.itensSemValidade)>0&&Number(stOk.lotesEsperados||0)===0))){
+      if(stOk&&stOk.segura&&stOk.confirmacaoRespostas===true&&Number(stOk.linhasRespostas)>0){
         nfeConcluirRecebimento_(stOk,true);
         return {ok:true};
       }
@@ -5927,7 +5929,7 @@ async function nfeColetaSalvar(){
       nfeTabletMostrarDiagnostico_(c,'warn','<b>A resposta demorou. Confirmando diretamente na aba Respostas…</b>');
       mostrarToast('A resposta demorou. Conferindo a gravação em Respostas…','warn');
       var st=await nfeConsultarStatus_(n.chave);
-      if(st&&st.segura&&st.confirmacaoRespostas===true&&(Number(st.linhasRespostas)>0||(Number(st.itensSemValidade)>0&&Number(st.lotesEsperados||0)===0))){
+      if(st&&st.segura&&st.confirmacaoRespostas===true&&Number(st.linhasRespostas)>0){
         restaurar();
         nfeConcluirRecebimento_(st,true);
         return;
@@ -6568,7 +6570,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.25-nfe-setor-recebimento-inline';console.info('[AURA] Coleta Tablet v7.25 — setor e recebimento lado a lado');</script>
+<script>window.AURA_TABLET_BUILD='v7.26-nfe-conversao-pratica';console.info('[AURA] Coleta Tablet v7.26 — conversão prática e quantidade automática');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6750,7 +6752,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     if(cnt)cnt.textContent=pend.length;body.innerHTML=_buildTarefaCards('m');modal.classList.add('open');if(pend.length)try{carregarFotosTarefas('m');}catch(e){}
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){auraRenderTarefasModal_();},30);});
   };
   function htmlAviso_(nome,cached){
     var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
@@ -6790,7 +6792,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 
 
 <style id="auraTaskGroupsV4Style">
-/* AURA tarefas v5 — ações rápidas no item, ordenação por vencimento e avanço no fluxo */
+/* AURA tarefas v4 — central organizada por dias para vencer + setor */
 .aura-task-filters{margin:0 0 12px;padding:11px;border:1px solid var(--bd);border-radius:13px;background:var(--card)}
 .aura-task-filter-title{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);margin-bottom:8px}
 .aura-task-filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:7px}.aura-task-filter-grid select{width:100%;min-width:0;height:40px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);padding:0 9px;font-size:11px}.aura-task-clear-filter{height:40px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx2);padding:0 11px;font-size:10px;font-weight:850;cursor:pointer}
@@ -6799,10 +6801,6 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 .aura-task-days-badge,.aura-task-sector-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 7px;font-size:8px;font-weight:950;letter-spacing:.02em;margin:0 5px 5px 0}.aura-task-days-badge.hoje{background:rgba(226,75,74,.14);color:#E24B4A}.aura-task-days-badge.curto{background:rgba(245,158,11,.16);color:#D87900}.aura-task-days-badge.medio{background:rgba(186,117,23,.14);color:#BA7517}.aura-task-days-badge.longo{background:rgba(55,138,221,.13);color:#378ADD}.aura-task-days-badge.semdata,.aura-task-days-badge.passado{background:rgba(120,120,120,.11);color:var(--tx2)}.aura-task-sector-badge{background:rgba(29,158,117,.11);color:#1D9E75}
 .aura-task-group .tarefas-hist-card{margin:0}.aura-task-price-suggest{margin-top:7px;display:inline-flex;gap:5px;align-items:center;border:1px solid rgba(29,158,117,.25);background:rgba(29,158,117,.10);color:#1D9E75;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:900}.aura-task-empty-filter{text-align:center;padding:38px 15px;color:var(--tx2);font-size:11px}.aura-task-empty-filter i{display:block;font-size:34px;margin-bottom:7px;opacity:.55}
 @media(max-width:390px){.aura-task-filters{padding:9px}.aura-task-filter-grid{grid-template-columns:1fr 1fr}.aura-task-clear-filter{grid-column:1/-1}.aura-task-group-hd{padding:10px}.aura-task-group-title{font-size:10.5px}}
-</style>
-<style id="auraTaskQuickActionsStyle">
-.aura-task-quick{margin-top:10px;padding:10px;border:1px solid var(--bd);border-radius:11px;background:var(--card)}.aura-task-quick-title{font-size:10px;font-weight:850;color:var(--tx2);margin-bottom:7px}.aura-task-quick-row{display:flex;gap:7px;align-items:center}.aura-task-quick-row input{width:82px;min-width:70px;height:40px;border:1px solid var(--bd);border-radius:9px;text-align:center;font-size:15px;font-weight:850;background:var(--bg);color:var(--tx)}.aura-task-quick-row button{min-height:40px;border:1px solid var(--bd);border-radius:9px;padding:7px 10px;font-size:11px;font-weight:850;cursor:pointer;background:var(--bg);color:var(--tx);white-space:nowrap}.aura-task-quick-row button.zero{background:rgba(226,75,74,.10);border-color:rgba(226,75,74,.35);color:#B42318}.aura-task-quick-row button.save{background:#1D9E75;border-color:#1D9E75;color:#fff;flex:1}.aura-task-quick-row button:disabled{opacity:.55;cursor:wait}.aura-task-quick-saving{font-size:10px;color:var(--tx2);margin-top:6px;min-height:13px}
-@media(max-width:390px){.aura-task-quick{padding:8px}.aura-task-quick-row{gap:5px}.aura-task-quick-row input{width:65px;min-width:60px}.aura-task-quick-row button{padding:6px 8px;font-size:10px}}
 </style>
 <script id="auraTaskGroupsV4">
 (function(){
@@ -6835,11 +6833,6 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function diasClasse(t){var d=diasNum(t);if(d===null)return 'semdata';if(d<0)return 'passado';if(d===0)return 'hoje';if(d<=3)return 'curto';if(d<=10)return 'medio';return 'longo';}
   function diasOrdemKey(key){if(key==='passado')return -1000;if(key==='semdata')return 100000;var n=Number(key);return isFinite(n)?n:99999;}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
-  function gravarCacheTarefa_(t){try{var a=JSON.parse(localStorage.getItem('coleta_tarefas')||'[]');if(!Array.isArray(a))a=[];var e=String(t.email||'').toLowerCase(),i=a.findIndex(function(x){return String(x.id)===String(t.id)&&String(x.email||'').toLowerCase()===e;});if(i>=0)a[i]=Object.assign({},a[i],t);else a.push(t);localStorage.setItem('coleta_tarefas',JSON.stringify(a));}catch(e){}}
-  function avancarTarefa_(){setTimeout(function(){var cand=(_tarefasHistorico||[]).map(function(t,i){return {t:t,i:i};}).filter(function(x){var f=x.t.fase||tarefasHistFaseLocal_(x.t),d=diasNum(x.t),dk=diasKey(x.t),st=setorTarefa(x.t);return (f==='pendente'||f==='respondida')&&(d===null||d>=0)&&(!_auraTaskDiasFilter||dk===_auraTaskDiasFilter)&&(!_auraTaskSetorFilter||st===_auraTaskSetorFilter)&&f===_tarefasHistFiltro;});if(!cand.length&&_tarefasHistFiltro!=='pendente'&&(_tarefasHistorico||[]).some(function(t){return (t.fase||tarefasHistFaseLocal_(t))==='pendente';})){filtrarTarefasHistorico('pendente');setTimeout(avancarTarefa_,60);return;}cand.sort(function(a,b){return (diasNum(a.t)===null?99999:diasNum(a.t))-(diasNum(b.t)===null?99999:diasNum(b.t))||((SETOR_ORDEM[setorTarefa(a.t)]||99)-(SETOR_ORDEM[setorTarefa(b.t)]||99));});var x=cand[0];if(!x)return;window._auraTaskOpenGroups[diasKey(x.t)+'|'+setorTarefa(x.t)]=true;renderTarefasHistorico();var card=document.getElementById('auraTaskCard_'+x.i);if(card)card.scrollIntoView({behavior:'smooth',block:'center'});},80);}
-  window.auraTaskFocusNext_=avancarTarefa_;
-  window.auraTaskAjustarQtd_=function(idx,delta){var e=document.getElementById('auraTaskQty_'+idx);if(!e)return;e.value=String(Math.max(0,Math.min(999,(parseInt(e.value,10)||0)+delta)));};
-  window.auraTaskSalvarQtd_=async function(id,idx,qty){var t=(_tarefasHistorico||[])[Number(idx)];if(!t||String(t.id)!==String(id))return {ok:false};var area=document.getElementById('auraTaskActions_'+idx);if(!area||area.dataset.saving==='1')return {ok:false};var cfg=loadCfg();if(!cfg.url||!cfg.email){mostrarToast('A conexão com a AURA não está configurada.','err');return {ok:false};}if(typeof qty==='string'&&!/^\d+$/.test(qty.trim())){mostrarToast('Informe uma quantidade válida ou use “Zerar estoque”.','warn');return {ok:false};}qty=Math.max(0,Math.min(999,parseInt(qty,10)||0));area.dataset.saving='1';Array.prototype.forEach.call(area.querySelectorAll('button,input'),function(x){x.disabled=true;});var msg=area.querySelector('.aura-task-quick-saving');if(msg)msg.textContent='Salvando a conferência…';var gravouNoServidor=false;try{var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'confirmarTarefa',tarefaId:t.id,quantidade:qty,email:cfg.email,sessao:window._auraTaskCurrentSession||'',app:window._auraTaskAppLabel||'Coleta'})});if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(!j||!j.ok)throw new Error((j&&j.erro)||'A AURA não confirmou a gravação.');gravouNoServidor=true;if(window.auraAuditarAcaoMobile_)window.auraAuditarAcaoMobile_('Tarefas','Confirmou estoque da tarefa','concluída');var now=new Date().toISOString();delete t.carrinhoStatus;delete t.carrinhoRespondidoEm;Object.assign(t,{status:'concluida',fase:qty>0?'respondida':'concluida',quantidadeConfirmada:qty,confirmadoEm:now,email:cfg.email,_localConfirmada:true,_qtdeLocal:qty});var pi=(_tarefasPendentes||[]).findIndex(function(x){return String(x.id)===String(t.id);});if(qty===0){if(pi>=0)_tarefasPendentes.splice(pi,1);}else if(pi>=0)Object.assign(_tarefasPendentes[pi],t);else _tarefasPendentes.push(Object.assign({},t));gravarCacheTarefa_(t);if(typeof renderTarefas==='function')renderTarefas();if(qty>0){filtrarTarefasHistorico('respondida');mostrarToast('Quantidade registrada. Conclua a ação comercial indicada.','ok');setTimeout(function(){var c=document.getElementById('auraTaskCard_'+idx);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},80);}else{renderTarefasHistorico();mostrarToast('Estoque zerado e tarefa concluída.','ok');avancarTarefa_();}return {ok:true};}catch(e){if(!gravouNoServidor&&window.auraAuditarAcaoMobile_)window.auraAuditarAcaoMobile_('Tarefas','Confirmou estoque da tarefa','falhou');area.dataset.saving='0';Array.prototype.forEach.call(area.querySelectorAll('button,input'),function(x){x.disabled=false;});if(msg)msg.textContent='Não foi possível salvar. Tente novamente.';mostrarToast('Falha ao gravar a tarefa: '+String(e&&e.message||e),'err');return {ok:false,error:String(e&&e.message||e)};}};
   function ensureControls(){
     var body=document.querySelector('#tarefasHistView .tarefas-hist-body'),tabs=body&&body.querySelector('.tarefas-hist-tabs');if(!body||!tabs||document.getElementById('auraTaskFilters'))return;
     var box=document.createElement('div');box.id='auraTaskFilters';box.className='aura-task-filters';
@@ -6853,11 +6846,11 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function popularDias(base){var sel=document.getElementById('auraTaskDiasSel');if(!sel)return;var atual=window._auraTaskDiasFilter||'',keys={};base.forEach(function(x){keys[diasKey(x.t)]=true;});var arr=Object.keys(keys).sort(function(a,b){return diasOrdemKey(a)-diasOrdemKey(b);});var opts=['<option value="">Todos os vencimentos</option>'];arr.forEach(function(k){var label;if(k==='passado')label='Já vencidas (histórico)';else if(k==='semdata')label='Sem data';else {var n=Number(k);label=n===0?'Vence hoje':n===1?'Vence amanhã':'Vence em '+n+' dias';}opts.push('<option value="'+tarefasHistEsc_(k)+'">'+tarefasHistEsc_(label)+'</option>');});sel.innerHTML=opts.join('');sel.value=atual;}
   function renderCard(t,idx){
     var fase=t.fase||tarefasHistFaseLocal_(t),setor=setorTarefa(t),icone=fase==='pendente'?'ti-clock':(fase==='respondida'?'ti-message-check':'ti-circle-check'),rotulo=fase==='pendente'?'Pendente':(fase==='respondida'?'Respondida':'Concluída'),idJs=tarefasHistJs_(t.id),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,answer='';
-    if(fase==='respondida'){var refrig=_tarefaAutoRefrigerada_(t),acao=refrig?'Etiquetar e manter na frente do expositor':'Levar ao carrinho e etiquetar',feito=refrig?'Etiquetado na frente':'Carrinho + etiqueta';answer='<div class="tarefas-hist-answer"><b>Quantidade encontrada:</b> '+(q||0)+' un.<br><b>Ação:</b> '+acao+'.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-circle-check"></i> '+feito+'</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-clock"></i> Ainda não</button></div>';}
-    else if(fase==='pendente')answer='<div class="aura-task-quick" id="auraTaskActions_'+idx+'"><div class="aura-task-quick-title">Quantidade encontrada</div><div class="aura-task-quick-row"><button type="button" class="zero" onclick="auraTaskSalvarQtd_(\''+idJs+'\','+idx+',0)">Zerar estoque</button><button type="button" onclick="auraTaskAjustarQtd_('+idx+',-1)">−</button><input type="tel" inputmode="numeric" min="0" max="999" id="auraTaskQty_'+idx+'" placeholder="Qtd." aria-label="Quantidade encontrada"><button type="button" onclick="auraTaskAjustarQtd_('+idx+',1)">+</button><button type="button" class="save" onclick="auraTaskSalvarQtd_(\''+idJs+'\','+idx+',document.getElementById(\'auraTaskQty_'+idx+'\').value)">Registrar</button></div><div class="aura-task-quick-saving" aria-live="polite"></div></div>';
+    if(fase==='respondida')answer='<div class="tarefas-hist-answer"><b>Quantidade respondida:</b> '+(q||0)+' un.<br>Falta concluir a ação comercial indicada.</div><div class="tarefas-hist-actions"><button class="tarefas-hist-action ok" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'sim\')"><i class="ti ti-circle-check"></i> Concluído</button><button class="tarefas-hist-action warn" onclick="tarefasHistFinalizar_(\''+idJs+'\',\'nao\')"><i class="ti ti-clock"></i> Ainda não</button></div>';
+    else if(fase==='pendente')answer='<div class="tarefas-hist-actions"><button class="tarefas-hist-action primary" onclick="tarefasHistResponderPendente_(\''+idJs+'\')"><i class="ti ti-player-play"></i> Executar tarefa</button></div>';
     else {var res=q===0?'Sem estoque restante':(t.carrinhoStatus==='sim'?'Ação comercial concluída':(t.carrinhoStatus==='nao'?'Ação ainda não concluída':'Tarefa finalizada'));answer='<div class="tarefas-hist-answer"><b>Quantidade confirmada:</b> '+(q===null?'—':q+' un.')+'<br><b>Resultado:</b> '+tarefasHistEsc_(res)+(t.carrinhoRespondidoEm?'<br><b>Finalizada em:</b> '+tarefasHistEsc_(tarefasHistData_(t.carrinhoRespondidoEm)):'')+'</div>';}
     var preco=window._auraTarefaBadgesPrecoHtml_?window._auraTarefaBadgesPrecoHtml_(t):'';
-    return '<div id="auraTaskCard_'+idx+'" class="tarefas-hist-card" data-task-phase="'+fase+'"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_g'+idx+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div><span class="aura-task-days-badge '+diasClasse(t)+'"><i class="ti ti-calendar-time"></i> '+tarefasHistEsc_(diasLabel(t))+'</span><span class="aura-task-sector-badge"><i class="ti ti-building-store"></i> '+tarefasHistEsc_(setor)+'</span></div><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+preco+(t.descricao?'<div class="tarefas-hist-desc"><div class="tarefas-hist-desc-label"><i class="ti ti-message-circle"></i> Orientação</div>'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
+    return '<div class="tarefas-hist-card"><div class="tarefas-hist-card-top"><div class="tarefa-foto" id="tarefaFoto_g'+idx+'"><span class="spin"></span></div><div class="tarefas-hist-main"><div><span class="aura-task-days-badge '+diasClasse(t)+'"><i class="ti ti-calendar-time"></i> '+tarefasHistEsc_(diasLabel(t))+'</span><span class="aura-task-sector-badge"><i class="ti ti-building-store"></i> '+tarefasHistEsc_(setor)+'</span></div><div class="tarefas-hist-phase '+fase+'"><i class="ti '+icone+'"></i> '+rotulo+'</div><div class="tarefas-hist-name">'+tarefasHistEsc_(t.produto||'Produto')+'</div>'+(t.cod?'<div class="tarefas-hist-meta">EAN '+tarefasHistEsc_(t.cod)+'</div>':'')+(t.validade?'<div class="tarefas-hist-meta">Validade '+tarefasHistEsc_(_fmtValidadeTarefaTexto_(t.validade))+'</div>':'')+preco+(t.descricao?'<div class="tarefas-hist-desc"><div class="tarefas-hist-desc-label"><i class="ti ti-message-circle"></i> Orientação</div>'+tarefasHistEsc_(t.descricao)+'</div>':'')+'</div></div>'+answer+'</div>';
   }
   var originalAbrir=window.abrirCentralTarefas;
   window.abrirCentralTarefas=function(){ensureControls();return originalAbrir.apply(this,arguments);};
@@ -6879,9 +6872,9 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     fotos.forEach(function(x){_carregarFotoTarefa('g'+x.idx,x.t.cod,x.t.produto);});
   };
   window.tarefasHistResponderPendente_=function(id){
-    fecharCentralTarefas();buscarTarefas(false).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
+    fecharCentralTarefas();buscarTarefas(true).then(function(){setTimeout(function(){var idx=(_tarefasPendentes||[]).findIndex(function(t){return String(t.id)===String(id);}),modal=document.getElementById('tarefasModal'),body=document.getElementById('tarefasModalBody'),cnt=document.getElementById('tarefasModalCount');if(idx<0||!modal||!body){mostrarToast('Esta tarefa já foi concluída por outro colaborador.','ok');return;}body.innerHTML=_buildTarefaCards('m');Array.prototype.forEach.call(body.querySelectorAll('.tarefa-card'),function(c){c.style.display=c.id==='tarefa_m'+idx?'':'none';});if(cnt)cnt.textContent='1';modal.classList.add('open');try{_carregarFotoTarefa('m'+idx,_tarefasPendentes[idx].cod,_tarefasPendentes[idx].produto);}catch(e){}},30);});
   };
-  console.info('[AURA] tarefas v5 — confirmação rápida no cartão e avanço por vencimento');
+  console.info('[AURA] tarefas v4 — filtros por setor + dias para vencer; agrupamento por vencimento exato');
 })();
 </script>
 
@@ -6903,7 +6896,6 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 #aura-loading-gauge .ag-arc{fill:none;stroke-linecap:round;stroke-width:16}#aura-loading-gauge .ag-track{stroke:var(--atrack)}#aura-loading-gauge .ag-fill{stroke:var(--c);transition:stroke .2s}
 #aura-loading-gauge .ag-tick{stroke:var(--amute);stroke-width:2;opacity:.5}#aura-loading-gauge .ag-needle{transform-origin:150px 150px;transition:transform .16s linear}#aura-loading-gauge .ag-needle line{stroke:var(--aink);stroke-width:5;stroke-linecap:round}#aura-loading-gauge .ag-hub{fill:var(--aink)}#aura-loading-gauge .ag-hubi{fill:var(--c)}
 #aura-loading-gauge[data-s="stuck"] .ag-needle{animation:ag-tremor .5s infinite}#aura-loading-gauge[data-s="stuck"] .ag-pct,#aura-loading-gauge[data-s="err"] .ag-pct{animation:ag-pulse 1.1s infinite}@keyframes ag-tremor{0%,100%{transform:rotate(var(--a))}50%{transform:rotate(calc(var(--a) + 2.5deg))}}@keyframes ag-pulse{50%{opacity:.5}}
-#aura-loading-gauge[data-real="false"] .ag-pct{visibility:hidden}
 #aura-loading-gauge .ag-pct{font-size:31px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums;margin-top:0}#aura-loading-gauge .ag-msg{text-align:center;font-size:14px;font-weight:750;margin-top:1px;line-height:1.35}#aura-loading-gauge .ag-meta{text-align:center;color:var(--amute);font-size:12px;margin-top:3px;min-height:16px;line-height:1.35}
 #aura-loading-gauge .ag-actions{display:flex;justify-content:center;gap:8px;margin-top:10px}#aura-loading-gauge .ag-actions:empty{display:none}#aura-loading-gauge .ag-actions button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--aline);border-radius:9px;background:var(--abg);color:var(--aink);padding:7px 12px;cursor:pointer}#aura-loading-gauge .ag-actions button:focus-visible{outline:3px solid var(--ag);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){#aura-loading-gauge,#aura-loading-gauge *{transition:none!important;animation:none!important}}
@@ -6911,7 +6903,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 <div id="aura-loading-gauge" role="status" aria-live="polite" aria-atomic="true" data-s="run">
  <div class="ag-panel"><div class="ag-brand"><b>AURA System</b><span>Processando</span></div>
   <svg class="ag-gauge" viewBox="0 0 300 166" aria-hidden="true"><g class="ag-ticks"></g><path class="ag-arc ag-track" d="M30 150 A120 120 0 0 1 270 150" pathLength="100"/><path class="ag-arc ag-fill" d="M30 150 A120 120 0 0 1 270 150" pathLength="100" stroke-dasharray="0 100"/><g class="ag-needle" style="--a:-90deg;transform:rotate(-90deg)"><polygon points="146,150 154,150 150,40" fill="currentColor"/><line x1="150" y1="150" x2="150" y2="164"/></g><circle class="ag-hub" cx="150" cy="150" r="11"/><circle class="ag-hubi" cx="150" cy="150" r="5"/></svg>
-  <div class="ag-pct">0%</div><div class="ag-msg">Aguardando…</div><div class="ag-meta">Aguardando resposta</div><div class="ag-actions"></div>
+  <div class="ag-pct">0%</div><div class="ag-msg">Aguardando…</div><div class="ag-meta">Percentual estimado</div><div class="ag-actions"></div>
  </div>
 </div>
 <script id="aura-loading-gauge-js">
@@ -6919,7 +6911,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
  'use strict'; if(w.AuraLoader&&w.AuraLoader.__gauge)return;
  var root=d.getElementById('aura-loading-gauge'),panel=root.querySelector('.ag-panel'),fill=root.querySelector('.ag-fill'),needle=root.querySelector('.ag-needle'),pct=root.querySelector('.ag-pct'),msg=root.querySelector('.ag-msg'),meta=root.querySelector('.ag-meta'),actions=root.querySelector('.ag-actions'),ticks=root.querySelector('.ag-ticks');
  for(var i=0;i<=10;i++){var a=(-90+i*18)*Math.PI/180,x1=150+Math.sin(a)*130,y1=150-Math.cos(a)*130,x2=150+Math.sin(a)*(i%5?136:142),y2=150-Math.cos(a)*(i%5?136:142),line=d.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('class','ag-tick');line.setAttribute('x1',x1.toFixed(1));line.setAttribute('y1',y1.toFixed(1));line.setAttribute('x2',x2.toFixed(1));line.setAttribute('y2',y2.toFixed(1));ticks.appendChild(line)}
- var active=0,started=0,timer=0,visibleTimer=0,interval=0,state='run',currentLabel='Carregando conteúdo…',real=false,realPct=0,seq=0,hideAfter=0,groupError='',currentComplete='Processo concluído',shown=false;
+ var active=0,started=0,timer=0,visibleTimer=0,interval=0,state='run',currentLabel='Carregando conteúdo…',real=false,realPct=0,seq=0,hideAfter=0,groupError='',currentComplete='Processo concluído';
  function draw(p){p=Math.max(0,Math.min(100,p));fill.setAttribute('stroke-dasharray',p+' 100');var deg=-90+p*1.8;needle.style.setProperty('--a',deg+'deg');needle.style.transform='rotate('+deg+'deg)';pct.textContent=Math.round(p)+'%'}
  function setState(s,title,detail){state=s;root.dataset.s=s;msg.textContent=title||'';meta.textContent=detail||''}
  function clearTimers(){clearTimeout(timer);clearTimeout(visibleTimer);clearTimeout(hideAfter);clearInterval(interval);timer=visibleTimer=interval=hideAfter=0}
@@ -6927,17 +6919,17 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
  function dismiss(){root.classList.remove('on');actions.textContent='';clearTimers();if(active>0){state='hidden';return}state='idle';real=false;draw(0)}
  function labelFor(text){text=(text||'').replace(/\s+/g,' ').trim();return text?text.slice(0,90):'Processando sua solicitação…'}
  function gestureLabel(el){var node=el&&el.closest?el.closest('button,[role="button"],input[type="submit"],input[type="button"],a,[aria-label]'):null;if(!node)return '';return labelFor(node.getAttribute('aria-label')||node.innerText||node.value||node.title||'')}
- function begin(label,mode){if(active===0){clearTimers();groupError='';shown=false;root.dataset.real='false';started=Date.now();real=false;realPct=0;draw(0);actions.textContent='';setState('run',label||'Carregando conteúdo…','Aguardando resposta');root.classList.remove('on');visibleTimer=setTimeout(function(){if(active>0&&state!=='hidden'){root.classList.add('on');shown=true}},650);interval=setInterval(tick,100)}else if(label&&currentLabel==='Carregando conteúdo…'){currentLabel=label;msg.textContent=label}active++;seq++;return seq}
- function finish(err,immediate){if(err)groupError=groupError||err;active=Math.max(0,active-1);if(active>0)return;if(state==='hidden'){state='idle';clearTimers();return}clearInterval(interval);interval=0;if(groupError){clearTimeout(visibleTimer);root.classList.add('on');shown=true;actions.textContent='';setState('err','Falha ao concluir a solicitação',groupError);button('Fechar',dismiss);groupError='';return}real=false;root.dataset.real='true';draw(100);if(immediate||!shown){setState('ok',currentComplete||'Processo concluído','Concluído e confirmado');clearTimeout(visibleTimer);root.classList.remove('on');actions.textContent='';clearTimers();state='idle';shown=false;return}setState('ok',currentComplete||'Processo concluído','Concluído e confirmado');clearTimeout(visibleTimer);root.classList.add('on');hideAfter=setTimeout(function(){if(active===0)dismiss()},850)}
- function tick(){if(!active||state==='hidden')return;var elapsed=Date.now()-started,sec=(elapsed/1000).toFixed(1).replace('.',',');if(!real){draw(0);meta.textContent='Aguardando resposta · '+sec+' s'}else{draw(realPct);meta.textContent=Math.round(realPct)+'% confirmado'}if(elapsed>=20000){setState('stuck','Ainda processando',sec+' s · aguardando resposta do servidor');if(!actions.firstChild)button('Ocultar',dismiss)}else if(elapsed>=8000){setState('slow','Demorando mais que o normal',sec+' s · aguardando resposta');}else if(state==='run'){setState('run',currentLabel,real?'Progresso confirmado':'Aguardando resposta · '+sec+' s')}}
- w.AuraLoader={__gauge:true,start:function(options){options=typeof options==='string'?{message:options}:options||{};if(typeof loginBlocksLoader==='function'&&loginBlocksLoader())return 0;if(active===0){currentLabel=labelFor(options.message||'Processando a ação…');currentComplete=labelFor(options.complete||'Processo concluído')}return begin(currentLabel,'manual')},progress:function(current,total,message){if(active===0)begin(message||'Processando a ação…','manual');real=true;root.dataset.real='true';realPct=total>0?Math.max(0,Math.min(100,100*current/total)):0;draw(realPct);if(message)currentLabel=labelFor(message);setState('run',currentLabel,Math.round(realPct)+'% confirmado · '+current+' de '+total)},done:function(message,immediate){if(message)currentComplete=labelFor(message);if(active===0)begin('Finalizando a ação…','manual');finish(null,!!immediate)},fail:function(message){finish(message||'A ação não foi concluída')},markFailure:function(message){if(active>0)groupError=groupError||String(message||'A ação não foi concluída')},wrapAction:function(name,message,complete,condition){var original=w[name];if(typeof original!=='function'||original.__auraProcessWrapped)return false;var wrapped=function(){var self=this,args=arguments;if(condition==='manualBool'&&args[0]!==true)return original.apply(self,args);if(condition==='manualTag'&&args[0]!=='manual')return original.apply(self,args);if(condition==='ean44'&&String(args[0]||'').replace(/\D/g,'').length!==44)return original.apply(self,args);var ticket=w.AuraLoader.start({message:message,complete:complete});var out;try{out=original.apply(self,args)}catch(e){if(ticket)w.AuraLoader.fail(e&&e.message||complete);throw e}if(!ticket)return out;function settle(v){if(v===false||(v&&(v.ok===false||v.success===false))){w.AuraLoader.fail(v.erro||v.error||('Não foi possível concluir: '+complete))}else w.AuraLoader.done()}if(out&&typeof out.then==='function')return Promise.resolve(out).then(function(v){settle(v);return v},function(e){w.AuraLoader.fail(e&&e.message||complete);throw e});settle(out);return out};wrapped.__auraProcessWrapped=true;w[name]=wrapped;return true},__version:'2.1.0'};
+ function begin(label,mode){if(active===0){clearTimers();groupError='';started=Date.now();real=false;realPct=0;draw(0);actions.textContent='';setState('run',label||'Carregando conteúdo…','Percentual estimado');root.classList.remove('on');visibleTimer=setTimeout(function(){if(active>0&&state!=='hidden')root.classList.add('on')},220);interval=setInterval(tick,100)}else if(label&&currentLabel==='Carregando conteúdo…'){currentLabel=label;msg.textContent=label}active++;seq++;return seq}
+ function finish(err,immediate){if(err)groupError=groupError||err;active=Math.max(0,active-1);if(active>0)return;if(state==='hidden'){state='idle';clearTimers();return}clearInterval(interval);interval=0;if(groupError){clearTimeout(visibleTimer);root.classList.add('on');actions.textContent='';setState('err','Falha ao concluir a solicitação',groupError);button('Fechar',dismiss);groupError='';return}real=false;draw(100);setState('ok',currentComplete||'Processo concluído',immediate?'Avatares apresentados':'Etapa finalizada');clearTimeout(visibleTimer);if(immediate){root.classList.remove('on');actions.textContent='';clearTimers();state='idle';return}root.classList.add('on');hideAfter=setTimeout(function(){if(active===0)dismiss()},850)}
+ function tick(){if(!active||state==='hidden')return;var elapsed=Date.now()-started,sec=(elapsed/1000).toFixed(1).replace('.',',');if(!real){var p=elapsed<2000?70*elapsed/2000:70+22*(1-Math.exp(-(elapsed-2000)/4300));draw(Math.min(92,p));meta.textContent='Percentual estimado · '+sec+' s'}else{draw(realPct);meta.textContent=Math.round(realPct)+'% confirmado · '+sec+' s'}if(elapsed>=20000){setState('stuck','Ainda processando',sec+' s · a operação não respondeu no tempo esperado');if(!actions.firstChild)button('Ocultar',dismiss)}else if(elapsed>=8000){setState('slow','Demorando mais que o normal',sec+' s · aguardando resposta');}else if(state==='run'){setState('run',currentLabel,real?'Progresso confirmado':'Percentual estimado · '+sec+' s')}}
+ w.AuraLoader={__gauge:true,start:function(options){options=typeof options==='string'?{message:options}:options||{};if(typeof loginBlocksLoader==='function'&&loginBlocksLoader())return 0;if(active===0){currentLabel=labelFor(options.message||'Processando a ação…');currentComplete=labelFor(options.complete||'Processo concluído')}return begin(currentLabel,'manual')},progress:function(current,total,message){if(active===0)begin(message||'Processando a ação…','manual');real=true;realPct=total>0?Math.max(0,Math.min(100,100*current/total)):0;draw(realPct);if(message)currentLabel=labelFor(message);setState('run',currentLabel,Math.round(realPct)+'% confirmado · '+current+' de '+total)},done:function(message,immediate){if(message)currentComplete=labelFor(message);if(active===0)begin('Finalizando a ação…','manual');finish(null,!!immediate)},fail:function(message){finish(message||'A ação não foi concluída')},markFailure:function(message){if(active>0)groupError=groupError||String(message||'A ação não foi concluída')},wrapAction:function(name,message,complete,condition){var original=w[name];if(typeof original!=='function'||original.__auraProcessWrapped)return false;var wrapped=function(){var self=this,args=arguments;if(condition==='manualBool'&&args[0]!==true)return original.apply(self,args);if(condition==='manualTag'&&args[0]!=='manual')return original.apply(self,args);if(condition==='ean44'&&String(args[0]||'').replace(/\D/g,'').length!==44)return original.apply(self,args);var ticket=w.AuraLoader.start({message:message,complete:complete});var out;try{out=original.apply(self,args)}catch(e){if(ticket)w.AuraLoader.fail(e&&e.message||complete);throw e}if(!ticket)return out;function settle(v){if(v===false||(v&&(v.ok===false||v.success===false))){w.AuraLoader.fail(v.erro||v.error||('Não foi possível concluir: '+complete))}else w.AuraLoader.done()}if(out&&typeof out.then==='function')return Promise.resolve(out).then(function(v){settle(v);return v},function(e){w.AuraLoader.fail(e&&e.message||complete);throw e});settle(out);return out};wrapped.__auraProcessWrapped=true;w[name]=wrapped;return true},__version:'2.0.0'};
 
  var _auraToastOriginal=w.mostrarToast;if(typeof _auraToastOriginal==='function'&&!_auraToastOriginal.__auraToastObserved){var _auraToastObserved=function(msg,type){if(active>0&&/^(err|error)$/i.test(String(type||'')))groupError=groupError||String(msg||'Falha informada pela aplicação');return _auraToastOriginal.apply(this,arguments)};_auraToastObserved.__auraToastObserved=true;w.mostrarToast=_auraToastObserved}
  draw(0);
 })(window,document);</script>
 
 <script id="aura-process-loader-hooks">
-(function(){if(!window.AuraLoader)return;var ops=[["tarefasHistFinalizar_", "Registrando a resposta da tarefa…", "Resposta da tarefa registrada"], ["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada", "manualBool"], ["carregarTarefasHistorico", "Consultando o histórico de tarefas…", "Histórico de tarefas carregado", "manualBool"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarTarefa", "Gravando a conferência do estoque da tarefa…", "Estoque da tarefa confirmado"], ["responderCarrinhoTarefa", "Registrando a situação da tarefa…", "Situação da tarefa registrada"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado", "manualBool"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
+(function(){if(!window.AuraLoader)return;var ops=[["tarefasHistFinalizar_", "Registrando a resposta da tarefa…", "Resposta da tarefa registrada"], ["reenviarPendentes", "Enviando os registros pendentes…", "Registros enviados"], ["nfeHistRetomarPendente_", "Abrindo a conferência pendente…", "Conferência aberta"], ["carregarRetiradas", "Consultando as retiradas pela data selecionada…", "Lista de retiradas carregada"], ["carregarTarefasHistorico", "Consultando o histórico de tarefas…", "Histórico de tarefas carregado"], ["nfeColetaSalvar", "Gravando as validades da NF-e…", "Validades gravadas"], ["confirmarTarefa", "Gravando a conferência do estoque da tarefa…", "Estoque da tarefa confirmado"], ["responderCarrinhoTarefa", "Registrando a situação da tarefa…", "Situação da tarefa registrada"], ["confirmarAtualizarEstoqueLote", "Atualizando o lote…", "Lote atualizado"], ["nfeColetaBuscarChave", "Consultando a NF-e pela chave…", "NF-e carregada", "ean44"], ["carregarHistoricoNFe", "Consultando o histórico de NF-e deste colaborador…", "Histórico de NF-e carregado"], ["abrirDetalheNFe_", "Carregando os detalhes da NF-e…", "Detalhes carregados"], ["nfeHistSalvarEdicao_", "Salvando as alterações da conferência…", "Alterações salvas"]];ops.forEach(function(x){window.AuraLoader.wrapAction(x[0],x[1],x[2],x[3])});})();
 </script>
 <style id="auraPriceBadgesV1">
 .prod-price-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
