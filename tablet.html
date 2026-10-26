@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.26 — conversão prática e quantidade automática -->
+<!-- Coleta Tablet v7.28 — layout Lenovo Tab M9 -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -1168,6 +1168,21 @@ html,body{overscroll-behavior-y:none!important;}
   .nfe-escudo-content>.nfe-field input{height:40px}
   .nfe-actions{padding:7px 10px calc(7px + env(safe-area-inset-bottom,0px))}
   .nfe-save{padding:11px 12px}
+}
+/* Tablet portrait: use the width beside the product photo and keep the conversion choices on one line. */
+@media(min-width:600px){
+  .nfe-item-main{display:flex;flex-direction:column;align-items:stretch}
+  .nfe-item-name,.nfe-bank-tag{align-self:flex-start}
+  .nfe-info-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:5px 7px!important;width:100%}
+  .nfe-info-line{min-width:0;overflow-wrap:anywhere}
+  .nfe-info-line.nfe-qtd-gravada{grid-column:1/-1}
+  .nfe-conv-box{width:100%;margin-top:6px;padding:7px 8px;border-radius:8px}
+  .nfe-conv-title{margin-bottom:4px}
+  .nfe-conv-source{margin-bottom:4px;line-height:1.3}
+  .nfe-conv-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:5px}
+  .nfe-conv-choice{min-height:38px;padding:4px 6px;font-size:8px;line-height:1.15}
+  .nfe-conv-manual{margin-top:0}
+  .nfe-conv-manual .nfe-conv-row{margin-top:6px}
 }
 </style>
 <style id="nfe-receipt-inline-layout">
@@ -5354,8 +5369,8 @@ function nfeItemHtml_(it,i){
   var conversionHtml=embalagem?('<div class="nfe-conv-box '+(decisaoFeita?'decidida':'pendente')+'"><div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> Conversão de unidade</div>'
     +'<div class="nfe-conv-source">'+(fator>1?('Sugestão: '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+' × '+nfeFmtQtd_(fator)+' = <b>'+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</b>'):'A NF-e informa '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+'. Confirme se essa quantidade deve ser convertida para '+nfeEsc_(unDestino)+'.')+'</div>'
     +(decisaoFeita?('<div class="nfe-conv-decision">'+(decisao==='converter'?'Conversão aplicada: ':'Sem conversão: ')+nfeFmtQtd_(Number(it.qtdEstoque)||qtdBaseConversao)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</div>'):'')
-    +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button></div>'
-    +'<div class="nfe-conv-manual"><button type="button" class="nfe-conv-choice" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL MANUALMENTE</button>'
+    +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice manual" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL</button></div>'
+    +'<div class="nfe-conv-manual">'
     +(it.conversaoManualAberta?('<div class="nfe-conv-row"><label for="nfeQtdManual_'+i+'">Total a gravar ('+nfeEsc_(unDestino)+')</label><input id="nfeQtdManual_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" placeholder="Ex.: '+nfeEsc_(nfeFmtQtd_(totalSugConversao))+'" value="" onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();nfeAplicarQtdManual_('+i+');}"><button type="button" class="nfe-conv-choice yes" onclick="nfeAplicarQtdManual_('+i+')">APLICAR</button></div>'):'')
     +'</div></div>'):'';
 
@@ -5398,9 +5413,9 @@ function nfeItemHtml_(it,i){
             +'<div class="nfe-info-line"><span class="lbl">Recebido na NF</span><b>'+qtdNF+'</b></div>'
             +'<div class="nfe-info-line nfe-qtd-gravada"><span class="lbl">Quantidade que será gravada</span><b class="nfe-qtd-gravada-value">'+(recebimentoStatus==='NAO_RECEBIDO'?'0':(embalagem&&!decisaoFeita?'Aguardando escolha':nfeFmtQtd_(qtd)+(it.unidadeAura||unDestino||it.uCom?' '+(it.unidadeAura||unDestino||it.uCom):'')))+'</b></div>'
           +'</div>'
-          +conversionHtml
         +'</div>'
       +'</div>'
+      +conversionHtml
     +'</div>'
     +'<div class="nfe-item-body">'+gravacaoHtml+escudoHtml+recebimentoExtra+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-lotes-title"><span>'+(it.validadeIndeterminada===true?'Conferência sem lote de validade':'Validade(s) · distribuir a quantidade gravada')+'</span>'+(it.validadeIndeterminada===true?'':'<button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button>')+'</div>'+lotes+'</div>'
   +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+(it.controlar===false?'<span class="nfe-review-static"><i class="ti ti-infinity"></i> '+(confConfirmado?'VALIDADE INDETERMINADA · CONFERIDA':'AGUARDANDO VALIDADE INDETERMINADA')+'</span>':'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>')+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
@@ -6570,7 +6585,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.26-nfe-conversao-pratica';console.info('[AURA] Coleta Tablet v7.26 — conversão prática e quantidade automática');</script>
+<script>window.AURA_TABLET_BUILD='v7.28-lenovo-tab-m9-nfe';console.info('[AURA] Coleta Tablet v7.28 — layout Lenovo Tab M9');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
