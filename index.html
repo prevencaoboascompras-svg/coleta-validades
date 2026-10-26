@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual v7.24 — conversão prática e quantidade automática -->
+<!-- Coleta Individual v7.26 — layout iPhone 15 -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
@@ -1111,7 +1111,7 @@ body.tarefas-hist-aberta{overflow:hidden}
 .nfe-conv-choice.yes.selected{border-color:#1D9E75;background:rgba(29,158,117,.14);color:#1D9E75}
 .nfe-conv-choice.no.selected{border-color:#B76E00;background:rgba(239,159,39,.15);color:#B76E00}
 .nfe-conv-decision{margin-top:7px;font-size:9px;line-height:1.4;color:var(--tx)}
-@media(max-width:520px){.nfe-conv-choices{grid-template-columns:1fr}.nfe-conv-choice{min-height:42px}}
+@media(max-width:520px){.nfe-conv-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.nfe-conv-choice{min-height:40px}.nfe-conv-choice.manual{grid-column:1/-1}}
 
 .nfe-item.nfe-pending-focus{outline:3px solid rgba(226,75,74,.72);outline-offset:2px;box-shadow:0 0 0 6px rgba(226,75,74,.12);transition:box-shadow .25s ease,outline-color .25s ease;}.nfe-field.nfe-missing-field input,.nfe-field.nfe-missing-field select,.nfe-lote.nfe-missing-field input{border-color:#ff3b50!important;box-shadow:0 0 0 3px rgba(255,59,80,.28),0 0 18px rgba(255,59,80,.42)!important;animation:nfeMissingPulse 1s ease-in-out 2}.nfe-conv-box.nfe-missing-field{outline:3px solid #ffb020;outline-offset:2px;box-shadow:0 0 0 5px rgba(255,176,32,.2),0 0 18px rgba(255,176,32,.4);animation:nfeMissingPulse 1s ease-in-out 2}@keyframes nfeMissingPulse{50%{filter:brightness(1.18)}}</style>
 <style id="nfe-history-full-edit-css">
@@ -1125,8 +1125,14 @@ body.tarefas-hist-aberta{overflow:hidden}
   .nfe-item{margin-bottom:8px}
   .nfe-item-hd{padding:8px}
   .nfe-item-statusrow{margin-bottom:7px}
-  .nfe-product-wrap{grid-template-columns:124px minmax(0,1fr);gap:9px}
+  .nfe-product-wrap{grid-template-columns:124px minmax(0,1fr);gap:9px;align-items:start}
   .nfe-thumb{width:124px;height:124px}
+  .nfe-item-main{min-width:0}
+  .nfe-item-name{text-align:left;overflow-wrap:anywhere}
+  .nfe-info-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:4px;margin-top:6px}
+  .nfe-info-line{min-width:0;overflow-wrap:anywhere;padding:4px 5px;border-radius:6px;background:var(--card);font-size:8px;line-height:1.2}
+  .nfe-info-line .lbl{font-size:6.5px;line-height:1.1}
+  .nfe-info-line.nfe-qtd-gravada{grid-column:1/-1}
   .nfe-item-body{padding:8px}
   .nfe-grid2{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
   .nfe-field label{margin-bottom:3px}
@@ -1139,8 +1145,8 @@ body.tarefas-hist-aberta{overflow:hidden}
   .nfe-escudo-field small{font-size:8px!important;line-height:1.25}
   .nfe-lotes-title{margin:8px 0 5px}
   .nfe-review-row.nfe-review-bottom{margin-top:8px;min-height:42px;padding:7px 8px}
-  .nfe-conv-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:5px 8px;margin-top:7px;padding:8px}
-  .nfe-conv-title,.nfe-conv-source,.nfe-conv-choices,.nfe-conv-decision,.nfe-conv-note{grid-column:1/-1}
+  .nfe-conv-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:5px 8px;width:100%;margin-top:7px;padding:8px}
+  .nfe-conv-title,.nfe-conv-source,.nfe-conv-choices,.nfe-conv-decision,.nfe-conv-note,.nfe-conv-manual{grid-column:1/-1}
   .nfe-conv-title{margin-bottom:0}
   .nfe-conv-source{margin-bottom:0;font-size:8.5px}
   .nfe-conv-factor{grid-column:1;flex-wrap:nowrap;margin:0;font-size:8.5px}
@@ -5323,8 +5329,8 @@ function nfeItemHtml_(it,i){
   var conversionHtml=embalagem?('<div class="nfe-conv-box '+(decisaoFeita?'decidida':'pendente')+'"><div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> Conversão de unidade</div>'
     +'<div class="nfe-conv-source">'+(fator>1?('Sugestão: '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+' × '+nfeFmtQtd_(fator)+' = <b>'+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</b>'):'A NF-e informa '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+'. Confirme se essa quantidade deve ser convertida para '+nfeEsc_(unDestino)+'.')+'</div>'
     +(decisaoFeita?('<div class="nfe-conv-decision">'+(decisao==='converter'?'Conversão aplicada: ':'Sem conversão: ')+nfeFmtQtd_(Number(it.qtdEstoque)||qtdBaseConversao)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</div>'):'')
-    +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button></div>'
-    +'<div class="nfe-conv-manual"><button type="button" class="nfe-conv-choice" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL MANUALMENTE</button>'
+    +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice manual" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL</button></div>'
+    +'<div class="nfe-conv-manual">'
     +(it.conversaoManualAberta?('<div class="nfe-conv-row"><label for="nfeQtdManual_'+i+'">Total a gravar ('+nfeEsc_(unDestino)+')</label><input id="nfeQtdManual_'+i+'" type="number" min="0.001" step="any" inputmode="decimal" placeholder="Ex.: '+nfeEsc_(nfeFmtQtd_(totalSugConversao))+'" value="" onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();nfeAplicarQtdManual_('+i+');}"><button type="button" class="nfe-conv-choice yes" onclick="nfeAplicarQtdManual_('+i+')">APLICAR</button></div>'):'')
     +'</div></div>'):'';
 
@@ -5367,9 +5373,9 @@ function nfeItemHtml_(it,i){
             +'<div class="nfe-info-line"><span class="lbl">Recebido na NF</span><b>'+qtdNF+'</b></div>'
             +'<div class="nfe-info-line nfe-qtd-gravada"><span class="lbl">Quantidade que será gravada</span><b class="nfe-qtd-gravada-value">'+(recebimentoStatus==='NAO_RECEBIDO'?'0':(embalagem&&!decisaoFeita?'Aguardando escolha':nfeFmtQtd_(qtd)+(it.unidadeAura||unDestino||it.uCom?' '+(it.unidadeAura||unDestino||it.uCom):'')))+'</b></div>'
           +'</div>'
-          +conversionHtml
         +'</div>'
       +'</div>'
+      +conversionHtml
     +'</div>'
     +'<div class="nfe-item-body">'+gravacaoHtml+escudoHtml+recebimentoExtra+'<div class="nfe-grid2"><div class="nfe-field"><label>EAN / código de barras</label><div class="nfe-ean-row"><div class="nfe-ean-search-wrap"><input id="nfeEan_'+i+'" type="text" inputmode="numeric" autocomplete="off" value="'+nfeEsc_(it._campoBusca!==undefined?it._campoBusca:(it.eanAura||''))+'" placeholder="Código interno/EAN ou nome" oninput="nfeBuscaProdutoInput_('+i+',this)" onkeydown="nfeCampoCodigoKey_(event,'+i+',this)" onblur="nfeCampoCodigoBlur_('+i+',this)"><button type="button" class="nfe-kbd-toggle" onclick="nfeTrocarTeclado_('+i+',this)" title="Buscar também por nome">ABC</button><div class="nfe-autocomplete" id="nfeAuto_'+i+'"></div></div><button class="nfe-mini-btn camera" aria-label="Abrir câmera para ler o EAN" title="Ler EAN pela câmera" onclick="nfeEscanearEan_('+i+')"><i class="ti ti-camera"></i> CÂMERA</button></div></div><div class="nfe-lotes-title"><span>'+(it.validadeIndeterminada===true?'Conferência sem lote de validade':'Validade(s) · distribuir a quantidade gravada')+'</span>'+(it.validadeIndeterminada===true?'':'<button class="nfe-add-lote" onclick="nfeAdicionarLote_('+i+')"><i class="ti ti-plus"></i> dividir lote</button>')+'</div>'+lotes+'</div>'
   +'<div class="nfe-review-row nfe-review-bottom '+(confConfirmado?'ok':(confEstado.pronto?'ready':''))+'" id="nfeConfBox'+i+'">'+(it.controlar===false?'<span class="nfe-review-static"><i class="ti ti-infinity"></i> '+(confConfirmado?'VALIDADE INDETERMINADA · CONFERIDA':'AGUARDANDO VALIDADE INDETERMINADA')+'</span>':'<label class="nfe-review-check"><input id="nfeConfCheck'+i+'" type="checkbox" '+(confConfirmado?'checked ':'')+'onchange="nfeMarcarConferido_('+i+',this.checked)"><span><i class="ti ti-circle-check"></i> CONFERIDO</span></label>')+'<span class="nfe-review-msg" id="nfeConfText'+i+'">'+nfeEsc_(confMsg)+'</span></div>'+'</div>'
