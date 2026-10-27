@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual v7.26 — layout iPhone 15 -->
+<!-- Coleta Individual v7.28 — fallback da consulta de lotes iPhone 15 -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
@@ -8,6 +8,12 @@
 <!-- v7.14 — histórico de NF-e visível a todos; retomar/editar restrito ao responsável -->
 <html lang="pt-BR">
 <head>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fcfbf8">
@@ -1201,6 +1207,30 @@ body.tarefas-hist-aberta{overflow:hidden}
 .nfe-item-statusrow>.nfe-badge{margin-left:auto}
 @media(max-width:520px){.nfe-item-statusrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}.nfe-item-statusleft{grid-column:1}.nfe-item-statusrow>.nfe-badge{grid-column:2;grid-row:1;margin-left:0}.nfe-status-controls{grid-column:1/-1;grid-row:2;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nfe-item-receipt,.nfe-item-sector{grid-template-columns:1fr;gap:3px}.nfe-item-receipt label,.nfe-item-sector>label{font-size:7px!important}.nfe-item-receipt select,.nfe-item-sector select{height:38px!important;font-size:9px!important;padding:0 5px!important}}
 @media(max-width:350px){.nfe-status-controls{grid-template-columns:1fr}}
+</style>
+
+<style id="aura-individual-iphone-15-layout">
+@media(max-width:430px){
+  body{width:100%;max-width:480px;margin:0 auto}
+  .hdr{width:100%;max-width:480px;padding-left:16px;padding-right:16px}
+  .scan-wrap{margin:12px;height:clamp(100px,14vh,150px);min-height:100px}
+  .prod-row{margin:0 10px 8px;padding:8px;gap:9px;align-items:flex-start}
+  .prod-foto{width:108px;height:108px}
+  .prod-info{gap:5px}
+  .prod-desc-val{font-size:12px;line-height:1.25}
+  .prod-codigo{font-size:11px;overflow-wrap:anywhere}
+  .prod-status-row{justify-content:flex-start}
+  .manual-wrap,.nfe-entry,.nfe-resume-card,.tarefas-section,.form-body,.hist-section{margin-left:10px;margin-right:10px}
+  .form-body{gap:11px}
+  .retirada-view{width:100%;max-width:480px}
+  .retirada-body{padding:10px 10px calc(24px + env(safe-area-inset-bottom,0px))}
+  .retirada-item-body{gap:8px;padding:8px}
+  .retirada-foto{width:104px;height:104px}
+  .retirada-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .retirada-info-val{font-size:10px}
+  .tarefas-hist-view{width:100%;max-width:480px}
+  .nfe-hist-shell{width:100%;max-width:480px}
+}
 </style>
 </head>
 <body>
@@ -6525,7 +6555,11 @@ async function nfeHistSalvarEdicao_(idx){
     el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');else{elPreco.classList.remove('show');if(elPromo)elPromo.classList.remove('show');}
     // A tela responde já. Lotes/setor e eventual dado mais novo chegam depois.
     setTimeout(function(){if((codigoAtual||'')===ean)buscarFotoCompleta(p.ean||ean,p.descricao||'');},0);
-    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var r=await tentarBuscaCompleta(cfg.url,p.ean||ean);if((codigoAtual||'')!==ean)return;if(r&&r.suportado&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco,lotes,'atualizando');if(lotes.length){_loteEanAtual=p.ean||ean;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
+    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var codigoConsulta=p.ean||ean;var r=await tentarBuscaCompleta(cfg.url,codigoConsulta);if((codigoAtual||'')!==ean)return;var loteConsultaOk=!!(r&&r.suportado&&r.encontrado&&Array.isArray(r.lotes));
+    // Se a implantação ainda não expõe buscarEANCompleto ou essa ação falhar,
+    // consulta produto e lotes pelas duas ações compatíveis do backend.
+    if(!loteConsultaOk){var legacy=await Promise.all([tentarBusca(cfg.url,codigoConsulta),tentarVerificarLotes(cfg.url,codigoConsulta)]);if((codigoAtual||'')!==ean)return;if(legacy[0]&&legacy[0].encontrado){r={suportado:true,encontrado:true,descricao:legacy[0].descricao||p.descricao,preco:legacy[0].preco,lotes:legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes)?legacy[1].lotes:[]};loteConsultaOk=!!(legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes));}}
+    if((codigoAtual||'')!==ean)return;if(r&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco!==undefined&&r.preco!==null?r.preco:p.preco,lotes,loteConsultaOk?'atualizando':'indisponivel');if(lotes.length){_loteEanAtual=codigoConsulta;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
   };
 
   // NF-e: autocomplete local com 90ms; EAN completo é imediato.
@@ -6640,7 +6674,7 @@ async function nfeHistSalvarEdicao_(idx){
     try{var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'}),data=await resp.json();if(!data||!data.ok)return;var nova=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});var sigAnt=JSON.stringify((_tarefasHistorico||[]).map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];})),sigNova=JSON.stringify(nova.map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];}));if(sigAnt!==sigNova){_tarefasHistorico=nova;_tarefasHistorico.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});renderTarefasHistorico();_tarefasPendentes=nova.filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});atualizarBadge_();}}
     catch(e){}finally{_taskSilentBusy=false;}
   }
-  _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
+  _taskPollTimer=setInterval(syncCentralSilencioso_,5000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
   console.info('[AURA] tarefas automáticas v3 — popup em toda entrada + decisão/execução auditáveis');
 })();
 </script>
@@ -6734,7 +6768,7 @@ async function nfeHistSalvarEdicao_(idx){
 </script>
 
 
-<script>console.info('[AURA Mobile] Individual v7.08 — tarefas por setor + dias para vencer; validade até 21:00');</script>
+<script>console.info('[AURA Mobile] Individual v7.28 — fallback da consulta de lotes; iPhone 15');</script>
 
 <script>console.info('[AURA Mobile] Individual v7.09 — popup a cada entrada + feedback gerencial de execução');</script>
 <style id="aura-loading-gauge-css">
