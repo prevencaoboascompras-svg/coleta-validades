@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.29 — auditoria responsiva Lenovo Tab M9 -->
+<!-- Coleta Tablet v7.30 — fallback de lotes + perfil responsivo Lenovo Tab M9 -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -9,6 +9,12 @@
 <!-- v7.14 — histórico de NF-e visível a todos; retomar/editar restrito ao responsável -->
 <html lang="pt-BR">
 <head>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#fcfbf8">
@@ -1240,6 +1246,28 @@ html,body{overscroll-behavior-y:none!important;}
   .retirada-body,.tarefas-hist-body{max-width:1200px;margin:0 auto}
   .nfe-hist-shell{width:100%;max-width:1100px}
   .nfe-shell{width:100%;max-width:1000px}
+}
+</style>
+<style id="aura-tablet-profile-narrow-viewport">
+/* O app é exclusivo do Lenovo Tab M9: alguns modos de tela do Android
+   reportam viewport CSS menor que 520px mesmo com o painel grande. */
+@media(min-width:400px) and (max-width:519px){
+  body{width:100%;max-width:none;margin:0}
+  .hdr{width:100%;max-width:none}
+  .scan-wrap{height:clamp(125px,18vh,170px);min-height:120px;margin:12px}
+  .prod-row{margin:0 12px 10px;padding:10px 11px;gap:10px}
+  .prod-foto{width:120px;height:120px}
+  .prod-info{gap:6px}
+  .prod-desc-val{font-size:13px}
+  .prod-codigo{font-size:13px}
+  .manual-wrap,.nfe-entry,.nfe-resume-card,.tarefas-section,.form-body,.hist-section{margin-left:12px;margin-right:12px}
+  .form-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .form-body>.submit-btn{grid-column:1/-1}
+  .field-input,.field-select,.qty-row{height:48px;min-height:48px;font-size:14px}
+  .qty-btn{width:48px}
+  .tablet-grid{width:100%;max-width:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .retirada-view,.tarefas-hist-view{width:100%;max-width:none;left:0;transform:none}
+  .nfe-shell,.nfe-hist-shell{width:100%;max-width:none}
 }
 </style>
 <style id="aura-tablet-lenovo-m9-layout">
@@ -6763,7 +6791,11 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');else{elPreco.classList.remove('show');if(elPromo)elPromo.classList.remove('show');}
     // A tela responde já. Lotes/setor e eventual dado mais novo chegam depois.
     setTimeout(function(){if((codigoAtual||'')===ean)buscarFotoCompleta(p.ean||ean,p.descricao||'');},0);
-    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var r=await tentarBuscaCompleta(cfg.url,p.ean||ean);if((codigoAtual||'')!==ean)return;if(r&&r.suportado&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco,lotes,'atualizando');if(lotes.length){_loteEanAtual=p.ean||ean;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
+    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var codigoConsulta=p.ean||ean;var r=await tentarBuscaCompleta(cfg.url,codigoConsulta);if((codigoAtual||'')!==ean)return;var loteConsultaOk=!!(r&&r.suportado&&r.encontrado&&Array.isArray(r.lotes));
+    // Se a implantação ainda não expõe buscarEANCompleto ou essa ação falhar,
+    // consulta produto e lotes pelas duas ações compatíveis do backend.
+    if(!loteConsultaOk){var legacy=await Promise.all([tentarBusca(cfg.url,codigoConsulta),tentarVerificarLotes(cfg.url,codigoConsulta)]);if((codigoAtual||'')!==ean)return;if(legacy[0]&&legacy[0].encontrado){r={suportado:true,encontrado:true,descricao:legacy[0].descricao||p.descricao,preco:legacy[0].preco,lotes:legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes)?legacy[1].lotes:[]};loteConsultaOk=!!(legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes));}}
+    if((codigoAtual||'')!==ean)return;if(r&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco!==undefined&&r.preco!==null?r.preco:p.preco,lotes,loteConsultaOk?'atualizando':'indisponivel');if(lotes.length){_loteEanAtual=codigoConsulta;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
   };
 
   // NF-e: autocomplete local com 90ms; EAN completo é imediato.
@@ -6878,7 +6910,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     try{var resp=await fetch(cfg.url+'?action=buscarTarefasHistorico&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'}),data=await resp.json();if(!data||!data.ok)return;var nova=(data.tarefas||[]).map(function(t){if(!t.fase)t.fase=tarefasHistFaseLocal_(t);return t;});var sigAnt=JSON.stringify((_tarefasHistorico||[]).map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];})),sigNova=JSON.stringify(nova.map(function(t){return [t.id,t.fase||tarefasHistFaseLocal_(t),t.carrinhoStatus,t.quantidadeConfirmada];}));if(sigAnt!==sigNova){_tarefasHistorico=nova;_tarefasHistorico.sort(function(a,b){return tarefasHistTs_(b)-tarefasHistTs_(a);});renderTarefasHistorico();_tarefasPendentes=nova.filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';});atualizarBadge_();}}
     catch(e){}finally{_taskSilentBusy=false;}
   }
-  _taskPollTimer=setInterval(syncCentralSilencioso_,3000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
+  _taskPollTimer=setInterval(syncCentralSilencioso_,5000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(syncCentralSilencioso_,80);});
   console.info('[AURA] tarefas automáticas v3.1 — identidade tablet obrigatória antes do popup');
 })();
 </script>
@@ -6972,7 +7004,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 
 
-<script>console.info('[AURA Mobile] Tablet v7.09 — tarefas por setor + dias para vencer; validade até 21:00');</script>
+<script>console.info('[AURA Mobile] Tablet v7.30 — layout Lenovo Tab M9 + fallback da consulta de lotes; validade até 21:00');</script>
 
 <script>console.info('[AURA Mobile] Tablet v7.10 — popup a cada entrada + feedback gerencial de execução');</script>
 <style id="aura-loading-gauge-css">
