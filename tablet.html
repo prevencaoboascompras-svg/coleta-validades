@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.31 — identidade no acesso à Conferência NF-e -->
+<!-- Coleta Tablet v7.33 — tarefas respeitam permissão do colaborador -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -1123,7 +1123,14 @@ body.tarefas-hist-aberta{overflow:hidden}
 /* v7.00 — proteção contra pull-to-refresh do Android/PWA */
 html,body{overscroll-behavior-y:none!important;}
 .nfe-overlay,.tablet-modal,.tarefas-modal,.modal-bg,.drum-modal,.venc-alert-bg{overscroll-behavior-y:contain;}
-.nfe-item.nfe-pending-focus{outline:3px solid rgba(226,75,74,.72);outline-offset:2px;box-shadow:0 0 0 6px rgba(226,75,74,.12);transition:box-shadow .25s ease,outline-color .25s ease;}.nfe-field.nfe-missing-field input,.nfe-field.nfe-missing-field select,.nfe-lote.nfe-missing-field input{border-color:#ff3b50!important;box-shadow:0 0 0 3px rgba(255,59,80,.28),0 0 18px rgba(255,59,80,.42)!important;animation:nfeMissingPulse 1s ease-in-out 2}.nfe-conv-box.nfe-missing-field{outline:3px solid #ffb020;outline-offset:2px;box-shadow:0 0 0 5px rgba(255,176,32,.2),0 0 18px rgba(255,176,32,.4);animation:nfeMissingPulse 1s ease-in-out 2}@keyframes nfeMissingPulse{50%{filter:brightness(1.18)}}</style>
+.nfe-item.nfe-pending-focus{outline:3px solid rgba(226,75,74,.72);outline-offset:2px;box-shadow:0 0 0 6px rgba(226,75,74,.12);transition:box-shadow .25s ease,outline-color .25s ease;}.nfe-field.nfe-missing-field input,.nfe-field.nfe-missing-field select,.nfe-lote.nfe-missing-field input{border-color:#ff3b50!important;box-shadow:0 0 0 3px rgba(255,59,80,.28),0 0 18px rgba(255,59,80,.42)!important;animation:nfeMissingPulse 1s ease-in-out 2}.nfe-conv-box.nfe-missing-field{outline:3px solid #ffb020;outline-offset:2px;box-shadow:0 0 0 5px rgba(255,176,32,.2),0 0 18px rgba(255,176,32,.4);animation:nfeMissingPulse 1s ease-in-out 2}@keyframes nfeMissingPulse{50%{filter:brightness(1.18)}}
+/* v7.33/v7.31 — shelf-life receipt metadata + fixed conference progress */
+.nfe-note-received{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,240px);align-items:center;gap:4px 12px;margin:0 0 10px;padding:10px 12px;border:1px solid rgba(55,138,221,.32);border-radius:10px;background:rgba(55,138,221,.07)}
+.nfe-note-received.nfe-missing-field input{border-color:#ff3b50!important;box-shadow:0 0 0 3px rgba(255,59,80,.28),0 0 18px rgba(255,59,80,.42)!important;animation:nfeMissingPulse 1s ease-in-out 2}.nfe-note-received label{font-size:10px;font-weight:900;color:var(--tx)}.nfe-note-received label b{color:#E24B4A}.nfe-note-received input{height:36px;min-width:0;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 9px;font-size:12px}.nfe-note-received small{grid-column:1/-1;color:var(--tx2);font-size:9px}
+.nfe-lote{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(68px,92px) 34px!important;align-items:end;gap:6px!important;margin-bottom:8px}.nfe-lote-field{min-width:0}.nfe-lote-field label{display:block;margin:0 0 3px;font-size:8px;line-height:1;font-weight:850;color:var(--tx2);text-transform:uppercase}.nfe-lote-field input{width:100%;box-sizing:border-box;height:38px!important;min-height:38px!important;padding:0 6px!important;font-size:10px!important}.nfe-lote-field input.nfe-validade-input{font-size:12px!important}.nfe-lote-del{height:38px!important;align-self:end}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) minmax(68px,92px) 34px!important}
+.nfe-actions{padding:6px 14px calc(7px + env(safe-area-inset-bottom))!important}.nfe-conf-progress{width:min(732px,100%);box-sizing:border-box;margin:0 auto 6px!important;padding:6px 9px!important;border-radius:9px}.nfe-conf-progress-top{font-size:9px}.nfe-conf-progress-bar{height:5px;margin-top:4px}.nfe-ind-diag{margin-bottom:6px!important;padding:6px 9px!important;max-height:90px;overflow:auto}.nfe-save{padding:10px 14px!important}.nfe-shell{padding-bottom:170px!important}.nfe-body{padding-bottom:180px!important}
+@media(max-width:520px){.nfe-note-received{grid-template-columns:minmax(0,1fr) minmax(135px,44%);gap:4px 8px;padding:9px}.nfe-note-received small{font-size:8px}.nfe-lote{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 58px 30px!important;gap:4px!important}.nfe-lote-field label{font-size:7px}.nfe-lote-field input{height:36px!important;min-height:36px!important;padding:0 3px!important;font-size:9px!important}.nfe-lote-field input.nfe-validade-input{font-size:10px!important}.nfe-lote-del{height:36px!important}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) 58px 30px!important}.nfe-actions{padding-left:9px!important;padding-right:9px!important}.nfe-conf-progress-top{font-size:8px}.nfe-save{font-size:11px!important;padding:9px!important}.nfe-shell{padding-bottom:160px!important}.nfe-body{padding-bottom:170px!important}}
+</style>
 <style id="nfe-history-full-edit-css">
 .nfe-hist-edit-lotes-title{margin-top:10px;font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2)}.nfe-hist-edit-lote{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.6fr) 36px;gap:6px;align-items:end;padding:6px 0;border-top:1px dashed var(--bd)}.nfe-hist-edit-lote label{margin-top:0!important}.nfe-hist-edit-lote input{height:38px!important}.nfe-hist-edit-lote button{height:38px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:#E24B4A;font-size:18px}.nfe-hist-add-lote{margin-top:6px;min-height:36px;padding:0 9px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--tx);font-size:9px;font-weight:800}
 </style>
@@ -1382,7 +1389,7 @@ html,body{overscroll-behavior-y:none!important;}
     <button class="hdr-btn" id="trocaUsuarioBtn" onclick="iniciarModoTablet(true)" title="Trocar usuário" style="display:none">
       <i class="ti ti-user-circle"></i>
     </button>
-    <button class="hdr-btn" onclick="abrirCentralTarefas()" title="Minhas tarefas" aria-label="Abrir minhas tarefas">
+    <button class="hdr-btn" id="tarefasHeaderBtn" onclick="abrirCentralTarefas()" title="Minhas tarefas" aria-label="Abrir minhas tarefas">
       <i class="ti ti-clipboard-list"></i>
       <span class="tarefa-badge" id="tarefaBadge">0</span>
     </button>
@@ -1711,6 +1718,7 @@ html,body{overscroll-behavior-y:none!important;}
     <div class="nfe-body" id="nfeBody"></div>
   </div>
   <div class="nfe-actions" id="nfeActions">
+    <div class="nfe-conf-progress" id="nfeConfProgress"><div class="nfe-conf-progress-top"><span><i class="ti ti-list-check"></i> Progresso da conferência</span><span id="nfeConfCount">0 / 0 conferidos</span></div><div class="nfe-conf-progress-bar"><div class="nfe-conf-progress-fill" id="nfeConfFill"></div></div></div>
     <div class="nfe-tablet-diag" id="nfeTabletDiag"></div>
     <button class="nfe-save" id="nfeSaveBtn" onclick="nfeColetaSalvar()"><i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e</button>
   </div>
@@ -3475,9 +3483,36 @@ function limparHistorico() {
 //  TAREFAS PENDENTES
 // ═══════════════════════════════════════════════════════════
 var _tarefasPendentes = [];
+function _tarefasPerfilAtualColeta_(){
+  var cfg=loadCfg()||{},email=String(cfg.email||'').trim().toLowerCase(),lista=window.COLABORADORES||[];
+  if(!email)return null;
+  for(var i=0;i<lista.length;i++){
+    var u=lista[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);
+    for(var j=0;j<emails.length;j++)if(String(emails[j]||'').trim().toLowerCase()===email)return u;
+  }
+  return null;
+}
+function _tarefasPerfilSemAcessoColeta_(){
+  var u=_tarefasPerfilAtualColeta_();
+  // Sem permissão de visualização ou recebimento, não consulta nem revela tarefas.
+  return !!u&&(u.veTarefas===false||u.recebeTarefas===false);
+}
+function _tarefasLimparPerfilSemAcessoColeta_(){
+  _tarefasPendentes=[];
+  if(typeof _tarefasHistorico!=='undefined')_tarefasHistorico=[];
+  var badge=document.getElementById('tarefaBadge');if(badge){badge.textContent='0';badge.classList.remove('show');}
+  var button=document.getElementById('tarefasHeaderBtn');if(button)button.style.display='none';
+  var modal=document.getElementById('tarefasModal');if(modal)modal.classList.remove('open');
+  var hist=document.getElementById('tarefasHistView');if(hist){hist.classList.remove('open');hist.setAttribute('aria-hidden','true');}
+  var notice=document.getElementById('auraTaskNotice');if(notice)notice.remove();
+  var sec=document.getElementById('tarefasSection');if(sec)sec.classList.remove('show');
+  document.body.classList.remove('tarefas-hist-aberta');
+}
 
 async function buscarTarefas(mostrarFeedback) {
-  var cfg=loadCfg(),ticket=mostrarFeedback&&window.AuraLoader?window.AuraLoader.start({message:'Carregando as tarefas pendentes do colaborador…',complete:'Tarefas pendentes carregadas'}):0;
+  var cfg=loadCfg();
+  if(_tarefasPerfilSemAcessoColeta_()){_tarefasLimparPerfilSemAcessoColeta_();return {ok:true,disabled:true,total:0};}
+  var ticket=mostrarFeedback&&window.AuraLoader?window.AuraLoader.start({message:'Carregando as tarefas pendentes do colaborador…',complete:'Tarefas pendentes carregadas'}):0;
   if(!cfg.url||!cfg.email){var semCfg='Selecione o colaborador e configure a conexão com a AURA para consultar as tarefas.';if(ticket)window.AuraLoader.fail(semCfg);return {ok:false,error:semCfg};}
   try {
     var resp=await fetch(cfg.url+'?action=buscarTarefas&email='+encodeURIComponent(cfg.email)+'&_='+Date.now(),{cache:'no-store'});
@@ -3733,6 +3768,7 @@ function tarefasHistBuscar_(v){_tarefasHistBusca=String(v||'').trim();var w=docu
 function tarefasHistLimparBusca_(){_tarefasHistBusca='';var i=document.getElementById('tarefasHistBusca');if(i){i.value='';i.focus();}var w=document.getElementById('tarefasHistSearchWrap');if(w)w.classList.remove('has-value');renderTarefasHistorico();}
 function tarefasHistFaseLocal_(t){var st=String(t.status||'pendente').toLowerCase(),q=t.quantidadeConfirmada!==null&&t.quantidadeConfirmada!==undefined?Number(t.quantidadeConfirmada):null,c=String(t.carrinhoStatus||t._carrinhoStatus||'').toLowerCase(),auto=!!(t&&t.automatica);if(st==='pendente')return 'pendente';if(st==='concluida'&&q!==null&&q>0&&(!c||(auto&&c==='nao')))return 'respondida';return 'concluida';}
 function abrirCentralTarefas(){
+  if(_tarefasPerfilSemAcessoColeta_()){_tarefasLimparPerfilSemAcessoColeta_();return;}
   var cfg=loadCfg();if(!cfg.email){mostrarToast('Selecione/identifique o colaborador primeiro','warn');return;}
   fecharTarefasModal();
   _tarefasHistAberta=true;_tarefasHistScannerEstavaAtivo=!!scannerAtivo;try{pararScanner();}catch(e){}
@@ -3750,6 +3786,7 @@ function fecharCentralTarefas(){
   _tarefasHistScannerEstavaAtivo=false;
 }
 async function carregarTarefasHistorico(manual){
+  if(_tarefasPerfilSemAcessoColeta_()){_tarefasLimparPerfilSemAcessoColeta_();return {ok:true,disabled:true,total:0};}
   var cfg=loadCfg(),st=document.getElementById('tarefasHistStatus'),lista=document.getElementById('tarefasHistList');
   if(!cfg.url||!cfg.email){var semCfg='Configuração ou colaborador não informado.';if(st){st.className='tarefas-hist-status show err';st.textContent=semCfg;}return {ok:false,error:semCfg};}
   var token=++_tarefasHistToken;if(st){st.className='tarefas-hist-status show';st.innerHTML='<i class="ti ti-loader-2"></i> Consultando o histórico de tarefas…';}if(lista)lista.innerHTML='';
@@ -4734,7 +4771,7 @@ function selecionarUsuarioTablet(nome, email) {
   // Cada seleção explícita é uma nova entrada para popup/auditoria.
   try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
   setTimeout(function(){verificarAniversario(email,nome);},250);
-  setTimeout(function(){buscarTarefas(true);},0);
+  if(_tarefasPerfilSemAcessoColeta_())_tarefasLimparPerfilSemAcessoColeta_();else setTimeout(function(){buscarTarefas(true);},0);
   setTimeout(nfeAtualizarCardPendente_,80);
   setTimeout(function(){coletaDraftRestaurar_(false);},180);
 }
@@ -5278,9 +5315,10 @@ function nfeConferenciaEstado_(it){
 
   var lotes=Array.isArray(it.lotes)?it.lotes:[];
   var datasOk=lotes.length>0&&lotes.every(function(l){
-    return /^\d{4}-\d{2}-\d{2}$/.test(String(l.validade||''))&&(Number(l.quantidade)||0)>0;
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(l.validade||''))&&/^\d{4}-\d{2}-\d{2}$/.test(String(l.fabricacao||''))&&(Number(l.quantidade)||0)>0;
   });
-  if(!datasOk)faltas.push('validade/quantidade dos lotes');
+  if(!datasOk)faltas.push('fabricação/validade/quantidade dos lotes');
+  if(!_nfeColetaNota||!/^\d{4}-\d{2}-\d{2}$/.test(String(_nfeColetaNota.recebidoEm||'')))faltas.push('data real do recebimento');
 
   var esperado=Number(it.qtdEstoque||it.qCom||0)||0;
   var soma=lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);
@@ -5293,8 +5331,8 @@ function nfeConferenciaAssinatura_(it){
   if(it&&it.controlar===false){
     return JSON.stringify(['sem_controle_validade',!!it.validadeIndeterminada,!!it.conferenciaSemValidade,String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),Math.round((Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0)*1000)/1000,Math.round((Number(it.qCom)||0)*1000)/1000]);
   }
-  var lotes=(Array.isArray(it&&it.lotes)?it.lotes:[]).map(function(l){return [String(l.validade||''),Math.round((Number(l.quantidade)||0)*1000)/1000];});
-  return JSON.stringify([!!(it&&it.controlar!==false),String((it&&it.setor)||(it&&it.setorSugerido)||''),String((it&&it.setorOrigem)||''),nfeDigitos_(it&&it.eanAura||''),String((it&&it.status)||''),String((it&&it.conversaoDecisao)||''),Math.round((Number(it&&it.fatorConversao)||0)*1000)/1000,Math.round((Number(it&&it.qtdEstoque)||0)*1000)/1000,lotes]);
+  var lotes=(Array.isArray(it&&it.lotes)?it.lotes:[]).map(function(l){return [String(l.fabricacao||''),String(l.validade||''),Math.round((Number(l.quantidade)||0)*1000)/1000];});
+  return JSON.stringify([!!(it&&it.controlar!==false),String(_nfeColetaNota&&_nfeColetaNota.recebidoEm||''),String((it&&it.setor)||(it&&it.setorSugerido)||''),String((it&&it.setorOrigem)||''),nfeDigitos_(it&&it.eanAura||''),String((it&&it.status)||''),String((it&&it.conversaoDecisao)||''),Math.round((Number(it&&it.fatorConversao)||0)*1000)/1000,Math.round((Number(it&&it.qtdEstoque)||0)*1000)/1000,lotes]);
 }
 function nfeConferenciaConfirmada_(it){
   var e=nfeConferenciaEstado_(it);
@@ -5308,7 +5346,7 @@ function nfeConferenciaResumo_(nota){
 function nfeAtualizarResumoConferencia_(){
   var r=nfeConferenciaResumo_(_nfeColetaNota);
   var t=document.getElementById('nfeConfCount'),f=document.getElementById('nfeConfFill');
-  if(t)t.textContent=r.conferidos+' / '+r.total+' conferidos';
+  if(t)t.textContent=r.conferidos+' / '+r.total+' · faltam '+r.pendentes;
   if(f)f.style.width=r.pct+'%';
 }
 function nfeRolarItemConferencia_(i){
@@ -5330,7 +5368,8 @@ function nfeDestacarCampoConferencia_(i,faltas){
     else if(f.indexOf('decisão da conversão')>=0)x=card.querySelector('.nfe-conv-box');
     else if(f.indexOf('fator kg')>=0)x=campoPorLabel(/kg por unidade/i);
     else if(f.indexOf('quantidade do recebimento parcial')>=0)x=campoPorLabel(/quantidade recebida/i);
-    else if(f.indexOf('validade/quantidade dos lotes')>=0){var rows=card.querySelectorAll('.nfe-lote');for(var r=0;r<rows.length;r++){var ins=rows[r].querySelectorAll('input');if(ins.length>=2&&(!String(ins[0].value||'').trim()||!(Number(ins[1].value)>0))){x=rows[r];break;}}if(!x)x=rows[0];}
+    else if(f.indexOf('data real do recebimento')>=0)x=document.getElementById('nfeRecebidoEm');
+    else if(f.indexOf('fabricação/validade/quantidade dos lotes')>=0){var rows=card.querySelectorAll('.nfe-lote');for(var r=0;r<rows.length;r++){var fab=rows[r].querySelector('.nfe-fabricacao-input'),val=rows[r].querySelector('.nfe-validade-input'),qtd=rows[r].querySelector('input[type=number]');if((fab&&!fab.value)||(val&&!val.value)||!(qtd&&Number(qtd.value)>0)){x=rows[r];break;}}if(!x)x=rows[0];}
     else if(f.indexOf('divisão da quantidade')>=0){var rs=card.querySelectorAll('.nfe-lote');for(var q=0;q<rs.length;q++){var qi=rs[q].querySelector('input[type=number]');if(qi){rs[q].classList.add('nfe-missing-field');if(!x)x=rs[q];}}}
     if(x){x.classList.add('nfe-missing-field');if(!alvo)alvo=x;}
   });
@@ -5422,6 +5461,13 @@ function nfeEscudoSelecionarProduto_(i,codigo){
   nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);
 }
 
+function nfeSetRecebidoEm_(v){
+  var n=_nfeColetaNota;if(!n)return;
+  n.recebidoEm=String(v||'');
+  var campoData=document.getElementById('nfeRecebidoEm');if(campoData)campoData.classList.remove('nfe-missing-field');
+  (n.itens||[]).forEach(function(it){if(it&&it.controlar!==false){it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';}});
+  nfeSalvarRascunho_();nfeRenderNota_();
+}
 function nfeRenderNota_(){
   var n=_nfeColetaNota;if(!n)return nfeColetaNova();
   if(typeof n.canhotoRetido==='undefined')n.canhotoRetido=false;
@@ -5429,13 +5475,12 @@ function nfeRenderNota_(){
   document.getElementById('nfeHeadSub').textContent='NF '+(n.numero||'—')+' · '+(n.fornecedor||'Fornecedor');
   var html='<div class="nfe-note"><div class="nfe-note-top"><div class="nfe-note-icon"><i class="ti ti-file-invoice"></i></div><div><div class="nfe-note-name">'+nfeEsc_(n.fornecedor||'Fornecedor não informado')+'</div><div class="nfe-note-meta">NF '+nfeEsc_(n.numero||'—')+' · Série '+nfeEsc_(n.serie||'—')+' · Emissão '+nfeEsc_(n.emissao||'—')+'<br>CNPJ '+nfeEsc_(n.cnpjFornecedor||'—')+' · Chave '+nfeEsc_(n.chave||'')+'</div></div></div><div class="nfe-note-kpis"><div class="nfe-note-kpi"><b>'+Number(n.totalItens||0)+'</b><span>Itens</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalEncontrados||0)+'</b><span>Reconhecidos</span></div><div class="nfe-note-kpi"><b>'+Number(n.totalNaoEncontrados||0)+'</b><span>Vincular</span></div></div></div>';
   if(n.jaProcessada)html+='<div class="nfe-warn danger"><b>Esta NF-e já foi concluída anteriormente.</b><br>Para evitar duplicidade, a AURA não fará novo lançamento por padrão.</div>';
-  html+='<div class="nfe-warn" style="display:flex;align-items:center;gap:10px"><input id="nfeCanhotoRetido" type="checkbox" '+(n.canhotoRetido?'checked':'')+' onchange="_nfeColetaNota.canhotoRetido=this.checked;nfeSalvarRascunho_()"><label for="nfeCanhotoRetido"><b>Canhoto retido</b> · sinalizar retenção por divergência no recebimento</label></div>';
-  var confResumo=nfeConferenciaResumo_(n);
-  html+='<div class="nfe-warn"><b>Conferência:</b> nos itens com validade, confirme vínculo, setor, lotes e quantidade. Nos itens sem controle de validade, desmarque <b>Controlar validade</b> para concluir sem criar lote. A nota só conclui após confirmar todos os itens recebidos.'
-    +'<div class="nfe-conf-progress"><div class="nfe-conf-progress-top"><span>Progresso da conferência</span><span id="nfeConfCount">'+confResumo.conferidos+' / '+confResumo.total+' conferidos</span></div><div class="nfe-conf-progress-bar"><div class="nfe-conf-progress-fill" id="nfeConfFill" style="width:'+confResumo.pct+'%"></div></div></div></div>';
+  html+='<div class="nfe-note-received"><label for="nfeRecebidoEm"><i class="ti ti-calendar-event"></i> Data real do recebimento <b>*</b></label><input id="nfeRecebidoEm" type="date" value="'+nfeEsc_(n.recebidoEm||'')+'" onchange="nfeSetRecebidoEm_(this.value)"><small>Informe o dia em que a mercadoria chegou. Usado no cálculo da vida útil recebida.</small></div>';
+  html+='<div class="nfe-warn"><b>Conferência:</b> nos itens com validade, confirme vínculo, setor, fabricação, validade e quantidade dos lotes. Nos itens sem controle de validade, desmarque <b>Controlar validade</b> para concluir sem criar lote. A nota só conclui após confirmar todos os itens recebidos.</div>';
   (n.itens||[]).forEach(function(it,i){html+=nfeItemHtml_(it,i);});
   document.getElementById('nfeBody').innerHTML=html;
   document.getElementById('nfeActions').style.display='block';
+  nfeAtualizarResumoConferencia_();
   var b=document.getElementById('nfeSaveBtn');if(b){b.disabled=!!n.jaProcessada;b.innerHTML=n.jaProcessada?'<i class="ti ti-lock"></i> NF-e JÁ PROCESSADA':'<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}
   setTimeout(nfeCarregarFotosPendentes_,0);
   setTimeout(nfeEscudoGarantirCatalogo_,0);
@@ -5488,12 +5533,12 @@ function nfeItemHtml_(it,i){
   if(recebimentoStatus==='PARCIAL') recebimentoExtra='<div class="nfe-grid2 nfe-recebimento-extra"><div class="nfe-field"><label>Quantidade recebida ('+nfeEsc_(it.uCom||'un')+')</label><input id="nfeQtdRecebida_'+i+'" type="number" min="0" step="any" value="'+(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)+'" oninput="nfeQtdRecebidaAlterar_('+i+',this.value)" onchange="nfeRenderNota_()"></div><div class="nfe-field"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: entrega incompleta" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div></div>';
   else if(recebimentoStatus==='NAO_RECEBIDO') recebimentoExtra='<div class="nfe-field nfe-recebimento-extra"><label>Motivo / observação</label><input id="nfeMotivoRecebimento_'+i+'" value="'+nfeEsc_(it.motivoDivergencia||'')+'" placeholder="Ex.: item faltante" oninput="_nfeColetaNota.itens['+i+'].motivoDivergencia=this.value;nfeAgendarRascunho_()"></div>';
   var lotes=(it.lotes||[]).map(function(l,li){
-    var qtd='<input type="number" step="0.001" min="0" value="'+nfeEsc_(l.quantidade||'')+'" oninput="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" onchange="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" title="Quantidade">';
-    var remover='<button class="nfe-lote-del" onclick="nfeRemoverLote_('+i+','+li+')"><i class="ti ti-x"></i></button>';
+    var qtd='<div class="nfe-lote-field qtd"><label>Quantidade</label><input type="number" step="0.001" min="0" value="'+nfeEsc_(l.quantidade||'')+'" oninput="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" onchange="nfeLoteCampo_('+i+','+li+',\'quantidade\',this.value)" title="Quantidade"></div>';
+    var remover='<button class="nfe-lote-del" onclick="nfeRemoverLote_('+i+','+li+')" aria-label="Remover lote"><i class="ti ti-x"></i></button>';
     if(it.validadeIndeterminada===true)return '<div class="nfe-lote nfe-lote-indeterminada"><div class="nfe-indeterminada-tag"><i class="ti ti-infinity"></i> Validade indeterminada</div>'+qtd+remover+'</div>';
-    var data='<input id="nfeLoteVal_'+i+'_'+li+'" class="nfe-validade-input" type="text" inputmode="none" readonly placeholder="DD/MM/AAAA" value="'+nfeEsc_(nfeFmtDataPicker_(l.validade||''))+'" onclick="nfeAbrirSeletorValidade_('+i+','+li+')" aria-label="Selecionar validade">';
-    var indef='';
-    return '<div class="nfe-lote">'+data+indef+qtd+remover+'</div>';
+    var fab='<div class="nfe-lote-field"><label>Fabricação</label><input id="nfeLoteFab_'+i+'_'+li+'" class="nfe-fabricacao-input" type="date" value="'+nfeEsc_(l.fabricacao||'')+'" onchange="nfeLoteCampo_('+i+','+li+',\'fabricacao\',this.value)" aria-label="Data de fabricação"></div>';
+    var data='<div class="nfe-lote-field"><label>Validade</label><input id="nfeLoteVal_'+i+'_'+li+'" class="nfe-validade-input" type="text" inputmode="none" readonly placeholder="DD/MM/AAAA" value="'+nfeEsc_(nfeFmtDataPicker_(l.validade||''))+'" onclick="nfeAbrirSeletorValidade_('+i+','+li+')" aria-label="Selecionar validade"></div>';
+    return '<div class="nfe-lote">'+data+fab+qtd+remover+'</div>';
   }).join('');
   if(it.validadeIndeterminada===true)lotes='<div class="nfe-lote-indeterminada-summary"><i class="ti ti-infinity"></i> Validade indeterminada · item conferido sem lote de validade</div>';
   var infoNF=(nomeAURA&&nomeNF&&nomeAURA!==nomeNF)?('<div class="nfe-info-line"><span class="lbl">Descrição na NF-e</span>'+nfeEsc_(nomeNF)+'</div>'):'';
@@ -5857,7 +5902,7 @@ function nfeTabletColetarPayload_(){
     it.qtdEstoque=qtdFinal;
 
     var lotes=(it.lotes||[]).map(function(l){
-      return {validade:String(l.validade||''),quantidade:Number(l.quantidade)||0,lote:l.lote||''};
+      return {validade:String(l.validade||''),fabricacao:String(l.fabricacao||''),quantidade:Number(l.quantidade)||0,lote:l.lote||''};
     });
 
     if(recebimento==='PARCIAL'&&qComFinal>0&&qtdRecebida>=qComFinal)erros.push((it.nomeAura||it.nome||'Item')+': em recebimento parcial, a quantidade recebida precisa ser menor que a quantidade da NF-e.');
@@ -5883,16 +5928,18 @@ function nfeTabletColetarPayload_(){
       if(!lotes.length){
         erros.push((it.nomeAura||it.nome||ean||'Item')+': informe ao menos uma validade.');
       }else{
-        var soma=0,todasValidades=true,todasQtd=true;
+        var soma=0,todasValidades=true,todasFabricacoes=true,todasQtd=true;
         lotes.forEach(function(l){
           if(!l.validade)todasValidades=false;
+          if(!l.fabricacao)todasFabricacoes=false;
           if(!(l.quantidade>0))todasQtd=false;
           soma+=l.quantidade;
         });
         diag.lotes+=lotes.length;
         if(todasValidades)diag.comValidade++;
-        if(!todasValidades||!todasQtd){
-          erros.push((it.nomeAura||it.nome||ean||'Item')+': preencha validade e quantidade maior que zero em todos os lotes.');
+        if(!todasValidades||!todasFabricacoes||!todasQtd){
+          var faltaLote=[];if(!todasFabricacoes)faltaLote.push('data de fabricação');if(!todasValidades)faltaLote.push('validade');if(!todasQtd)faltaLote.push('quantidade maior que zero');
+          erros.push((it.nomeAura||it.nome||ean||'Item')+': preencha '+faltaLote.join(', ')+' em todos os lotes.');
         }
         if(todasQtd&&Math.abs(soma-qtdFinal)<=0.001)diag.quantidadesOk++;
         if(Math.abs(soma-qtdFinal)>0.001){
@@ -5917,6 +5964,8 @@ function nfeTabletColetarPayload_(){
     };
   });
 
+  if(diag.controlados>0&&!/^\d{4}-\d{2}-\d{2}$/.test(String(n.recebidoEm||'')))erros.unshift('Informe a data real do recebimento da NF-e.');
+
   if(!email)erros.unshift('Selecione/configure o colaborador antes de receber a NF-e.');
 
   return {
@@ -5926,7 +5975,7 @@ function nfeTabletColetarPayload_(){
       action:'nfeRegistrarValidades',
       actor:email,email:email,
       chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,
-      numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',
+      numero:n.numero,serie:n.serie,emissao:n.emissao,recebidoEm:String(n.recebidoEm||''),fonte:n.fonte||'',
       operador:email,itens:itens,canhotoRetido:!!(document.getElementById('nfeCanhotoRetido')&&document.getElementById('nfeCanhotoRetido').checked),
       aceitarProdutoNovo:true,
       exigirDecisaoConversao:true
@@ -6692,7 +6741,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.31-identidade-conferencia-nfe';console.info('[AURA] Coleta Tablet v7.31 — identidade enviada nas rotas protegidas da NF-e');</script>
+<script>window.AURA_TABLET_BUILD='v7.33-tarefas-conforme-permissao';console.info('[AURA] Coleta Tablet v7.33 — tarefas carregadas somente para perfis autorizados');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6847,6 +6896,9 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   var _taskPollTimer=null,_taskSilentBusy=false;
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
+  function perfilColaboradorTarefa_(cfg){var e=String(cfg&&cfg.email||'').trim().toLowerCase(),arr=window.COLABORADORES||[];for(var i=0;i<arr.length;i++){var u=arr[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);if(emails.some(function(x){return String(x||'').trim().toLowerCase()===e;}))return u;}return null;}
+  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?(c.veTarefas!==false&&c.recebeTarefas!==false):!gestorExcluido(nomeAtual_(cfg),String(cfg&&cfg.email||''));}
+  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?c.recebeTarefas===true:perfilPodeTarefas_(cfg);}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
@@ -6869,7 +6921,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function wrapAudit_(name,module,label){var original=window[name];if(typeof original!=='function'||original.__auraAuditWrapped)return;var wrapped=function(){var out;try{out=original.apply(this,arguments);}catch(e){registrarAcaoAudit_(module,label,'falhou');throw e;}if(out&&typeof out.then==='function')return out.then(function(v){registrarAcaoAudit_(module,label,(v===false||(v&&(v.ok===false||v.success===false)))?'falhou':'concluída');return v;},function(e){registrarAcaoAudit_(module,label,'falhou');throw e;});registrarAcaoAudit_(module,label,'iniciada');return out;};wrapped.__auraAuditWrapped=true;window[name]=wrapped;}
   function registrarAvisoBg_(ctx,acao,exibiu){if(!ctx)return;post_({action:'registrarVisualizacaoTarefas',sessao:ctx.sess,email:ctx.cfg.email,nome:ctx.nome||'',app:APP_LABEL,pendentes:Math.max(0,Number(ctx.qtd)||0),acao:acao||'',exibiu:!!exibiu,exibidoEmCliente:new Date().toISOString()});}
   function fecharAviso_(){var e=document.getElementById('auraTaskNotice');if(e)e.remove();}
-  function atualizarBadge_(){var b=document.getElementById('tarefaBadge'),q=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;if(b){b.textContent=q;if(q)b.classList.add('show');else b.classList.remove('show');}var s=document.getElementById('tarefasSection');if(s){s.classList.remove('show');s.style.display='none';}return q;}
+  function atualizarBadge_(){if(_tarefasPerfilSemAcessoColeta_()){_tarefasLimparPerfilSemAcessoColeta_();return 0;}var b=document.getElementById('tarefaBadge'),button=document.getElementById('tarefasHeaderBtn');if(button)button.style.display='';var q=(_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return f==='pendente'||f==='respondida';}).length;if(b){b.textContent=q;if(q)b.classList.add('show');else b.classList.remove('show');}var s=document.getElementById('tarefasSection');if(s){s.classList.remove('show');s.style.display='none';}return q;}
   // Não renderiza mais a lista de tarefas atrás do app. Só badge.
   window.renderTarefas=function(){return atualizarBadge_();};
   window.auraRenderTarefasModal_=function(){
@@ -6887,6 +6939,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function prepararAvisoImediato_(){
     var cfg=loadCfg();if(!cfg||!cfg.email)return null;var nome=nomeAtual_(cfg),sess=getSessao_(cfg.email),ctx={cfg:cfg,nome:nome,sess:sess,qtd:0,acao:'',fechado:false,regAcesso:false};
     registrarAcessoBg_(ctx);
+    if(!perfilPodeTarefas_(cfg)){cacheCountSet_(cfg.email,0);_tarefasLimparPerfilSemAcessoColeta_();return null;}
     if(gestorExcluido(nome,cfg.email)){registrarAvisoBg_(ctx,'gestor_sem_popup',false);return null;}
     var emailEntrada=String(cfg.email||'').toLowerCase();if(_auraEntradaPopupEmail_===emailEntrada)return null;_auraEntradaPopupEmail_=emailEntrada;
     window._auraTaskCurrentSession=sess;window._auraTaskAppLabel=APP_LABEL;
