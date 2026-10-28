@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.30 — fallback de lotes + perfil responsivo Lenovo Tab M9 -->
+<!-- Coleta Tablet v7.31 — identidade no acesso à Conferência NF-e -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -5129,7 +5129,7 @@ async function nfeColetaBuscarChave(chave){
 
   document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i><b>Buscando NF-e…</b><div style="font-size:10px;margin-top:5px">Nenhum rascunho foi encontrado. Localizando XML e cruzando os itens com o Banco AURA.</div></div>';
   try{
-    var j=await nfePost_({action:'nfeBuscarChave',chave:chave});
+    var j=await nfePost_({action:'nfeBuscarChave',actor:nfeOperadorAtual_(),email:nfeOperadorAtual_(),chave:chave});
     if(!j||!j.ok){var msg=(j&&j.erro)||'NF-e não localizada.';if(window.AuraLoader)window.AuraLoader.markFailure(msg);document.getElementById('nfeBody').innerHTML='<div class="nfe-keybox"><div class="nfe-warn danger"><b>Não foi possível abrir esta NF-e.</b><br>'+nfeEsc_(msg)+'</div><div class="nfe-xml-box"><b style="font-size:11px">Importar XML desta nota</b><div class="nfe-hint">Selecione o XML recebido do fornecedor. A AURA salva o arquivo no Drive para as próximas consultas.</div><input type="file" accept=".xml,text/xml,application/xml" onchange="nfeColetaLerArquivoXml(this.files&&this.files[0])"></div><button class="nfe-mini-btn" style="margin-top:10px" onclick="nfeColetaNova()">Tentar outra chave</button></div>';return;}
     if(j.nota&&j.nota.jaProcessada){var overlay=document.getElementById('nfeOverlay');if(overlay)overlay.classList.remove('open');document.body.style.overflow='';abrirHistoricoNFe();await abrirDetalheNFe_(chave);mostrarToast('NF-e já lançada. Abrimos os itens e lotes gravados para consulta e correção autorizada.','ok');return {ok:true,jaProcessada:true};}
     _nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();
@@ -5139,7 +5139,7 @@ function nfeColetaLerArquivoXml(file){
   if(!file)return; var ticket=window.AuraLoader?window.AuraLoader.start({message:'Lendo o XML da NF-e e salvando a nota…',complete:'NF-e importada e pronta para conferência'}):0; var r=new FileReader();
   r.onload=async function(){
     nfeAbrir_(); document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-loader-2 nfe-spin"></i>Lendo XML…</div>';
-    try{var j=await nfePost_({action:'nfeLerXml',xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();if(ticket&&window.AuraLoader)window.AuraLoader.done();}catch(e){var err=String(e&&e.message||e||'Falha ao importar XML');document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(err)+'</div>';if(ticket&&window.AuraLoader)window.AuraLoader.fail(err);}
+    try{var j=await nfePost_({action:'nfeLerXml',actor:nfeOperadorAtual_(),email:nfeOperadorAtual_(),xml:String(r.result||''),salvarDrive:true});if(!j||!j.ok)throw new Error((j&&j.erro)||'Falha ao ler XML.');_nfeColetaNota=j.nota;nfePrepararLotes_(_nfeColetaNota);nfeSalvarRascunho_();nfeRenderNota_();if(ticket&&window.AuraLoader)window.AuraLoader.done();}catch(e){var err=String(e&&e.message||e||'Falha ao importar XML');document.getElementById('nfeBody').innerHTML='<div class="nfe-state"><i class="ti ti-alert-triangle"></i>'+nfeEsc_(err)+'</div>';if(ticket&&window.AuraLoader)window.AuraLoader.fail(err);}
   }; r.onerror=function(){var err='Não foi possível ler o arquivo XML.';if(ticket&&window.AuraLoader)window.AuraLoader.fail(err);}; r.readAsText(file);
 }
 // v6.99 — conversão universal de unidades XML + total manual
@@ -5924,6 +5924,7 @@ function nfeTabletColetarPayload_(){
     diagnostico:diag,
     payload:{
       action:'nfeRegistrarValidades',
+      actor:email,email:email,
       chave:n.chave,cnpjFornecedor:n.cnpjFornecedor,fornecedor:n.fornecedor,
       numero:n.numero,serie:n.serie,emissao:n.emissao,fonte:n.fonte||'',
       operador:email,itens:itens,canhotoRetido:!!(document.getElementById('nfeCanhotoRetido')&&document.getElementById('nfeCanhotoRetido').checked),
@@ -6691,7 +6692,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.29-lenovo-tab-m9-responsivo';console.info('[AURA] Coleta Tablet v7.29 — auditoria responsiva Lenovo Tab M9');</script>
+<script>window.AURA_TABLET_BUILD='v7.31-identidade-conferencia-nfe';console.info('[AURA] Coleta Tablet v7.31 — identidade enviada nas rotas protegidas da NF-e');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
