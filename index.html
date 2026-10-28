@@ -3403,8 +3403,16 @@ function _tarefasPerfilAtualColeta_(){
   }
   return null;
 }
+function _tarefasIdentidadeSemTarefasColeta_(){
+  var u=_tarefasPerfilAtualColeta_(),cfg=loadCfg()||{},s=String((u&&u.nome||'')+' '+(u&&u.email||'')+' '+(cfg.email||''));
+  try{s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}
+  s=s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  // Perfis de gestão e a conta dedicada ao recebimento não recebem tarefas no Coleta.
+  return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});
+}
 function _tarefasPerfilSemAcessoColeta_(){
   var u=_tarefasPerfilAtualColeta_();
+  if(_tarefasIdentidadeSemTarefasColeta_())return true;
   // Sem permissão de visualização ou recebimento, não consulta nem revela tarefas.
   return !!u&&(u.veTarefas===false||u.recebeTarefas===false);
 }
@@ -6704,8 +6712,8 @@ async function nfeHistSalvarEdicao_(idx){
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
   function perfilColaboradorTarefa_(cfg){var e=String(cfg&&cfg.email||'').trim().toLowerCase(),arr=window.COLABORADORES||[];for(var i=0;i<arr.length;i++){var u=arr[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);if(emails.some(function(x){return String(x||'').trim().toLowerCase()===e;}))return u;}return null;}
-  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?(c.veTarefas!==false&&c.recebeTarefas!==false):!gestorExcluido(nomeAtual_(cfg),String(cfg&&cfg.email||''));}
-  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?c.recebeTarefas===true:perfilPodeTarefas_(cfg);}
+  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true:!gestorExcluido(nomeAtual_(cfg),String(cfg&&cfg.email||''));}
+  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true:perfilPodeTarefas_(cfg);}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
