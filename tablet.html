@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.33 — tarefas respeitam permissão do colaborador -->
+<!-- Coleta Tablet v7.37 — perfis sem tarefa não consultam fila -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -3496,8 +3496,16 @@ function _tarefasPerfilAtualColeta_(){
   }
   return null;
 }
+function _tarefasIdentidadeSemTarefasColeta_(){
+  var u=_tarefasPerfilAtualColeta_(),cfg=loadCfg()||{},s=String((u&&u.nome||'')+' '+(u&&u.email||'')+' '+(cfg.email||''));
+  try{s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}
+  s=s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  // Perfis de gestão e a conta dedicada ao recebimento não recebem tarefas no Coleta.
+  return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});
+}
 function _tarefasPerfilSemAcessoColeta_(){
   var u=_tarefasPerfilAtualColeta_();
+  if(_tarefasIdentidadeSemTarefasColeta_())return true;
   // Somente perfis explicitamente autorizados a ver E receber tarefas consultam a fila.
   // Conta ausente/incompleta é tratada como sem acesso; não afeta NF-e/coletas.
   return !u||u.veTarefas!==true||u.recebeTarefas!==true;
@@ -6785,7 +6793,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.35-shelf-life-alerta-imediato';console.info('[AURA] Coleta Tablet v7.35 — alerta imediato de shelf life');</script>
+<script>window.AURA_TABLET_BUILD='v7.37-tarefas-perfil-sem-consulta';console.info('[AURA] Coleta Tablet v7.37 — perfis sem tarefa não consultam fila');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6941,8 +6949,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
   function perfilColaboradorTarefa_(cfg){var e=String(cfg&&cfg.email||'').trim().toLowerCase(),arr=window.COLABORADORES||[];for(var i=0;i<arr.length;i++){var u=arr[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);if(emails.some(function(x){return String(x||'').trim().toLowerCase()===e;}))return u;}return null;}
-  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&c.veTarefas===true&&c.recebeTarefas===true;}
-  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&c.veTarefas===true&&c.recebeTarefas===true;}
+  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true;}
+  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true;}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
