@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual v7.32 — tarefas respeitam permissão do colaborador -->
+<!-- Coleta Individual v7.36 — infere fator kg por embalagem ao vincular Escudo -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
 <!-- AURA PATCH: NF-e pendente retomar · 2026-09-29 -->
@@ -5328,7 +5328,7 @@ function nfeMarcarConferido_(i,v){
 var _nfeEscudoCatalogo_=[];
 var _nfeEscudoCatalogoKey_='';
 var _nfeEscudoCatalogoBusy_='';
-function nfeEscudoFatorPadrao_(it){var d=String(it&&it.nome||'').toUpperCase().replace(/,/g,'.'),m=d.match(/(?:^|[^0-9])(\d+(?:\.\d+)?)\s*KG(?:\b|$)/);if(m&&Number(m[1])>0)return Number(m[1]);var u=String(it&&(it.uCom||it.unidadeNFe)||'').trim().toUpperCase();return /^(KG|KGM|QUILO|QUILOGRAMA)$/.test(u)?1:'';}
+function nfeEscudoFatorPadrao_(it){var u=String(it&&(it.uCom||it.unidadeNFe)||'').trim().toUpperCase();if(/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(u))return 1;var d=String(it&&(it.nome||it.nomeAura||it.nomeNFe)||'').toUpperCase().replace(/,/g,'.'),m=d.match(/(?:^|[^0-9])(\d+(?:\.\d+)?)\s*KG(?:\b|$)/);return m&&Number(m[1])>0?Number(m[1]):'';}
 function nfeEscudoFatorValor_(it){return it&&it.escudoFatorKg!==undefined&&it.escudoFatorKg!==null&&it.escudoFatorKg!==''?it.escudoFatorKg:nfeEscudoFatorPadrao_(it);}
 function nfeEscudoFatorAlterar_(i,v){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var raw=String(v||'').replace(',','.');it.escudoFatorKg=raw===''?'':Math.max(0,Number(raw)||0);nfeSalvarRascunho_();}
 function nfeEscudoOptions_(it){
@@ -5346,7 +5346,7 @@ function nfeEscudoGarantirCatalogo_(){
     if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';
     if(!j||!j.ok){console.warn('[NF-e] Catálogo Escudo indisponível:',j&&j.erro);return;}
     _nfeEscudoCatalogo_=Array.isArray(j.produtos)?j.produtos:[];_nfeEscudoCatalogoKey_=key;
-    (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v){if(!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}if(it.escudoFatorKg===undefined||it.escudoFatorKg==='')it.escudoFatorKg=Number(v.fatorKg)||nfeEscudoFatorPadrao_(it);}});
+    (n.itens||[]).forEach(function(it){var v=(j.vinculos||{})[String(it.nItem||it.cProd||'')];if(v){if(!it.escudoCodigo){it.escudoCodigo=String(v.codigo||'');it.escudoNome=String(v.nome||'');it.escudoUnidade=String(v.unidade||'kg');}var fatorNome=nfeEscudoFatorPadrao_(it),fatorSalvo=Number(v.fatorKg)||0,unNF=String(it.uCom||it.unidadeNFe||'').trim().toUpperCase(),nfPeso=/^(KG|KGM|QUILO|QUILOGRAMA)$/.test(unNF);if(!nfPeso&&Number(fatorNome)>1&&fatorSalvo<=1)it.escudoFatorKg=fatorNome;else if(it.escudoFatorKg===undefined||it.escudoFatorKg==='')it.escudoFatorKg=fatorSalvo||fatorNome;}});
     if(_nfeColetaNota===n){nfeSalvarRascunho_();nfeRenderNota_();}
   }).catch(function(e){if(_nfeEscudoCatalogoBusy_===key)_nfeEscudoCatalogoBusy_='';console.warn('[NF-e] Falha ao consultar produtos do Escudo:',e);});
 }
@@ -5884,7 +5884,7 @@ function nfeIndividualColetarPayload_(){
     }
 
     return {
-      controlar:controlar,conferenciaSemValidade:!controlar&&nfeConferenciaConfirmada_(it),nItem:it.nItem,cProd:it.cProd,nome:it.nome,
+      controlar:controlar,conferenciaSemValidade:!controlar&&nfeConferenciaConfirmada_(it),nItem:it.nItem,cProd:it.cProd,nome:it.nome,ncm:it.ncm||'',cfop:it.cfop||'',xmlIndiceStatus:it.xmlIndiceStatus||'',
       ean:ean,qCom:it.qCom,qtdRecebida:qtdRecebida,recebimentoStatus:recebimento,motivoDivergencia:it.motivoDivergencia||'',qtdEstoque:qtdFinal,
       fatorConversao:it.fatorConversao||1,
       fatorConversaoSugerido:it.fatorConversaoSugerido||it.fatorConversao||1,
