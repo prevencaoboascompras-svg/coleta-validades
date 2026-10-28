@@ -1130,6 +1130,10 @@ html,body{overscroll-behavior-y:none!important;}
 .nfe-lote{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(68px,92px) 34px!important;align-items:end;gap:6px!important;margin-bottom:8px}.nfe-lote-field{min-width:0}.nfe-lote-field label{display:block;margin:0 0 3px;font-size:8px;line-height:1;font-weight:850;color:var(--tx2);text-transform:uppercase}.nfe-lote-field input{width:100%;box-sizing:border-box;height:38px!important;min-height:38px!important;padding:0 6px!important;font-size:10px!important}.nfe-lote-field input.nfe-validade-input{font-size:12px!important}.nfe-lote-del{height:38px!important;align-self:end}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) minmax(68px,92px) 34px!important}
 .nfe-actions{padding:6px 14px calc(7px + env(safe-area-inset-bottom))!important}.nfe-conf-progress{width:min(732px,100%);box-sizing:border-box;margin:0 auto 6px!important;padding:6px 9px!important;border-radius:9px}.nfe-conf-progress-top{font-size:9px}.nfe-conf-progress-bar{height:5px;margin-top:4px}.nfe-ind-diag{margin-bottom:6px!important;padding:6px 9px!important;max-height:90px;overflow:auto}.nfe-save{padding:10px 14px!important}.nfe-shell{padding-bottom:170px!important}.nfe-body{padding-bottom:180px!important}
 @media(max-width:520px){.nfe-note-received{grid-template-columns:minmax(0,1fr) minmax(135px,44%);gap:4px 8px;padding:9px}.nfe-note-received small{font-size:8px}.nfe-lote{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 58px 30px!important;gap:4px!important}.nfe-lote-field label{font-size:7px}.nfe-lote-field input{height:36px!important;min-height:36px!important;padding:0 3px!important;font-size:9px!important}.nfe-lote-field input.nfe-validade-input{font-size:10px!important}.nfe-lote-del{height:36px!important}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) 58px 30px!important}.nfe-actions{padding-left:9px!important;padding-right:9px!important}.nfe-conf-progress-top{font-size:8px}.nfe-save{font-size:11px!important;padding:9px!important}.nfe-shell{padding-bottom:160px!important}.nfe-body{padding-bottom:170px!important}}
+
+/* Feedback imediato do Shelf Life na conferência da NF-e */
+.nfe-lote-wrap{margin:0 0 8px}.nfe-lote-wrap .nfe-lote{margin-bottom:3px}.nfe-shelf-life-badge{display:inline-flex;align-items:center;gap:5px;max-width:100%;box-sizing:border-box;padding:4px 7px;border-radius:7px;font-size:8.5px;line-height:1.25;font-weight:900}.nfe-shelf-life-badge[hidden]{display:none}.nfe-shelf-life-badge.ok{color:#087a55;border:1px solid rgba(29,158,117,.48);background:rgba(29,158,117,.12)}.nfe-shelf-life-badge.warn,.nfe-shelf-life-badge.invalid{color:#a32922;border:1px solid rgba(226,75,74,.66);background:rgba(226,75,74,.14);animation:nfeShelfPulse .8s ease-in-out 2}@keyframes nfeShelfPulse{50%{box-shadow:0 0 0 3px rgba(226,75,74,.17)}}
+@media(max-width:520px){.nfe-shelf-life-badge{font-size:7.7px;padding:4px 6px}}
 </style>
 <style id="nfe-history-full-edit-css">
 .nfe-hist-edit-lotes-title{margin-top:10px;font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2)}.nfe-hist-edit-lote{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.6fr) 36px;gap:6px;align-items:end;padding:6px 0;border-top:1px dashed var(--bd)}.nfe-hist-edit-lote label{margin-top:0!important}.nfe-hist-edit-lote input{height:38px!important}.nfe-hist-edit-lote button{height:38px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:#E24B4A;font-size:18px}.nfe-hist-add-lote{margin-top:6px;min-height:36px;padding:0 9px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--tx);font-size:9px;font-weight:800}
@@ -3494,8 +3498,9 @@ function _tarefasPerfilAtualColeta_(){
 }
 function _tarefasPerfilSemAcessoColeta_(){
   var u=_tarefasPerfilAtualColeta_();
-  // Sem permissão de visualização ou recebimento, não consulta nem revela tarefas.
-  return !!u&&(u.veTarefas===false||u.recebeTarefas===false);
+  // Somente perfis explicitamente autorizados a ver E receber tarefas consultam a fila.
+  // Conta ausente/incompleta é tratada como sem acesso; não afeta NF-e/coletas.
+  return !u||u.veTarefas!==true||u.recebeTarefas!==true;
 }
 function _tarefasLimparPerfilSemAcessoColeta_(){
   _tarefasPendentes=[];
@@ -5461,12 +5466,46 @@ function nfeEscudoSelecionarProduto_(i,codigo){
   nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);
 }
 
+function nfeShelfLifeCalcular_(fabricacao,validade,recebidoEm){
+  var iso=/^\d{4}-\d{2}-\d{2}$/;
+  if(!iso.test(String(fabricacao||''))||!iso.test(String(validade||''))||!iso.test(String(recebidoEm||'')))return null;
+  function ms(v){var p=v.split('-').map(Number),t=Date.UTC(p[0],p[1]-1,p[2]),d=new Date(t);return d.getUTCFullYear()===p[0]&&d.getUTCMonth()===p[1]-1&&d.getUTCDate()===p[2]?t:NaN;}
+  var f=ms(fabricacao),v=ms(validade),r=ms(recebidoEm);
+  if(!isFinite(f)||!isFinite(v)||!isFinite(r)||v<=f||r<f||r>v)return {valido:false,pct:null};
+  return {valido:true,pct:Math.max(0,Math.min(100,((v-r)/(v-f))*100))};
+}
+function nfeShelfLifeBadgeHtml_(i,li){return '<div id="nfeShelfBadge_'+i+'_'+li+'" class="nfe-shelf-life-badge" hidden></div>';}
+function nfeEmitirAlertaShelfLife_(mensagem){
+  try{if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')navigator.vibrate([180,70,180]);}catch(e){}
+  try{var AC=window.AudioContext||window.webkitAudioContext;if(AC){var ctx=new AC();var tocar=function(){var o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime;o.type='sine';o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(660,t+.18);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.16,t+.025);g.gain.setValueAtTime(.16,t+.25);g.gain.exponentialRampToValueAtTime(.0001,t+.42);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+.43);setTimeout(function(){try{ctx.close();}catch(e){}},650);};if(ctx.state==='suspended')ctx.resume().then(tocar).catch(function(){});else tocar();}}catch(e){}
+  if(mensagem&&typeof mostrarToast==='function')mostrarToast(mensagem,'warn');
+}
+function nfeShelfLifeAtualizarLote_(i,li,notificar){
+  var n=_nfeColetaNota,it=n&&n.itens&&n.itens[i],l=it&&it.lotes&&it.lotes[li];if(!l)return null;
+  var el=document.getElementById('nfeShelfBadge_'+i+'_'+li);if(!el)return null;
+  var calc=nfeShelfLifeCalcular_(l.fabricacao,l.validade,n.recebidoEm||'');
+  if(!calc){el.hidden=true;el.textContent='';el.className='nfe-shelf-life-badge';return null;}
+  el.hidden=false;
+  if(!calc.valido){el.className='nfe-shelf-life-badge invalid';el.innerHTML='<i class="ti ti-alert-triangle"></i> SHELF LIFE: confira fabricação, recebimento e validade — datas fora de ordem.';var key='invalido|'+[l.fabricacao,l.validade,n.recebidoEm].join('|');if(notificar&&l._shelfAlertKey!==key){l._shelfAlertKey=key;nfeEmitirAlertaShelfLife_('Shelf life com datas fora de ordem. Confira fabricação, recebimento e validade.');}return {valido:false,key:key};}
+  var pct=calc.pct,baixo=pct<80,formatado=pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  el.className='nfe-shelf-life-badge '+(baixo?'warn':'ok');
+  el.innerHTML=baixo?'<i class="ti ti-alert-triangle"></i> SHELF LIFE NA ENTRADA: '+formatado+'% · ABAIXO DO MÍNIMO DE 80%':'<i class="ti ti-circle-check"></i> VIDA ÚTIL NA ENTRADA: '+formatado+'% · DENTRO DO MÍNIMO';
+  var key='baixo|'+[l.fabricacao,l.validade,n.recebidoEm].join('|');
+  if(!baixo)l._shelfAlertKey='';
+  else if(notificar&&l._shelfAlertKey!==key){l._shelfAlertKey=key;nfeEmitirAlertaShelfLife_('Atenção: shelf life '+formatado+'%, abaixo do mínimo de 80%.');}
+  return {valido:true,pct:pct,baixo:baixo,key:key};
+}
+function nfeShelfLifeAtualizarNota_(notificar){
+  var n=_nfeColetaNota,alerta=null;if(!n||!Array.isArray(n.itens))return;
+  (n.itens||[]).forEach(function(it,i){if(!it||it.controlar===false)return;(it.lotes||[]).forEach(function(l,li){var r=nfeShelfLifeAtualizarLote_(i,li,false);if(!r)return;if(r.valido===false||r.baixo){var k=r.key;if(l._shelfAlertKey!==k&&notificar){l._shelfAlertKey=k;if(!alerta)alerta=r;}}else if(r.valido)l._shelfAlertKey='';});});
+  if(alerta){if(alerta.valido===false)nfeEmitirAlertaShelfLife_('Atenção: confira a ordem das datas de fabricação, recebimento e validade.');else{var p=alerta.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});nfeEmitirAlertaShelfLife_('Atenção: shelf life '+p+'%, abaixo do mínimo de 80%.');}}
+}
 function nfeSetRecebidoEm_(v){
   var n=_nfeColetaNota;if(!n)return;
   n.recebidoEm=String(v||'');
   var campoData=document.getElementById('nfeRecebidoEm');if(campoData)campoData.classList.remove('nfe-missing-field');
   (n.itens||[]).forEach(function(it){if(it&&it.controlar!==false){it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';}});
-  nfeSalvarRascunho_();nfeRenderNota_();
+  nfeSalvarRascunho_();nfeRenderNota_();nfeShelfLifeAtualizarNota_(true);
 }
 function nfeRenderNota_(){
   var n=_nfeColetaNota;if(!n)return nfeColetaNova();
@@ -5480,6 +5519,7 @@ function nfeRenderNota_(){
   (n.itens||[]).forEach(function(it,i){html+=nfeItemHtml_(it,i);});
   document.getElementById('nfeBody').innerHTML=html;
   document.getElementById('nfeActions').style.display='block';
+  nfeShelfLifeAtualizarNota_(false);
   nfeAtualizarResumoConferencia_();
   var b=document.getElementById('nfeSaveBtn');if(b){b.disabled=!!n.jaProcessada;b.innerHTML=n.jaProcessada?'<i class="ti ti-lock"></i> NF-e JÁ PROCESSADA':'<i class="ti ti-device-floppy"></i> GRAVAR VALIDADES DA NF-e';}
   setTimeout(nfeCarregarFotosPendentes_,0);
@@ -5538,7 +5578,7 @@ function nfeItemHtml_(it,i){
     if(it.validadeIndeterminada===true)return '<div class="nfe-lote nfe-lote-indeterminada"><div class="nfe-indeterminada-tag"><i class="ti ti-infinity"></i> Validade indeterminada</div>'+qtd+remover+'</div>';
     var fab='<div class="nfe-lote-field"><label>Fabricação</label><input id="nfeLoteFab_'+i+'_'+li+'" class="nfe-fabricacao-input" type="date" value="'+nfeEsc_(l.fabricacao||'')+'" onchange="nfeLoteCampo_('+i+','+li+',\'fabricacao\',this.value)" aria-label="Data de fabricação"></div>';
     var data='<div class="nfe-lote-field"><label>Validade</label><input id="nfeLoteVal_'+i+'_'+li+'" class="nfe-validade-input" type="text" inputmode="none" readonly placeholder="DD/MM/AAAA" value="'+nfeEsc_(nfeFmtDataPicker_(l.validade||''))+'" onclick="nfeAbrirSeletorValidade_('+i+','+li+')" aria-label="Selecionar validade"></div>';
-    return '<div class="nfe-lote">'+data+fab+qtd+remover+'</div>';
+    return '<div class="nfe-lote-wrap"><div class="nfe-lote">'+data+fab+qtd+remover+'</div>'+nfeShelfLifeBadgeHtml_(i,li)+'</div>';
   }).join('');
   if(it.validadeIndeterminada===true)lotes='<div class="nfe-lote-indeterminada-summary"><i class="ti ti-infinity"></i> Validade indeterminada · item conferido sem lote de validade</div>';
   var infoNF=(nomeAURA&&nomeNF&&nomeAURA!==nomeNF)?('<div class="nfe-info-line"><span class="lbl">Descrição na NF-e</span>'+nfeEsc_(nomeNF)+'</div>'):'';
@@ -5773,7 +5813,7 @@ function nfeEscolherConversao_(i,aplicar){
 }
 function nfeAbrirQtdManual_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;it.conversaoManualAberta=true;nfeRenderNota_();setTimeout(function(){var x=document.getElementById('nfeQtdManual_'+i);if(x){x.focus();x.select();}},40);}
 function nfeAplicarQtdManual_(i){var x=document.getElementById('nfeQtdManual_'+i);if(!x)return;nfeDefinirTotalConversao_(i,x.value);}
-function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.lotes[li])return;it.lotes[li][campo]=campo==='quantidade'?(Number(v)||0):v;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
+function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.lotes[li])return;it.lotes[li][campo]=campo==='quantidade'?(Number(v)||0):v;nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);if(campo==='fabricacao'||campo==='validade')nfeShelfLifeAtualizarLote_(i,li,true);}
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function nfeFmtDataPicker_(iso){var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
@@ -6741,7 +6781,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.33-tarefas-conforme-permissao';console.info('[AURA] Coleta Tablet v7.33 — tarefas carregadas somente para perfis autorizados');</script>
+<script>window.AURA_TABLET_BUILD='v7.35-shelf-life-alerta-imediato';console.info('[AURA] Coleta Tablet v7.35 — alerta imediato de shelf life');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
@@ -6897,8 +6937,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
   function perfilColaboradorTarefa_(cfg){var e=String(cfg&&cfg.email||'').trim().toLowerCase(),arr=window.COLABORADORES||[];for(var i=0;i<arr.length;i++){var u=arr[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);if(emails.some(function(x){return String(x||'').trim().toLowerCase()===e;}))return u;}return null;}
-  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?(c.veTarefas!==false&&c.recebeTarefas!==false):!gestorExcluido(nomeAtual_(cfg),String(cfg&&cfg.email||''));}
-  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return c?c.recebeTarefas===true:perfilPodeTarefas_(cfg);}
+  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&c.veTarefas===true&&c.recebeTarefas===true;}
+  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&c.veTarefas===true&&c.recebeTarefas===true;}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
@@ -6956,7 +6996,9 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   }
   var originalBuscar=window.buscarTarefas;
   if(typeof originalBuscar==='function')window.buscarTarefas=async function(){
-    window._auraTarefasPrimeiraBuscaFeita=true;var ctx=prepararAvisoImediato_(),r=await originalBuscar.apply(this,arguments),q=atualizarBadge_();aplicarQtdAviso_(ctx,q);return r;
+    window._auraTarefasPrimeiraBuscaFeita=true;var cfg=loadCfg();
+    if(!perfilPodeTarefas_(cfg)){cacheCountSet_(cfg&&cfg.email,0);_tarefasLimparPerfilSemAcessoColeta_();return {ok:true,disabled:true,total:0};}
+    var ctx=prepararAvisoImediato_(),r=await originalBuscar.apply(this,arguments),q=atualizarBadge_();aplicarQtdAviso_(ctx,q);return r;
   };
   [['registrar','Coleta','Registrou produto e validade'],['iniciarScanner','Scanner de produtos','Iniciou scanner de códigos de barras'],['confirmarTarefa','Tarefas','Confirmou estoque da tarefa'],['responderCarrinhoTarefa','Tarefas','Atualizou situação da tarefa'],['tarefasHistFinalizar_','Tarefas','Finalizou ação da tarefa'],['nfeColetaIniciarScan','Conferência NF-e','Iniciou scanner da chave de acesso'],['nfeEscanearEan_','Conferência NF-e','Iniciou scanner de código do produto'],['nfeColetaBuscarChave','Conferência NF-e','Consultou NF-e pela chave'],['nfeColetaSalvar','Conferência NF-e','Gravou validades da NF-e'],['abrirRetiradas','Retiradas','Abriu lista de retiradas de vencidos'],['carregarRetiradas','Retiradas','Consultou retiradas'],['abrirHistoricoNFe','Conferência NF-e','Abriu histórico de NF-e'],['nfeHistRetomarPendente_','Conferência NF-e','Retomou NF-e pendente'],['nfeHistSalvarEdicao_','Conferência NF-e','Salvou correção no histórico de NF-e']].forEach(function(x){wrapAudit_(x[0],x[1],x[2]);});
   async function syncCentralSilencioso_(){
