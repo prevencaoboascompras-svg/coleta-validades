@@ -1957,6 +1957,8 @@ var _motorAtivo  = null;
 var _videoStream  = null;
 var _videoEl      = null;
 var _nativeLoop   = null;
+var _nativeFallbackTimer = null;
+var _forceZXingAfterNative = false;
 
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
@@ -2200,6 +2202,28 @@ function initAudioContext() {
   }
 }
 
+function _scannerNativeFallbackZXing_(session) {
+  if (session !== _scanSessionId || _motorAtivo !== 'native' || !scannerAtivo) return;
+  console.warn('[AURA Scanner] BarcodeDetector sem leitura; alternando para ZXing.');
+  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
+  var nfeFast = document.body && document.body.classList.contains('nfe-fast-scan');
+  scannerAtivo = false;
+  _scannerIniciando = false;
+  _scanSessionId++;
+  if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
+  if (_videoStream) { try { _videoStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _videoStream = null; }
+  if (_videoEl) { try { _videoEl.srcObject = null; } catch(e){} _videoEl = null; }
+  _motorAtivo = null;
+  var wrap = document.getElementById('scannerView');
+  if (wrap) wrap.innerHTML = '';
+  var idle = document.getElementById('stateIdle'); if (idle) idle.style.display = 'none';
+  var erro = document.getElementById('stateErro'); if (erro) erro.style.display = 'none';
+  var laser = document.getElementById('laser'); if (laser) laser.style.display = 'none';
+  _forceZXingAfterNative = true;
+  iniciarScanner();
+  if (nfeFast && document.body) document.body.classList.add('nfe-fast-scan');
+}
+
 async function iniciarScanner() {
   // v7.11: identidade vem antes da câmera no tablet.
   if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de usar a câmera','warn');}catch(e){}return;}
@@ -2231,7 +2255,7 @@ async function iniciarScanner() {
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
-  if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
+  if (typeof BarcodeDetector !== 'undefined' && !isIOS() && !_forceZXingAfterNative) {
     var constraints = {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } }
     };
@@ -2261,6 +2285,8 @@ async function iniciarScanner() {
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
       scannerAtivo = true;
+      if (_nativeFallbackTimer) clearTimeout(_nativeFallbackTimer);
+      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 2800);
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
@@ -2276,6 +2302,7 @@ async function iniciarScanner() {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
               if (meuSession !== _scanSessionId) { console.warn('Descartado: resultado nativo de sessão antiga #' + meuSession); return; }
+              if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
               onScanSuccess(results[0].rawValue);
               return;
             }
@@ -2290,6 +2317,8 @@ async function iniciarScanner() {
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
+
+  _forceZXingAfterNative = false;
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
   // Se o bundle ainda estiver carregando, aguardamos dentro da MESMA sessão.
@@ -2463,6 +2492,8 @@ async function iniciarScanner() {
 }
 
 function pararScanner() {
+  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
+  _forceZXingAfterNative = false;
   scannerAtivo = false;
   if (document && document.body) document.body.classList.remove('nfe-fast-scan');
   _scannerIniciando = false;
