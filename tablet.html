@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.39 — infere fator kg por embalagem ao vincular Escudo -->
+<!-- Coleta Tablet v7.41 — consulta de lotes antes de liberar lançamento -->
+<!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
 <!-- AURA Coleta Tablet v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -1419,6 +1420,7 @@ html,body{overscroll-behavior-y:none!important;}
   <i class="ti ti-cloud-off pend-banner-icon"></i>
   <div class="pend-banner-text">
     <b><span id="pendBannerCount">0</span> registro(s)</b> salvos localmente sem enviar — sem conexão ou erro ao salvar.
+    <small id="pendBannerError" style="display:none;margin-top:3px;font-size:10px;line-height:1.35"></small>
   </div>
   <button class="pend-banner-btn" id="pendBannerBtn" onclick="reenviarPendentes()">
     <i class="ti ti-upload"></i> Reenviar
@@ -1472,7 +1474,7 @@ html,body{overscroll-behavior-y:none!important;}
   <div class="prod-foto" id="fotoPreview"><i class="ti ti-photo-search" style="font-size:40px"></i></div>
   <div class="prod-info">
     <span class="prod-desc-val" id="descVal">Aguardando leitura…</span>
-    <div class="prod-price-row" id="descPriceRow"><span class="prod-preco" id="descPreco"></span><span class="prod-preco-promo" id="descPrecoPromo"></span></div>
+    <div class="prod-price-row" id="descPriceRow"><span class="prod-preco" id="descPreco"></span><span class="prod-preco-promo" id="descPrecoPromo"></span><small id="descBancoAtualizado" class="prod-price-freshness"></small></div>
     <span class="prod-codigo empty" id="codeDisplay">Aguardando leitura…</span>
     <!-- status de onde a foto foi encontrada fica só no elemento (não exibido), mantido pra debug -->
     <span class="foto-status" id="fotoStatus" style="display:none"></span>
@@ -2653,6 +2655,7 @@ function ajustarFonteCodigo() {
 }
 
 function resetCodigo() {
+  if(window.auraCancelarConsultaProduto_)window.auraCancelarConsultaProduto_();
   codigoAtual = '';
   var el = document.getElementById('codeDisplay');
   el.textContent = 'Aguardando leitura…';
@@ -2669,6 +2672,7 @@ function resetCodigo() {
   document.getElementById('descVal').className = 'prod-desc-val';
   document.getElementById('descPreco').classList.remove('show');
   document.getElementById('descPreco').textContent = '';
+  var freshness=document.getElementById('descBancoAtualizado');if(freshness){freshness.textContent='';freshness.classList.remove('show');}
   var precoPromo=document.getElementById('descPrecoPromo');if(precoPromo){precoPromo.classList.remove('show');precoPromo.textContent='';}
   // Reseta foto
   fotoToken++;
@@ -2968,7 +2972,7 @@ async function buscarDescricao(ean) {
   var el  = document.getElementById('descVal');
   var elPreco = document.getElementById('descPreco');
   var elPrecoPromo = document.getElementById('descPrecoPromo');
-  el.textContent = 'Buscando produto…';
+  el.textContent = 'Consultando cadastro, preços e lotes…';
   el.className = 'prod-desc-val loading';
   elPreco.classList.remove('show');
   elPreco.textContent = '';
@@ -2993,11 +2997,11 @@ async function buscarDescricao(ean) {
   var endpointNovoDisponivel = primeira.suportado;
 
   if (primeira.suportado && primeira.encontrado) {
-    resultado = primeira;
+    resultado = Object.assign({}, primeira, {_consultaLotesOk:true});
   } else if (primeira.suportado && variantes.length > 1) {
     var segunda = await tentarBuscaCompleta(cfg.url, variantes[1]);
     if (segunda.suportado && segunda.encontrado) {
-      resultado = segunda;
+      resultado = Object.assign({}, segunda, {_consultaLotesOk:true});
       eanEncontrado = variantes[1];
     }
   } else if (!primeira.suportado) {
@@ -3012,7 +3016,8 @@ async function buscarDescricao(ean) {
       eanEncontrado = variantes[idxAntigo];
       var lotesDoMesmoCodigo = lotesAntigosTodos[idxAntigo];
       resultado = Object.assign({}, buscasAntigas[idxAntigo], {
-        lotes: (lotesDoMesmoCodigo && lotesDoMesmoCodigo.ok && lotesDoMesmoCodigo.lotes) ? lotesDoMesmoCodigo.lotes : []
+        lotes: (lotesDoMesmoCodigo && lotesDoMesmoCodigo.ok && lotesDoMesmoCodigo.lotes) ? lotesDoMesmoCodigo.lotes : [],
+        _consultaLotesOk:!!(lotesDoMesmoCodigo&&lotesDoMesmoCodigo.ok&&Array.isArray(lotesDoMesmoCodigo.lotes))
       });
     }
   }
@@ -3022,18 +3027,19 @@ async function buscarDescricao(ean) {
   if ((codigoAtual || '') !== ean) return;
 
   if (resultado && resultado.encontrado) {
+    if(resultado.bancoAtualizadoEm)window._auraBancoAtualizadoEm_=resultado.bancoAtualizadoEm;
     el.textContent = resultado.descricao;
     el.className = 'prod-desc-val';
     descricaoAtual = resultado.descricao;
 
     // Exibe venda e preço por validade; a promoção vem dos lotes ativos,
     // respeitando a validade até 21h e a faixa de até 15 dias.
-    if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(resultado.preco,resultado.lotes||[],'atualizando');
+    if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(resultado.preco,resultado.lotes||[],resultado._consultaLotesOk===false?'indisponivel':'concluida');
 
     // Lotes vêm na MESMA resposta do produto. O modal ganha prioridade sobre
     // foto/catálogos externos para não competir com a etapa operacional.
     var lotes = Array.isArray(resultado.lotes) ? resultado.lotes : [];
-    if (lotes.length) {
+    if (lotes.length && resultado._consultaLotesOk!==false) {
       _loteEanAtual = eanEncontrado;
       _lotesEncontrados = lotes;
       abrirLoteModal();
@@ -3068,7 +3074,7 @@ async function tentarBuscaCompleta(url, ean) {
     var resp = await fetchComTimeout(
       url + '?action=buscarEANCompleto&ean=' + encodeURIComponent(ean),
       { method: 'GET', cache: 'no-store' },
-      10000
+      20000
     );
     if (!resp.ok) return { suportado: false, encontrado: false };
     var data = await resp.json();
@@ -3089,6 +3095,7 @@ async function tentarBuscaCompleta(url, ean) {
       descricao: data.descricao || '',
       preco: data.preco,
       custo: data.custo,
+      bancoAtualizadoEm: data.bancoAtualizadoEm || '',
       lotes: Array.isArray(data.lotes) ? data.lotes : []
     };
   } catch (e) {
@@ -3107,7 +3114,7 @@ async function tentarBusca(url, ean) {
     if (!resp.ok) return { encontrado: false };
     var data = await resp.json();
     if (data.ok && data.descricao) {
-      return { encontrado: true, descricao: data.descricao, preco: data.preco };
+      return { encontrado: true, descricao: data.descricao, preco: data.preco, bancoAtualizadoEm:data.bancoAtualizadoEm||'' };
     }
     return { encontrado: false };
   } catch(e) {
@@ -3193,6 +3200,7 @@ function _novoQid_() {
 }
 
 function registrar() {
+  if (window._auraProdutoConsultaPendente_) { mostrarToast('Aguarde a consulta do cadastro e dos lotes antes de lançar.', 'warn'); return; }
   var codigo  = codigoAtual || document.getElementById('manualInput').value.trim();
   var valRaw  = document.getElementById('fValidade').value;
   var setor   = document.getElementById('fSetor').value;
@@ -3352,8 +3360,10 @@ async function processarFilaEnvio(modoManual) {
         _atualizarHistoricoStatus_(item._qid, 'ok');
         ok++;
       } catch (e) {
-        fail = loadPend().length;
-        console.warn('Fila de envio pausada: ' + (e && e.message ? e.message : e));
+        var msgErro=String(e&&e.message?e.message:e||'Falha desconhecida ao enviar');
+        var filaErro=loadPend();for(var fi=0;fi<filaErro.length;fi++)if(filaErro[fi]&&filaErro[fi]._qid===item._qid){filaErro[fi]._erroEnvio=msgErro;break;}
+        savePend(filaErro);fail=filaErro.length;
+        console.warn('Fila de envio pausada: ' + msgErro);
         break;
       }
     }
@@ -3401,6 +3411,9 @@ function atualizarPendUI() {
   if (banner) banner.classList.toggle('show', n > 0);
   var bannerCount = document.getElementById('pendBannerCount');
   if (bannerCount) bannerCount.textContent = n;
+  var erroEl=document.getElementById('pendBannerError'),ultimoErro='';
+  for(var i=0;i<arr.length;i++)if(arr[i]&&arr[i]._erroEnvio){ultimoErro=String(arr[i]._erroEnvio);break;}
+  if(erroEl){erroEl.textContent=ultimoErro?'Última tentativa: '+ultimoErro:'';erroEl.style.display=ultimoErro?'block':'none';}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3496,18 +3509,9 @@ function _tarefasPerfilAtualColeta_(){
   }
   return null;
 }
-function _tarefasIdentidadeSemTarefasColeta_(){
-  var u=_tarefasPerfilAtualColeta_(),cfg=loadCfg()||{},s=String((u&&u.nome||'')+' '+(u&&u.email||'')+' '+(cfg.email||''));
-  try{s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}
-  s=s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  // Perfis de gestão e a conta dedicada ao recebimento não recebem tarefas no Coleta.
-  return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});
-}
 function _tarefasPerfilSemAcessoColeta_(){
   var u=_tarefasPerfilAtualColeta_();
-  if(_tarefasIdentidadeSemTarefasColeta_())return true;
-  // Somente perfis explicitamente autorizados a ver E receber tarefas consultam a fila.
-  // Conta ausente/incompleta é tratada como sem acesso; não afeta NF-e/coletas.
+  // A planilha de permissões é a única fonte; perfil ausente/incompleto falha fechado.
   return !u||u.veTarefas!==true||u.recebeTarefas!==true;
 }
 function _tarefasLimparPerfilSemAcessoColeta_(){
@@ -6869,8 +6873,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   function dbOpen(){return new Promise(function(res,rej){if(!window.indexedDB){rej(new Error('IndexedDB indisponível'));return;}var r=indexedDB.open(DB,1);r.onupgradeneeded=function(){var d=r.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'key'});};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error||new Error('IndexedDB'));};});}
   async function loadCache(){try{var d=await dbOpen();return await new Promise(function(res){var tx=d.transaction(STORE,'readonly'),rq=tx.objectStore(STORE).get(KEY);rq.onsuccess=function(){res(rq.result||null);};rq.onerror=function(){res(null);};});}catch(e){return null;}}
   async function saveCache(obj){try{var d=await dbOpen();await new Promise(function(res,rej){var tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(obj);tx.oncomplete=function(){res();};tx.onerror=function(){rej(tx.error);};});}catch(e){}}
-  function build(c){if(c&&Array.isArray(c.produtos)){core.build(c.produtos,c.versao||String(c.produtos.length));return true;}return false;}
-  async function sync(force){if(syncing)return;syncing=true;try{var cached=await loadCache();if(cached)build(cached);var cfg=typeof loadCfg==='function'?loadCfg():{};if(!cfg.url||navigator.onLine===false)return;var ver=cached&&cached.versao?cached.versao:'';var sep=cfg.url.indexOf('?')>=0?'&':'?';var url=cfg.url+sep+'action=buscarIndiceProdutos&versaoCliente='+encodeURIComponent(force?'':ver)+'&_='+Date.now();var r=await fetchComTimeout(url,{cache:'no-store'},20000),j=await r.json();if(!j||!j.ok)return;if(j.alterado&&Array.isArray(j.produtos)){var obj={key:KEY,versao:j.versao||'',atualizadoEm:Date.now(),produtos:j.produtos};build(obj);saveCache(obj);console.info('[AURA Search Core] índice móvel atualizado:',j.total||j.produtos.length);}else if(!core.ready&&cached)build(cached);}catch(e){console.warn('[AURA Search Core] índice móvel indisponível; fallback servidor mantido:',e&&e.message||e);}finally{syncing=false;}}
+  function build(c){if(c&&Array.isArray(c.produtos)){if(c.bancoAtualizadoEm)window._auraBancoAtualizadoEm_=c.bancoAtualizadoEm;core.build(c.produtos,c.versao||String(c.produtos.length));return true;}return false;}
+  async function sync(force){if(syncing)return;syncing=true;try{var cached=await loadCache();if(cached)build(cached);var cfg=typeof loadCfg==='function'?loadCfg():{};if(!cfg.url||navigator.onLine===false)return;var ver=cached&&cached.versao?cached.versao:'';var sep=cfg.url.indexOf('?')>=0?'&':'?';var url=cfg.url+sep+'action=buscarIndiceProdutos&versaoCliente='+encodeURIComponent(force?'':ver)+'&_='+Date.now();var r=await fetchComTimeout(url,{cache:'no-store'},20000),j=await r.json();if(!j||!j.ok)return;if(j.bancoAtualizadoEm){window._auraBancoAtualizadoEm_=j.bancoAtualizadoEm;if(window._auraAtualizarBancoTimestamp_)window._auraAtualizarBancoTimestamp_();}if(j.alterado&&Array.isArray(j.produtos)){var obj={key:KEY,versao:j.versao||'',atualizadoEm:Date.now(),bancoAtualizadoEm:j.bancoAtualizadoEm||'',produtos:j.produtos};build(obj);saveCache(obj);console.info('[AURA Search Core] índice móvel atualizado:',j.total||j.produtos.length);}else{if(cached){cached.bancoAtualizadoEm=j.bancoAtualizadoEm||cached.bancoAtualizadoEm||'';build(cached);saveCache(cached);}}}catch(e){console.warn('[AURA Search Core] índice móvel indisponível; fallback servidor mantido:',e&&e.message||e);}finally{syncing=false;}}
   window.auraSearchMobileSync_=sync;
   window.auraSearchMobileLookup_=function(c){return core.lookup(c);};
   window.auraSearchMobileSearch_=function(q,n){return core.search(q,n);};
@@ -6886,18 +6890,63 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   var core=window.AURASearchCore;if(!core)return;
   function hit(c){return core.ready?core.lookup(c):null;}
   var buscarServidor=window.buscarDescricao;
+  var consultaSeq=0;
+  function travarFormularioConsulta_(travar){
+    window._auraProdutoConsultaPendente_=!!travar;
+    ['fQty','fPeso','fSetor','submitBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=!!travar;});
+    ['drumTrigger','pesoToggle'].forEach(function(id){var el=document.getElementById(id);if(el){el.style.pointerEvents=travar?'none':'';el.style.opacity=travar?'.58':'';}});
+  }
+  function consultaAindaAtual_(seq,ean){return seq===consultaSeq&&(codigoAtual||'')===ean;}
+  window.auraCancelarConsultaProduto_=function(){consultaSeq++;travarFormularioConsulta_(false);};
   window.buscarDescricao=async function(ean){
-    var p=hit(ean);if(!p){return buscarServidor(ean);}
-    var el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco'),elPromo=document.getElementById('descPrecoPromo');
+    var seq=++consultaSeq,p=hit(ean),el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco'),elPromo=document.getElementById('descPrecoPromo');
     if((codigoAtual||'')!==ean)return;
-    el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');else{elPreco.classList.remove('show');if(elPromo)elPromo.classList.remove('show');}
-    // A tela responde já. Lotes/setor e eventual dado mais novo chegam depois.
-    setTimeout(function(){if((codigoAtual||'')===ean)buscarFotoCompleta(p.ean||ean,p.descricao||'');},0);
-    var cfg=loadCfg();if(!cfg.url){window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');return;}try{var codigoConsulta=p.ean||ean;var r=await tentarBuscaCompleta(cfg.url,codigoConsulta);if((codigoAtual||'')!==ean)return;var loteConsultaOk=!!(r&&r.suportado&&r.encontrado&&Array.isArray(r.lotes));
-    // Se a implantação ainda não expõe buscarEANCompleto ou essa ação falhar,
-    // consulta produto e lotes pelas duas ações compatíveis do backend.
-    if(!loteConsultaOk){var legacy=await Promise.all([tentarBusca(cfg.url,codigoConsulta),tentarVerificarLotes(cfg.url,codigoConsulta)]);if((codigoAtual||'')!==ean)return;if(legacy[0]&&legacy[0].encontrado){r={suportado:true,encontrado:true,descricao:legacy[0].descricao||p.descricao,preco:legacy[0].preco,lotes:legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes)?legacy[1].lotes:[]};loteConsultaOk=!!(legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes));}}
-    if((codigoAtual||'')!==ean)return;if(r&&r.encontrado){if(r.descricao){el.textContent=r.descricao;descricaoAtual=r.descricao;}var lotes=Array.isArray(r.lotes)?r.lotes:[];if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(r.preco!==undefined&&r.preco!==null?r.preco:p.preco,lotes,loteConsultaOk?'atualizando':'indisponivel');if(lotes.length){_loteEanAtual=codigoConsulta;_lotesEncontrados=lotes;abrirLoteModal();}}else if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}catch(e){if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');}
+    travarFormularioConsulta_(true);
+    if(p){
+      // O catálogo local dá resposta imediata à descrição e à venda; a promoção
+      // fica explicitamente em consulta e a entrada de lote só libera quando a
+      // consulta dos lotes terminou. Assim nenhum alerta de lote chega atrasado.
+      el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';
+      if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');
+    }else{
+      el.textContent='Consultando cadastro, preços e lotes…';el.className='prod-desc-val loading';
+      if(elPreco){elPreco.classList.remove('show');elPreco.textContent='';}if(elPromo){elPromo.classList.remove('show');elPromo.textContent='';}
+    }
+    try{
+      if(!p){await buscarServidor(ean);return;}
+      var cfg=loadCfg(),codigoConsulta=p.ean||ean;
+      if(!cfg.url)throw new Error('A conexão com a AURA não está configurada.');
+      var r=await tentarBuscaCompleta(cfg.url,codigoConsulta),consultaLotesCompleta=!!(r&&r.suportado&&r.encontrado&&Array.isArray(r.lotes));
+      if(!consultaLotesCompleta){
+        var legacy=await Promise.all([tentarBusca(cfg.url,codigoConsulta),tentarVerificarLotes(cfg.url,codigoConsulta)]);
+        if(!consultaAindaAtual_(seq,ean))return;
+        if(legacy[0]&&legacy[0].encontrado){
+          r={suportado:true,encontrado:true,descricao:legacy[0].descricao||p.descricao,preco:legacy[0].preco!==undefined?legacy[0].preco:p.preco,lotes:legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes)?legacy[1].lotes:[]};
+          consultaLotesCompleta=!!(legacy[1]&&legacy[1].ok&&Array.isArray(legacy[1].lotes));
+        }
+      }
+      if(!consultaAindaAtual_(seq,ean))return;
+      if(r&&r.encontrado&&consultaLotesCompleta){
+        if(r.bancoAtualizadoEm)window._auraBancoAtualizadoEm_=r.bancoAtualizadoEm;
+        el.textContent=r.descricao||p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=el.textContent;
+        var lotes=Array.isArray(r.lotes)?r.lotes:[];
+        window._auraAtualizarBadgesConsulta_(r.preco!==undefined&&r.preco!==null?r.preco:p.preco,lotes,'concluida');
+        if(lotes.length){_loteEanAtual=r.ean||codigoConsulta;_lotesEncontrados=lotes;abrirLoteModal();}
+        setTimeout(function(){if(consultaAindaAtual_(seq,ean))buscarFotoCompleta(r.ean||codigoConsulta,r.descricao||p.descricao||'');},0);
+      }else{
+        // Não mostramos falsa conclusão: o operador vê que a validade ainda
+        // não foi consultada, em vez de poder cadastrar antes da resposta.
+        el.textContent=(p.descricao||'Produto')+' · consulta de lotes indisponível';el.className='prod-desc-val notfound';
+        window._auraAtualizarBadgesConsulta_(p.preco,[],'indisponivel');
+      }
+    }catch(err){
+      if(!consultaAindaAtual_(seq,ean))return;
+      el.textContent=(p&&p.descricao?p.descricao+' · ':'')+'falha ao consultar lotes';el.className='prod-desc-val notfound';
+      if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p&&p.preco,[],'indisponivel');
+      console.warn('[AURA Coleta] Consulta completa de produto/lotes falhou:',err&&err.message||err);
+    }finally{
+      if(consultaAindaAtual_(seq,ean))travarFormularioConsulta_(false);
+    }
   };
 
   // NF-e: autocomplete local com 90ms; EAN completo é imediato.
@@ -6947,10 +6996,9 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   var APP_KEY='coleta_tablet', APP_LABEL='Coleta Tablet';
   var _taskPollTimer=null,_taskSilentBusy=false;
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
-  function gestorExcluido(nome,email){var s=norm((nome||'')+' '+(email||''));return ['cesar','taiti','leonardo','1960 nf'].some(function(x){return s.indexOf(x)>=0;});}
   function perfilColaboradorTarefa_(cfg){var e=String(cfg&&cfg.email||'').trim().toLowerCase(),arr=window.COLABORADORES||[];for(var i=0;i<arr.length;i++){var u=arr[i]||{},emails=[u.email].concat(Array.isArray(u.aliases)?u.aliases:[]);if(emails.some(function(x){return String(x||'').trim().toLowerCase()===e;}))return u;}return null;}
-  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true;}
-  function perfilRecebeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&!gestorExcluido(c.nome,c.email)&&c.veTarefas===true&&c.recebeTarefas===true;}
+  function perfilPodeTarefas_(cfg){var c=perfilColaboradorTarefa_(cfg);return !!c&&c.veTarefas===true&&c.recebeTarefas===true;}
+  function perfilRecebeTarefas_(cfg){return perfilPodeTarefas_(cfg);}
   function fmtMoney(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
   window._auraPrecoValidadeLoteHtml_=function(l){
     if(!l||l.diasParaVencer===null||l.diasParaVencer===undefined||Number(l.diasParaVencer)<0||Number(l.diasParaVencer)>15||!(Number(l.precoSugerido)>0))return '';
@@ -6992,7 +7040,6 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     var cfg=loadCfg();if(!cfg||!cfg.email)return null;var nome=nomeAtual_(cfg),sess=getSessao_(cfg.email),ctx={cfg:cfg,nome:nome,sess:sess,qtd:0,acao:'',fechado:false,regAcesso:false};
     registrarAcessoBg_(ctx);
     if(!perfilPodeTarefas_(cfg)){cacheCountSet_(cfg.email,0);_tarefasLimparPerfilSemAcessoColeta_();return null;}
-    if(gestorExcluido(nome,cfg.email)){registrarAvisoBg_(ctx,'gestor_sem_popup',false);return null;}
     var emailEntrada=String(cfg.email||'').toLowerCase();if(_auraEntradaPopupEmail_===emailEntrada)return null;_auraEntradaPopupEmail_=emailEntrada;
     window._auraTaskCurrentSession=sess;window._auraTaskAppLabel=APP_LABEL;
     var cached=cacheCountGet_(cfg.email),back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';back.innerHTML=htmlAviso_(nome,cached);document.body.appendChild(back);ctx.el=back;window._auraTaskNoticeCtx=ctx;
@@ -7166,6 +7213,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <style id="auraPriceBadgesV1">
 .prod-price-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prod-price-freshness{display:none;flex-basis:100%;font-size:9px;line-height:1.25;color:var(--tx2);opacity:.9}
+.prod-price-freshness.show{display:block}
 .prod-preco,.prod-preco-promo{display:none;align-self:flex-start;white-space:normal;flex-shrink:1;font-family:var(--mono);font-size:11px;font-weight:900;line-height:1.2;padding:6px 9px;border-radius:9px}
 .prod-preco.show{display:inline-flex;color:#B42318;background:rgba(226,75,74,.11);border:1.5px solid #E24B4A}
 .prod-preco-promo.show{display:inline-flex;color:#755700;background:rgba(255,193,7,.16);border:1.5px solid #D9A400}
@@ -7175,7 +7224,19 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 .aura-price-badge b{font-family:var(--mono);font-size:12px;font-weight:950}
 .aura-price-badge.sale{color:#B42318;background:rgba(226,75,74,.11);border-color:#E24B4A}
 .aura-price-badge.promo{color:#755700;background:rgba(255,193,7,.16);border-color:#D9A400}
-.aura-price-badge.na{font-size:9px;min-width:0;padding:6px 8px}
+.prod-preco.show{color:#FFE2E0;background:linear-gradient(135deg,rgba(174,35,39,.42),rgba(226,75,74,.20));border:1.5px solid #FF7771;box-shadow:0 2px 8px rgba(226,75,74,.13)}
+.prod-preco-promo.show{color:#FFF0B5;background:linear-gradient(135deg,rgba(153,108,0,.40),rgba(255,193,7,.18));border:1.5px solid #F0C34A;box-shadow:0 2px 8px rgba(255,193,7,.12)}
+.aura-price-badge{min-width:112px;padding:7px 10px;border-width:1.5px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.aura-price-badge small{font-size:8px;letter-spacing:.055em;opacity:1}
+.aura-price-badge b{font-size:14px;letter-spacing:.01em}
+.aura-price-badge.sale{color:#FFE5E3;background:linear-gradient(135deg,rgba(150,28,34,.58),rgba(226,75,74,.20));border-color:#FF7771}
+.aura-price-badge.sale small{color:#FF9B96}
+.aura-price-badge.sale b{color:#FFF8F7}
+.aura-price-badge.promo{color:#FFF2C2;background:linear-gradient(135deg,rgba(130,91,0,.55),rgba(255,193,7,.20));border-color:#F0C34A}
+.aura-price-badge.promo small{color:#FFD76A}
+.aura-price-badge.promo b{color:#FFF9E6}
+.aura-price-badge.na{font-size:9px;min-width:0;padding:6px 9px}
+
 .aura-price-context{width:100%;font-size:9px;color:var(--tx2);line-height:1.3}
 .aura-validade-price{margin-top:8px;padding:0;background:transparent;border:0;font-size:10px;line-height:1.35}
 .aura-validade-price.urgent{background:transparent;border:0}
@@ -7218,12 +7279,14 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
   }
   window._auraTarefaBadgesPrecoHtml_=function(t){var x=taskPriceData(t),context=x.days!==null&&x.days>=0&&x.days<=15?'Válido para lotes a até 15 dias do vencimento; preço ativo até 21h no dia da validade.':'';return badgeHtml(x.sale,x.promo,x.status,context);};
   function promoLot(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15?(num(l.precoSugerido)||promoFor(l.precoNormal,l.custo,d)):0;}
+  window._auraAtualizarBancoTimestamp_=function(){var fresh=document.getElementById('descBancoAtualizado');if(!fresh)return;var stamp=window._auraBancoAtualizadoEm_||'',dt=stamp?new Date(stamp):null;fresh.textContent=stamp?'Banco atualizado em '+(dt&&!isNaN(dt.getTime())?dt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):stamp):'Atualização do banco não registrada';fresh.classList.add('show');};
   window._auraAtualizarBadgesConsulta_=function(sale,lotes,mode){
     lotes=Array.isArray(lotes)?lotes:[];var saleN=num(sale);if(!saleN){for(var i=0;i<lotes.length;i++){saleN=num(lotes[i]&&lotes[i].precoNormal);if(saleN)break;}}
     var elegiveis=lotes.filter(function(l){return promoLot(l)>0;});elegiveis.sort(function(a,b){return Number(a.diasParaVencer)-Number(b.diasParaVencer);});
     var promo=elegiveis.length?promoLot(elegiveis[0]):0,el=document.getElementById('descPreco'),ep=document.getElementById('descPrecoPromo');
+    if(window._auraAtualizarBancoTimestamp_)window._auraAtualizarBancoTimestamp_();
     if(el){el.textContent='VENDA · '+(saleN?brl(saleN):'Não cadastrada');el.classList.add('show');}
-    if(ep){var inRange=lotes.some(function(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15;}),st=mode==='consultando'?'Consultando validade…':(mode==='indisponivel'?'Consulta de validade indisponível':(inRange?'Preço não disponível':'Sem lote elegível'));ep.textContent='PROMOÇÃO · '+(promo?brl(promo):st);ep.classList.add('show');}
+    if(ep){var inRange=lotes.some(function(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15;}),st=mode==='consultando'?'Consultando lotes…':(mode==='indisponivel'?'Consulta de validade indisponível':(inRange?'Preço não disponível':'Sem lote elegível'));ep.textContent='PROMOÇÃO · '+(promo?brl(promo):st);ep.classList.add('show');}
   };
   window._auraPrecoValidadeLoteHtml_=function(l){l=l||{};var d=Number(l.diasParaVencer),eligible=isFinite(d)&&d>=0&&d<=15,promo=eligible?promoLot(l):0,status=eligible?'Preço indisponível':'Sem promoção por validade',sale=num(l.precoNormal),context=eligible?d+' dia'+(d===1?'':'s')+' para vencer · promoção válida até 21h no dia da validade':(isFinite(d)?(d<0?'Validade encerrada':'Vencimento fora da faixa de promoção'):'');
     return '<div class="aura-validade-price'+(eligible&&d<=10?' urgent':'')+'">'+badgeHtml(sale,promo,status,context)+'</div>';};
