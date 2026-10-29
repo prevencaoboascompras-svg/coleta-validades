@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.41 — consulta de lotes antes de liberar lançamento -->
+<!-- Coleta Tablet v7.44 — lotes vencidos somente em Retiradas -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
@@ -3039,9 +3039,10 @@ async function buscarDescricao(ean) {
     // Lotes vêm na MESMA resposta do produto. O modal ganha prioridade sobre
     // foto/catálogos externos para não competir com a etapa operacional.
     var lotes = Array.isArray(resultado.lotes) ? resultado.lotes : [];
-    if (lotes.length && resultado._consultaLotesOk!==false) {
+    var lotesVigentes = auraFiltrarLotesVigentesColeta_(lotes);
+    if (lotesVigentes.length && resultado._consultaLotesOk!==false) {
       _loteEanAtual = eanEncontrado;
-      _lotesEncontrados = lotes;
+      _lotesEncontrados = lotesVigentes;
       abrirLoteModal();
     }
 
@@ -4149,6 +4150,15 @@ function auraDiasValidade21h_(v){
   if(diff===0&&agora.getTime()>new Date(p.y,p.m-1,p.d,21,0,0,0).getTime())return -1;return diff;
 }
 function auraValidadeVencida21h_(v){var d=auraDiasValidade21h_(v);return d!==null&&d<0;}
+// Na consulta operacional, vencidos não bloqueiam novo lançamento; ficam no relatório de Retiradas.
+function auraFiltrarLotesVigentesColeta_(lotes){
+  return (Array.isArray(lotes)?lotes:[]).filter(function(l){
+    if(!l)return false;
+    var dias=l.diasParaVencer;
+    if(dias!==null&&dias!==undefined&&dias!==''&&isFinite(Number(dias)))return Number(dias)>=0;
+    return !auraValidadeVencida21h_(l.validade);
+  });
+}
 
 function confirmarDrum() {
   var dd = String(_drumDia).padStart(2,'0');
@@ -6930,7 +6940,8 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
         el.textContent=r.descricao||p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=el.textContent;
         var lotes=Array.isArray(r.lotes)?r.lotes:[];
         window._auraAtualizarBadgesConsulta_(r.preco!==undefined&&r.preco!==null?r.preco:p.preco,lotes,'concluida');
-        if(lotes.length){_loteEanAtual=r.ean||codigoConsulta;_lotesEncontrados=lotes;abrirLoteModal();}
+        var lotesVigentes=auraFiltrarLotesVigentesColeta_(lotes);
+        if(lotesVigentes.length){_loteEanAtual=r.ean||codigoConsulta;_lotesEncontrados=lotesVigentes;abrirLoteModal();}
         setTimeout(function(){if(consultaAindaAtual_(seq,ean))buscarFotoCompleta(r.ean||codigoConsulta,r.descricao||p.descricao||'');},0);
       }else{
         // Não mostramos falsa conclusão: o operador vê que a validade ainda
