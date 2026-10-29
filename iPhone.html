@@ -4691,7 +4691,8 @@ function pararConfete() {
 var _modoTablet = window.location.search.indexOf('tablet') >= 0
   || /tablet\.html$/i.test(window.location.pathname);
 // Variante do Individual para iPhone: escolhe colaborador por avatar, sem ativar as regras específicas do Tablet.
-var _modoAvatarLogin = /individual-iphone15-usuarios\.html$/i.test(window.location.pathname);
+var _modoAvatarLogin = /individual-iphone15-usuarios\.html$/i.test(window.location.pathname)
+  || /iphone\.html$/i.test(window.location.pathname);
 
 function iniciarModoTablet() {
   var grid = document.getElementById('tabletGrid');
