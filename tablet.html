@@ -6902,16 +6902,15 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     var seq=++consultaSeq,p=hit(ean),el=document.getElementById('descVal'),elPreco=document.getElementById('descPreco'),elPromo=document.getElementById('descPrecoPromo');
     if((codigoAtual||'')!==ean)return;
     travarFormularioConsulta_(true);
-    if(p){
-      // O catálogo local dá resposta imediata à descrição e à venda; a promoção
-      // fica explicitamente em consulta e a entrada de lote só libera quando a
-      // consulta dos lotes terminou. Assim nenhum alerta de lote chega atrasado.
-      el.textContent=p.descricao||'Produto';el.className='prod-desc-val';descricaoAtual=p.descricao||'';
-      if(window._auraAtualizarBadgesConsulta_)window._auraAtualizarBadgesConsulta_(p.preco,[],'consultando');
-    }else{
-      el.textContent='Consultando cadastro, preços e lotes…';el.className='prod-desc-val loading';
-      if(elPreco){elPreco.classList.remove('show');elPreco.textContent='';}if(elPromo){elPromo.classList.remove('show');elPromo.textContent='';}
-    }
+    // Mantém a consulta como uma etapa única: o índice local pode reconhecer
+    // descrição e venda rapidamente, mas não exibe dados parciais antes de os
+    // lotes serem consultados. Isso evita o colaborador iniciar um lançamento
+    // e só depois descobrir que já existe validade cadastrada.
+    descricaoAtual='';
+    el.textContent='Consultando produto, preços e lotes…';el.className='prod-desc-val loading';
+    if(elPreco){elPreco.classList.remove('show');elPreco.textContent='';}
+    if(elPromo){elPromo.classList.remove('show');elPromo.textContent='';}
+    var freshness=document.getElementById('descBancoAtualizado');if(freshness){freshness.textContent='';freshness.classList.remove('show');}
     try{
       if(!p){await buscarServidor(ean);return;}
       var cfg=loadCfg(),codigoConsulta=p.ean||ean;
@@ -7289,6 +7288,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
     if(ep){var inRange=lotes.some(function(l){var d=Number(l&&l.diasParaVencer);return isFinite(d)&&d>=0&&d<=15;}),st=mode==='consultando'?'Consultando lotes…':(mode==='indisponivel'?'Consulta de validade indisponível':(inRange?'Preço não disponível':'Sem lote elegível'));ep.textContent='PROMOÇÃO · '+(promo?brl(promo):st);ep.classList.add('show');}
   };
   window._auraPrecoValidadeLoteHtml_=function(l){l=l||{};var d=Number(l.diasParaVencer),eligible=isFinite(d)&&d>=0&&d<=15,promo=eligible?promoLot(l):0,status=eligible?'Preço indisponível':'Sem promoção por validade',sale=num(l.precoNormal),context=eligible?d+' dia'+(d===1?'':'s')+' para vencer · promoção válida até 21h no dia da validade':(isFinite(d)?(d<0?'Validade encerrada':'Vencimento fora da faixa de promoção'):'');
+    var stamp=window._auraBancoAtualizadoEm_||'',dt=stamp?new Date(stamp):null;context+=(context?' · ':'')+(stamp?'Preço do banco atualizado em '+(dt&&!isNaN(dt.getTime())?dt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):stamp):'Data da atualização do banco não registrada · confirme no caixa');
     return '<div class="aura-validade-price'+(eligible&&d<=10?' urgent':'')+'">'+badgeHtml(sale,promo,status,context)+'</div>';};
 })();
 </script>
