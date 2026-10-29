@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.44 — lotes vencidos somente em Retiradas -->
+<!-- Coleta Tablet v7.46 — calendário da coleta e layout Lenovo Tab M9 -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
@@ -1333,6 +1333,59 @@ html,body{overscroll-behavior-y:none!important;}
   #retiradaLista{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
 }
 </style>
+
+<style id="coleta-device-layout-final">
+/* Calendário rápido da coleta: igual ao fluxo NF-e, com identidade vermelha do Coleta. */
+.nfe-date-picker.coleta-validade-mode .nfe-date-month.selected,
+.nfe-date-picker.coleta-validade-mode .nfe-date-day.selected{background:rgba(226,75,74,.14)!important;border-color:var(--accent)!important;color:var(--accent)!important}
+.nfe-date-picker.coleta-validade-mode .nfe-date-year.selected{background:var(--accent)!important;color:#fff!important}
+.nfe-date-picker.coleta-validade-mode .nfe-date-nav:active,
+.nfe-date-picker.coleta-validade-mode .nfe-date-day:active{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important}
+.nfe-date-picker.coleta-validade-mode .nfe-date-title{color:var(--accent)}
+
+/* Lenovo Tab M9: fluxo principal em duas colunas, controles compactos e alinhados. */
+@media(min-width:700px){
+  body{width:100%;max-width:none;margin:0;padding-top:74px}
+  .hdr{width:100%;max-width:none;padding:10px 20px 9px}
+  .hdr-title{font-size:17px}.hdr-sub{font-size:10px}
+  .hdr-btn{width:36px;height:36px}
+  .scan-wrap{height:clamp(135px,16vh,175px);min-height:125px;margin:10px 20px;border-radius:12px}
+  .prod-row{display:flex;align-items:center;margin:0 20px 10px;padding:10px 12px;gap:12px}
+  .prod-foto{width:124px;height:124px;flex:0 0 124px}
+  .prod-info{gap:5px}.prod-desc-val{font-size:14px;line-height:1.25}.prod-codigo{font-size:13px}
+  .prod-preco,.prod-preco-promo{font-size:12px;padding:4px 7px}
+  .manual-wrap,.nfe-entry,.nfe-resume-card,.tarefas-section,.form-body,.hist-section{margin-left:20px;margin-right:20px}
+  .form-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin-top:8px}
+  .form-body>.submit-btn{grid-column:1/-1}
+  .field-lbl{font-size:9px;margin-bottom:4px}
+  .field-input,.field-select,.qty-row,.peso-input-wrap,.drum-trigger{height:46px;min-height:46px;font-size:14px}
+  .field-input,.field-select{padding-left:11px;padding-right:11px}
+  .qty-btn{width:52px;font-size:24px}.qty-input,.peso-input{font-size:18px}
+  .drum-trigger{padding:0 11px;gap:8px}.drum-trigger .dt-val{font-size:14px}
+  .submit-btn{height:48px;font-size:14px}
+  .hist-section{margin-top:12px}
+  .nfe-date-panel{width:min(480px,calc(100vw - 32px));max-height:86dvh}
+}
+@media(min-width:700px) and (orientation:landscape){
+  .form-body{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
+  .form-body>.submit-btn{grid-column:1/-1}
+  .prod-row{min-height:116px}.prod-foto{width:108px;height:108px;flex-basis:108px}
+}
+@media(min-width:400px) and (max-width:699px){
+  body{width:100%;max-width:none;margin:0;padding-top:70px}
+  .hdr{width:100%;max-width:none;padding:10px 12px 8px}
+  .hdr-title{font-size:16px}.hdr-sub{font-size:9px}.hdr-btn{width:34px;height:34px}
+  .scan-wrap{height:clamp(115px,17vh,150px);min-height:110px;margin:9px 12px}
+  .prod-row{margin:0 12px 8px;padding:8px;gap:8px}.prod-foto{width:96px;height:96px;flex:0 0 96px}
+  .prod-desc-val{font-size:12px}.prod-codigo{font-size:12px}
+  .manual-wrap,.nfe-entry,.nfe-resume-card,.tarefas-section,.form-body,.hist-section{margin-left:12px;margin-right:12px}
+  .form-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 10px;margin-top:7px}
+  .form-body>.submit-btn{grid-column:1/-1}
+  .field-lbl{font-size:8.5px;margin-bottom:3px}.field-input,.field-select,.qty-row,.peso-input-wrap,.drum-trigger{height:44px;min-height:44px;font-size:13px}
+  .field-input,.field-select{padding-left:9px;padding-right:9px}.qty-btn{width:44px;font-size:22px}.qty-input,.peso-input{font-size:17px}
+  .submit-btn{height:46px;font-size:13px}.hist-section{margin-top:10px}
+}
+</style>
 </head>
 <body>
 
@@ -1563,9 +1616,9 @@ html,body{overscroll-behavior-y:none!important;}
 
   <div>
     <div class="field-lbl"><i class="ti ti-calendar"></i> Data de Validade</div>
-    <div class="drum-trigger" id="drumTrigger" onclick="abrirDrum()">
+    <div class="drum-trigger" id="drumTrigger" onclick="abrirCalendarioColeta_()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirCalendarioColeta_()}">
       <span class="dt-icon"><i class="ti ti-calendar"></i></span>
-      <span class="dt-val empty" id="drumDisplay">Toque para selecionar…</span>
+      <span class="dt-val empty" id="drumDisplay">Toque para escolher a data</span>
       <span style="color:var(--tx2);font-size:13px"><i class="ti ti-chevron-down"></i></span>
     </div>
     <!-- campo hidden para compatibilidade com o resto do código -->
@@ -4142,8 +4195,13 @@ function drumBgClick(e) {
 
 // REGRA AURA: a validade do rótulo vale até 21:00 do próprio dia.
 function auraValidadePartes21h_(v){
-  if(!v)return null;var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/),b=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if(m)return{y:+m[1],m:+m[2],d:+m[3]};if(b)return{y:+b[3],m:+b[2],d:+b[1]};return null;
+  if(!v)return null;
+  if(v instanceof Date&&!isNaN(v.getTime()))return{y:v.getFullYear(),m:v.getMonth()+1,d:v.getDate()};
+  var s=String(v).trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/),b=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m)return{y:+m[1],m:+m[2],d:+m[3]};if(b)return{y:+b[3],m:+b[2],d:+b[1]};
+  var en=s.match(/^[A-Za-z]{3} ([A-Za-z]{3}) (\d{1,2}) (\d{4})/);
+  if(en){var meses={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};if(meses[en[1]])return{y:+en[3],m:meses[en[1]],d:+en[2]};}
+  return null;
 }
 function auraDiasValidade21h_(v){
   var p=auraValidadePartes21h_(v);if(!p)return null;var agora=new Date(),diff=Math.round((Date.UTC(p.y,p.m-1,p.d)-Date.UTC(agora.getFullYear(),agora.getMonth(),agora.getDate()))/86400000);
@@ -4154,9 +4212,12 @@ function auraValidadeVencida21h_(v){var d=auraDiasValidade21h_(v);return d!==nul
 function auraFiltrarLotesVigentesColeta_(lotes){
   return (Array.isArray(lotes)?lotes:[]).filter(function(l){
     if(!l)return false;
-    var dias=l.diasParaVencer;
-    if(dias!==null&&dias!==undefined&&dias!==''&&isFinite(Number(dias)))return Number(dias)>=0;
-    return !auraValidadeVencida21h_(l.validade);
+    // A data gravada é a fonte de verdade; diasParaVencer pode estar em cache antigo.
+    var diasData=auraDiasValidade21h_(l.validade);
+    if(diasData!==null)return diasData>=0;
+    var diasServidor=l.diasParaVencer;
+    if(diasServidor!==null&&diasServidor!==undefined&&diasServidor!==''&&isFinite(Number(diasServidor)))return Number(diasServidor)>=0;
+    return true;
   });
 }
 
@@ -4183,7 +4244,7 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
   document.getElementById('fValidade').value = valFormatada;
 
   var disp = document.getElementById('drumDisplay');
-  disp.textContent = dd + ' de ' + MESES_PT[mm-1] + '. de ' + yy;
+  disp.textContent = dd + '/' + mm + '/' + yy;
   disp.classList.remove('empty');
 
   var drumTrigger = document.getElementById('drumTrigger');
@@ -4199,10 +4260,13 @@ function _aplicarValidade(dd, mm, yy, valFormatada) {
 var _vencPendente = null;
 
 function vencAlertCorrigir() {
-  // Fecha o popup e mantém o drum aberto para o colaborador corrigir a data
+  // Reabre o calendário com a data que gerou o aviso já selecionada.
+  var pendente=_vencPendente;
   document.getElementById('vencAlertBg').classList.remove('open');
   _vencPendente = null;
+  if(pendente&&pendente.valFormatada)abrirCalendarioColeta_(pendente.valFormatada);
 }
+
 
 function vencAlertContinuar() {
   // Aplica a validade vencida mesmo assim
@@ -4229,6 +4293,8 @@ function nomeDoEmail(email) {
 }
 
 function abrirLoteModal() {
+  _lotesEncontrados = auraFiltrarLotesVigentesColeta_(_lotesEncontrados);
+  if (!_lotesEncontrados.length) return;
   var cfg = loadCfg();
   document.getElementById('loteNome').textContent = nomeDoEmail(cfg.email) || '';
 
@@ -4794,6 +4860,9 @@ function selecionarUsuarioTablet(nome, email) {
   var modal=document.getElementById('tabletModal');if(modal)modal.classList.remove('open');
   var btn=document.getElementById('trocaUsuarioBtn');if(btn)btn.style.display='flex';
   var busca=document.getElementById('tabletSearch');if(busca)busca.value='';
+
+  // A seleção explícita do avatar autoriza a entrada; já abre a câmera sem outro toque.
+  try{iniciarScanner();}catch(e){console.warn('[AURA Coleta] Não foi possível iniciar a câmera automaticamente:',e&&e.message||e);}
 
   // Cada seleção explícita é uma nova entrada para popup/auditoria.
   try{if(typeof window.auraTarefasNovaEntrada_==='function')window.auraTarefasNovaEntrada_();}catch(e){}
@@ -5844,7 +5913,18 @@ function nfeLoteCampo_(i,li,campo,v){var it=_nfeColetaNota.itens[i];if(!it||!it.
 var _nfeDateTarget=null,_nfeDateYear=(new Date()).getFullYear(),_nfeDateMonth=(new Date()).getMonth(),_nfeDateSelected='';
 var _nfeDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];var _nfeDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function nfeFmtDataPicker_(iso){var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={i:i,li:li};_nfeDateSelected=lotes[li].validade||'';var m=_nfeDateSelected.match(/^(\d{4})-(\d{2})-(\d{2})$/),now=new Date();_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
+function abrirCalendarioColeta_(preselecionada){
+  var raw=String(preselecionada||((document.getElementById('fValidade')||{}).value)||''),p=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/),now=new Date();
+  _nfeDateTarget={tipo:'coleta'};_nfeDateSelected=p?p[3]+'-'+p[2]+'-'+p[1]:'';
+  _nfeDateYear=p?Number(p[3]):now.getFullYear();_nfeDateMonth=p?Number(p[2])-1:now.getMonth();
+  var o=document.getElementById('nfeDatePicker');if(!o)return;
+  o.classList.add('coleta-validade-mode','open');o.setAttribute('aria-hidden','false');
+  var title=o.querySelector('.nfe-date-title');if(title)title.textContent='Validade do produto';
+  document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');
+  nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';
+  setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);
+}
+function nfeAbrirSeletorValidade_(i,li){var lotes=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i]&&_nfeColetaNota.itens[i].lotes;if(!lotes||!lotes[li])return;_nfeDateTarget={tipo:'nfe',i:i,li:li};_nfeDateSelected=lotes[li].validade||'';var m=_nfeDateSelected.match(/^(\d{4})-(\d{2})-(\d{2})$/),now=new Date();_nfeDateYear=m?Number(m[1]):now.getFullYear();_nfeDateMonth=m?Number(m[2])-1:now.getMonth();var o=document.getElementById('nfeDatePicker');if(!o)return;o.classList.remove('coleta-validade-mode');o.classList.add('open');o.setAttribute('aria-hidden','false');var title=o.querySelector('.nfe-date-title');if(title)title.textContent='Data de validade';document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();document.body.style.overflow='hidden';setTimeout(function(){var y=document.querySelector('.nfe-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);}
 function nfeDateRenderMonths_(){var h=document.getElementById('nfeDateMonths');if(h)h.innerHTML=_nfeDateShort.map(function(n,i){return '<button type="button" class="nfe-date-month'+(i===_nfeDateMonth?' selected':'')+'" onclick="nfeDateEscolherMes_('+i+')">'+n+'</button>';}).join('');}
 function nfeDateRenderYears_(){var h=document.getElementById('nfeDateYears');if(!h)return;var now=(new Date()).getFullYear(),start=Math.min(2020,now-5,_nfeDateYear),end=Math.max(now+20,_nfeDateYear),html='';for(var y=start;y<=end;y++)html+='<button type="button" class="nfe-date-year'+(y===_nfeDateYear?' selected':'')+'" onclick="nfeDateEscolherAno_('+y+')">'+y+'</button>';h.innerHTML=html;}
 function nfeDateEscolherAno_(y){_nfeDateYear=y;nfeDateRenderYears_();}
@@ -5852,8 +5932,23 @@ function nfeDateEscolherMes_(m){_nfeDateMonth=m;document.getElementById('nfeDate
 function nfeDateVoltarMeses_(){document.getElementById('nfeDateMonthsStep').classList.remove('hidden');document.getElementById('nfeDateCalendar').classList.remove('show');nfeDateRenderMonths_();nfeDateRenderYears_();}
 function nfeDateMoverMes_(d){_nfeDateMonth+=d;if(_nfeDateMonth<0){_nfeDateMonth=11;_nfeDateYear--;}else if(_nfeDateMonth>11){_nfeDateMonth=0;_nfeDateYear++;}nfeDateRenderCalendar_();}
 function nfeDateRenderCalendar_(){var label=document.getElementById('nfeDateCalLabel'),h=document.getElementById('nfeDateDays');if(!h)return;label.textContent=_nfeDateMonthNames[_nfeDateMonth]+' '+_nfeDateYear;var first=new Date(_nfeDateYear,_nfeDateMonth,1),offset=(first.getDay()+6)%7,total=new Date(_nfeDateYear,_nfeDateMonth+1,0).getDate(),html='';for(var x=0;x<offset;x++)html+='<button class="nfe-date-day empty" tabindex="-1" aria-hidden="true"></button>';for(var d=1;d<=total;d++){var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');html+='<button type="button" class="nfe-date-day'+(iso===_nfeDateSelected?' selected':'')+'" onclick="nfeDateEscolherDia_('+d+')">'+d+'</button>';}h.innerHTML=html;}
-function nfeDateEscolherDia_(d){if(!_nfeDateTarget)return;var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();}
-function nfeFecharSeletorValidade_(){var o=document.getElementById('nfeDatePicker');if(o){o.classList.remove('open');o.setAttribute('aria-hidden','true');}document.body.style.overflow='';_nfeDateTarget=null;}
+function nfeDateEscolherDia_(d){
+  if(!_nfeDateTarget)return;
+  var iso=_nfeDateYear+'-'+String(_nfeDateMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),t=_nfeDateTarget;_nfeDateSelected=iso;
+  if(t.tipo==='coleta'){
+    var dd=String(d).padStart(2,'0'),mm=String(_nfeDateMonth+1).padStart(2,'0'),yy=String(_nfeDateYear),val=dd+'/'+mm+'/'+yy;
+    nfeFecharSeletorValidade_();
+    if(auraValidadeVencida21h_(val)){
+      _vencPendente={dd:dd,mm:mm,yy:yy,valFormatada:val,origem:'calendario'};
+      var aviso=document.getElementById('vencAlertData');if(aviso)aviso.textContent=val;
+      var bg=document.getElementById('vencAlertBg');if(bg)bg.classList.add('open');
+      return;
+    }
+    _aplicarValidade(dd,mm,yy,val);return;
+  }
+  nfeLoteCampo_(t.i,t.li,'validade',iso);var input=document.getElementById('nfeLoteVal_'+t.i+'_'+t.li);if(input)input.value=nfeFmtDataPicker_(iso);nfeFecharSeletorValidade_();
+}
+function nfeFecharSeletorValidade_(){var o=document.getElementById('nfeDatePicker');if(o){o.classList.remove('open','coleta-validade-mode');o.setAttribute('aria-hidden','true');var title=o.querySelector('.nfe-date-title');if(title)title.textContent='Data de validade';}document.body.style.overflow='';_nfeDateTarget=null;}
 function nfeDateOutside_(e){if(e.target&&e.target.id==='nfeDatePicker')nfeFecharSeletorValidade_();}document.addEventListener('keydown',function(e){if(e.key==='Escape')nfeFecharSeletorValidade_();});
 
 function nfeAdicionarLote_(i){var it=_nfeColetaNota.itens[i];if(!it)return;it.lotes.push({validade:'',quantidade:0,lote:''});nfeSalvarRascunho_();nfeRenderNota_();}
