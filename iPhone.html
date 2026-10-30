@@ -1253,9 +1253,17 @@ body.tarefas-hist-aberta{overflow:hidden}
 .nfe-date-picker.coleta-validade-mode .nfe-date-nav:active,
 .nfe-date-picker.coleta-validade-mode .nfe-date-day:active{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important}
 .nfe-date-picker.coleta-validade-mode .nfe-date-title{color:var(--accent)}
+.nfe-date-picker.coleta-validade-mode .nfe-date-close,
+.nfe-date-picker.coleta-validade-mode .nfe-date-back{border-color:var(--accent);color:var(--accent)}
+.nfe-date-picker.coleta-validade-mode .nfe-date-close:active,
+.nfe-date-picker.coleta-validade-mode .nfe-date-back:active{background:var(--accent);color:#fff}
 
 /* iPhone 15: controles compactos sem cortar dados e com moldura do scanner sobre a câmera. */
 @media(max-width:480px){
+  .drum-trigger{height:44px;min-height:44px;padding:0 12px;border:1.5px solid var(--bd);background:var(--bg);border-radius:10px;font-size:15px}
+  .drum-trigger:active,.drum-trigger:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px rgba(226,75,74,.14);outline:none}
+  .drum-trigger .dt-val{font-size:15px}
+  .drum-trigger .dt-icon{color:var(--accent);opacity:1}
   body{width:100%;max-width:480px;margin:0;padding-top:calc(70px + env(safe-area-inset-top,0px))}
   .hdr{padding:calc(10px + env(safe-area-inset-top,0px)) 11px 8px;gap:6px}
   .hdr-title{font-size:15px}.hdr-sub{font-size:9px;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1875,6 +1883,8 @@ var _motorAtivo  = null;
 var _videoStream  = null;
 var _videoEl      = null;
 var _nativeLoop   = null;
+var _nativeFallbackTimer = null;
+var _forceZXingAfterNative = false;
 
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
@@ -2118,6 +2128,28 @@ function initAudioContext() {
   }
 }
 
+function _scannerNativeFallbackZXing_(session) {
+  if (session !== _scanSessionId || _motorAtivo !== 'native' || !scannerAtivo) return;
+  console.warn('[AURA Scanner] Leitura ampla ativada após tentativa nativa sem resultado.');
+  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
+  var nfeFast = document.body && document.body.classList.contains('nfe-fast-scan');
+  scannerAtivo = false;
+  _scannerIniciando = false;
+  _scanSessionId++;
+  if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
+  if (_videoStream) { try { _videoStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _videoStream = null; }
+  if (_videoEl) { try { _videoEl.srcObject = null; } catch(e){} _videoEl = null; }
+  _motorAtivo = null;
+  var wrap = document.getElementById('scannerView');
+  if (wrap) wrap.innerHTML = '';
+  var idle = document.getElementById('stateIdle'); if (idle) idle.style.display = 'none';
+  var erro = document.getElementById('stateErro'); if (erro) erro.style.display = 'none';
+  var laser = document.getElementById('laser'); if (laser) laser.style.display = 'none';
+  _forceZXingAfterNative = true;
+  iniciarScanner();
+  if (nfeFast && document.body) document.body.classList.add('nfe-fast-scan');
+}
+
 async function iniciarScanner() {
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
@@ -2147,7 +2179,7 @@ async function iniciarScanner() {
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
-  if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
+  if (typeof BarcodeDetector !== 'undefined' && !isIOS() && !_forceZXingAfterNative) {
     var constraints = {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } }
     };
@@ -2177,6 +2209,8 @@ async function iniciarScanner() {
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
       scannerAtivo = true;
+      if (_nativeFallbackTimer) clearTimeout(_nativeFallbackTimer);
+      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 2800);
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
@@ -2191,6 +2225,7 @@ async function iniciarScanner() {
           try {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
+              if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
               if (meuSession !== _scanSessionId) { console.warn('Descartado: resultado nativo de sessão antiga #' + meuSession); return; }
               onScanSuccess(results[0].rawValue);
               return;
@@ -2206,6 +2241,8 @@ async function iniciarScanner() {
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
+
+  _forceZXingAfterNative = false;
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
   // Se o bundle ainda estiver carregando, aguardamos dentro da MESMA sessão.
@@ -2259,9 +2296,21 @@ async function iniciarScanner() {
           ? [bf.CODE_128]
           : [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF];
         fmtsDesejados = fmtsDesejados.filter(function(f) { return f !== undefined; });
-        if (fmtsDesejados.length) _zxingReader.possibleFormats = fmtsDesejados;
+        var _zxHints = new Map();
+        var _zxHintTypes = ZXingBrowser.DecodeHintType;
+        if (_zxHintTypes && _zxHintTypes.TRY_HARDER !== undefined) {
+          _zxHints.set(_zxHintTypes.TRY_HARDER, true);
+        }
+        if (fmtsDesejados.length && _zxHintTypes && _zxHintTypes.POSSIBLE_FORMATS !== undefined) {
+          _zxHints.set(_zxHintTypes.POSSIBLE_FORMATS, fmtsDesejados);
+        }
+        if (_zxHints.size && typeof _zxingReader.setHints === 'function') {
+          _zxingReader.setHints(_zxHints);
+        } else if (fmtsDesejados.length) {
+          _zxingReader.possibleFormats = fmtsDesejados;
+        }
       }
-    } catch(e) { /* se falhar, segue sem restringir formatos */ }
+    } catch(e) { /* se falhar, segue com as opções padrão do leitor */ }
 
     try {
       // ── CORREÇÃO iOS: pedir a câmera DIRETO via getUserMedia,
@@ -2404,6 +2453,8 @@ async function iniciarScanner() {
 }
 
 function pararScanner() {
+  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
+  _forceZXingAfterNative = false;
   scannerAtivo = false;
   if (document && document.body) document.body.classList.remove('nfe-fast-scan');
   _scannerIniciando = false;
@@ -4556,35 +4607,26 @@ function diasParaAniversario(anivStr) {
 }
 
 function verificarAniversario(email, nomeGAS) {
-  // Sempre começa escondendo o banner do colaborador anterior — antes,
-  // ao trocar de usuário (no tablet) pra alguém sem aniversário
-  // cadastrado, o banner do colaborador anterior ficava preso na tela
-  // porque nenhum caminho de saída antecipada (colaborador não achado,
-  // aniversário inválido/vazio) escondia o banner explicitamente.
+  // Esconde primeiro o banner anterior, inclusive quando o usuário atual
+  // não tem aniversário cadastrado.
   var banner = document.getElementById('anivBanner');
   if (banner) banner.classList.remove('show');
 
-  // Tenta usar o nome vindo do GAS (campo nomeColaborador), senão tenta pelo email
-  var colaborador = null;
-
-  if (nomeGAS) {
-    var nomeLower = nomeGAS.toLowerCase();
-    for (var i = 0; i < COLABORADORES.length; i++) {
-      var c = COLABORADORES[i];
-      if (c.nome.toLowerCase().indexOf(nomeLower.split(' ')[0]) >= 0) {
-        colaborador = c;
-        break;
-      }
-    }
+  // O e-mail é a identidade sem ambiguidade. Só recorremos ao nome exato
+  // quando não há correspondência por e-mail; primeiro nome sozinho pode
+  // selecionar outro cadastro (por exemplo, dois colaboradores chamados Eduardo).
+  var colaborador = encontrarColaborador(email);
+  if (!colaborador && nomeGAS) {
+    var nomeBusca = String(nomeGAS).trim().toLocaleLowerCase();
+    colaborador = COLABORADORES.find(function(c) {
+      return String(c.nome || '').trim().toLocaleLowerCase() === nomeBusca;
+    }) || null;
   }
-
-  if (!colaborador) {
-    colaborador = encontrarColaborador(email);
-  }
-
   if (!colaborador) return;
 
-  var dias = diasParaAniversario(colaborador.aniv);
+  // Aceita os nomes de campo usados pelas versões atuais e antigas do endpoint.
+  var aniversario = colaborador.aniv || colaborador.aniversario || colaborador.aniversarioDDMM || '';
+  var dias = diasParaAniversario(aniversario);
   if (dias === null) return; // aniversário vazio ou inválido na planilha — não mostra nada
   var nome = primeiroNome(colaborador.nome);
 
