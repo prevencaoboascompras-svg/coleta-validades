@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual iPhone 15 v7.45 — login por avatar, câmera e layout compacto -->
+<!-- Coleta Individual iPhone 15 v7.46 — scanner com busca ampla + calendário do Coleta -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -870,6 +870,17 @@ body{
 .nfe-auto-meta{font-size:8.5px;color:var(--tx2);margin-top:3px;line-height:1.25}
 .nfe-auto-empty{padding:10px;color:var(--tx2);font-size:9px;text-align:center}
 .nfe-lotes-title{font-size:9px;font-weight:900;text-transform:uppercase;color:var(--tx2);margin:11px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}.nfe-add-lote{border:none;background:none;color:#378ADD;font-size:9px;font-weight:800;cursor:pointer}.nfe-lote{display:grid;grid-template-columns:minmax(68px,1fr) auto 76px 28px;gap:5px;margin-bottom:6px}.nfe-lote input{height:34px;border:1px solid var(--bds);border-radius:8px;background:var(--bg);color:var(--tx);padding:0 7px;font-size:10.5px;min-width:0}.nfe-lote-del{height:34px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--err);cursor:pointer}.nfe-indeterminada-btn{height:34px;padding:0 8px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.14);color:#9a6a00;font-size:8px;font-weight:900;white-space:nowrap;cursor:pointer}.nfe-indeterminada-btn i{font-size:11px;vertical-align:-1px}.nfe-lote-indeterminada{grid-template-columns:minmax(0,1fr) 76px 28px;align-items:center}.nfe-indeterminada-tag{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 9px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.14);color:#9a6a00;font-size:9px;font-weight:900}.nfe-review-static{font-size:10px;font-weight:900;color:#9a6a00}.nfe-lote-indeterminada-summary{display:flex;align-items:center;gap:7px;padding:10px;border:1px solid #d99b12;border-radius:8px;background:rgba(245,190,55,.12);color:#9a6a00;font-size:10px;font-weight:900}
+/* Calendário da validade na coleta — mesma interação da NF-e, com a identidade vermelha do Coleta */
+.coleta-date-picker{display:none;position:fixed;inset:0;z-index:8000;background:rgba(8,12,20,.68);align-items:flex-end;justify-content:center;padding:12px}
+.coleta-date-picker.open{display:flex}
+.coleta-date-panel{width:min(560px,100%);max-height:min(84dvh,720px);overflow:hidden;background:var(--bg3);color:var(--tx);border:1px solid var(--bd);border-radius:20px 20px 14px 14px;box-shadow:0 20px 70px rgba(0,0,0,.42);display:flex;flex-direction:column;padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.coleta-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.coleta-date-title{font-size:16px;font-weight:900}.coleta-date-close{width:40px;height:40px;border:1px solid var(--bd);border-radius:12px;background:var(--surf);color:var(--tx);font-size:20px;cursor:pointer}
+.coleta-date-pick{display:grid;grid-template-columns:minmax(0,1fr) 82px;gap:10px;min-height:250px}.coleta-date-months{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,1fr);gap:8px}.coleta-date-month{min-height:58px;border:1px solid var(--bd);border-radius:12px;background:var(--surf);color:var(--tx);font-size:14px;font-weight:850;cursor:pointer;touch-action:manipulation}.coleta-date-month.selected{background:rgba(226,75,74,.16);border-color:var(--accent);color:var(--accent)}
+.coleta-date-years{height:100%;max-height:278px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--bd);border-radius:12px;scrollbar-width:thin;scroll-snap-type:y proximity}.coleta-date-year{display:block;width:100%;height:42px;border:0;border-bottom:1px solid var(--bd);background:var(--bg);color:var(--tx2);font-size:14px;font-weight:750;scroll-snap-align:center;cursor:pointer}.coleta-date-year.selected{background:var(--accent);color:#fff;font-weight:900}.coleta-date-hint{margin:9px 0 0;text-align:center;font-size:11px;color:var(--tx2)}
+.coleta-date-calendar{display:none}.coleta-date-calendar.show{display:block}.coleta-date-months-step.hidden{display:none}.coleta-date-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.coleta-date-nav{width:42px;height:42px;border:1px solid var(--bd);border-radius:12px;background:var(--surf);color:var(--tx);font-size:20px;cursor:pointer}.coleta-date-cal-label{font-size:16px;font-weight:900;text-transform:capitalize}.coleta-date-week,.coleta-date-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center}.coleta-date-week{margin-bottom:5px}.coleta-date-week span{padding:5px 0;color:var(--tx2);font-size:10px;font-weight:850}.coleta-date-day{aspect-ratio:1;border:1px solid transparent;border-radius:11px;background:var(--surf);color:var(--tx);font-size:14px;font-weight:750;cursor:pointer;touch-action:manipulation}.coleta-date-day:active{background:var(--accent);color:#fff}.coleta-date-day.selected{border-color:var(--accent);background:rgba(226,75,74,.16);color:var(--accent);font-weight:900}.coleta-date-day.empty{visibility:hidden}.coleta-date-back{height:44px;margin-top:12px;border:1px solid var(--bd);border-radius:11px;background:var(--surf);color:var(--tx);font-size:13px;font-weight:800;cursor:pointer}
+@media(min-width:700px){.coleta-date-picker{align-items:center}.coleta-date-panel{border-radius:20px}.coleta-date-pick{min-height:278px}.coleta-date-year{height:44px}}
+@media(max-width:390px){.coleta-date-picker{padding:8px}.coleta-date-panel{padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}.coleta-date-pick{grid-template-columns:minmax(0,1fr) 72px;gap:7px}.coleta-date-month{min-height:54px;font-size:13px}.coleta-date-days{gap:3px}.coleta-date-day{font-size:13px;border-radius:9px}}
+
 /* Seletor rápido de validade para conferência NF-e */
 .nfe-validade-input{cursor:pointer!important;font-size:16px!important;min-height:44px!important;background:var(--bg)!important}
 .nfe-date-picker{display:none;position:fixed;inset:0;z-index:100900;background:rgba(8,15,28,.62);align-items:flex-end;justify-content:center;padding:12px}
@@ -1757,6 +1768,8 @@ body.tarefas-hist-aberta{overflow:hidden}
 </div>
 
 <div class="nfe-date-picker" id="nfeDatePicker" onclick="nfeDateOutside_(event)" aria-hidden="true"><section class="nfe-date-panel" role="dialog" aria-modal="true" aria-label="Selecionar data de validade"><header class="nfe-date-head"><div class="nfe-date-title">Data de validade</div><button type="button" class="nfe-date-close" onclick="nfeFecharSeletorValidade_()" aria-label="Fechar">×</button></header><div class="nfe-date-months-step" id="nfeDateMonthsStep"><div class="nfe-date-pick"><div class="nfe-date-months" id="nfeDateMonths"></div><div class="nfe-date-years" id="nfeDateYears" aria-label="Rolar anos"></div></div><div class="nfe-date-hint">Escolha o ano na lista e toque no mês</div></div><div class="nfe-date-calendar" id="nfeDateCalendar"><div class="nfe-date-cal-head"><button type="button" class="nfe-date-nav" onclick="nfeDateMoverMes_(-1)" aria-label="Mês anterior">‹</button><strong class="nfe-date-cal-label" id="nfeDateCalLabel"></strong><button type="button" class="nfe-date-nav" onclick="nfeDateMoverMes_(1)" aria-label="Próximo mês">›</button></div><div class="nfe-date-week"><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span></div><div class="nfe-date-days" id="nfeDateDays"></div><button type="button" class="nfe-date-back" onclick="nfeDateVoltarMeses_()">Voltar aos meses</button></div></section></div>
+<div class="coleta-date-picker" id="coletaDatePicker" onclick="coletaDateOutside_(event)" aria-hidden="true"><section class="coleta-date-panel" role="dialog" aria-modal="true" aria-label="Selecionar data de validade"><header class="coleta-date-head"><div class="coleta-date-title">Data de validade</div><button type="button" class="coleta-date-close" onclick="fecharDrum()" aria-label="Fechar">×</button></header><div class="coleta-date-months-step" id="coletaDateMonthsStep"><div class="coleta-date-pick"><div class="coleta-date-months" id="coletaDateMonths"></div><div class="coleta-date-years" id="coletaDateYears" aria-label="Rolar anos"></div></div><div class="coleta-date-hint">Escolha o ano e toque no mês</div></div><div class="coleta-date-calendar" id="coletaDateCalendar"><div class="coleta-date-cal-head"><button type="button" class="coleta-date-nav" onclick="coletaDateMoverMes_(-1)" aria-label="Mês anterior">‹</button><strong class="coleta-date-cal-label" id="coletaDateCalLabel"></strong><button type="button" class="coleta-date-nav" onclick="coletaDateMoverMes_(1)" aria-label="Próximo mês">›</button></div><div class="coleta-date-week"><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span></div><div class="coleta-date-days" id="coletaDateDays"></div><button type="button" class="coleta-date-back" onclick="coletaDateVoltarMeses_()">Voltar aos meses</button></div></section></div>
+
 <!-- POPUP: ALERTA DE VALIDADE VENCIDA -->
 <div class="venc-alert-bg" id="vencAlertBg">
   <div class="venc-alert-box">
@@ -2210,7 +2223,7 @@ async function iniciarScanner() {
       _motorAtivo = 'native';
       scannerAtivo = true;
       if (_nativeFallbackTimer) clearTimeout(_nativeFallbackTimer);
-      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 2800);
+      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 850);
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
@@ -2279,7 +2292,7 @@ async function iniciarScanner() {
     } else {
       _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
     }
-    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 25 : 150;
+    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 25 : 100;
 
     // ── Restringir formatos de leitura ──────────────────────
     // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
@@ -2300,6 +2313,9 @@ async function iniciarScanner() {
         var _zxHintTypes = ZXingBrowser.DecodeHintType;
         if (_zxHintTypes && _zxHintTypes.TRY_HARDER !== undefined) {
           _zxHints.set(_zxHintTypes.TRY_HARDER, true);
+        }
+        if (_zxHintTypes && _zxHintTypes.ALSO_INVERTED !== undefined) {
+          _zxHints.set(_zxHintTypes.ALSO_INVERTED, true);
         }
         if (fmtsDesejados.length && _zxHintTypes && _zxHintTypes.POSSIBLE_FORMATS !== undefined) {
           _zxHints.set(_zxHintTypes.POSSIBLE_FORMATS, fmtsDesejados);
@@ -4268,6 +4284,35 @@ function vencAlertContinuar() {
   fecharDrum();
 }
 
+// Calendário rápido para o lançamento comum; mantém o campo dd/mm/aaaa consumido pela coleta.
+var _coletaDateYear=(new Date()).getFullYear(),_coletaDateMonth=(new Date()).getMonth(),_coletaDatePrevOverflow='';
+var _coletaDateMonthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var _coletaDateShort=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function abrirDrum(){
+  var hid=document.getElementById('fValidade'),v=String(hid&&hid.value||''),m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/),now=new Date();
+  _coletaDateYear=m?Number(m[3]):now.getFullYear();_coletaDateMonth=m?Number(m[2])-1:now.getMonth();
+  var o=document.getElementById('coletaDatePicker');if(!o)return;
+  o.classList.add('open');o.setAttribute('aria-hidden','false');
+  document.getElementById('coletaDateMonthsStep').classList.remove('hidden');document.getElementById('coletaDateCalendar').classList.remove('show');
+  coletaDateRenderMonths_();coletaDateRenderYears_();_coletaDatePrevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+  setTimeout(function(){var y=document.querySelector('.coleta-date-year.selected');if(y&&y.scrollIntoView)y.scrollIntoView({block:'center'});},30);
+}
+function fecharDrum(){
+  var o=document.getElementById('coletaDatePicker');if(o){o.classList.remove('open');o.setAttribute('aria-hidden','true');}
+  var legacy=document.getElementById('drumModal');if(legacy)legacy.classList.remove('open');
+  document.body.style.overflow=_coletaDatePrevOverflow||'';_coletaDatePrevOverflow='';
+}
+function coletaDateRenderMonths_(){var h=document.getElementById('coletaDateMonths');if(h)h.innerHTML=_coletaDateShort.map(function(n,i){return '<button type="button" class="coleta-date-month'+(i===_coletaDateMonth?' selected':'')+'" onclick="coletaDateEscolherMes_('+i+')">'+n+'</button>';}).join('');}
+function coletaDateRenderYears_(){var h=document.getElementById('coletaDateYears');if(!h)return;var now=(new Date()).getFullYear(),start=Math.min(2020,now-5,_coletaDateYear),end=Math.max(now+20,_coletaDateYear),html='';for(var y=start;y<=end;y++)html+='<button type="button" class="coleta-date-year'+(y===_coletaDateYear?' selected':'')+'" onclick="coletaDateEscolherAno_('+y+')">'+y+'</button>';h.innerHTML=html;}
+function coletaDateEscolherAno_(y){_coletaDateYear=y;coletaDateRenderYears_();}
+function coletaDateEscolherMes_(m){_coletaDateMonth=m;document.getElementById('coletaDateMonthsStep').classList.add('hidden');document.getElementById('coletaDateCalendar').classList.add('show');coletaDateRenderCalendar_();}
+function coletaDateVoltarMeses_(){document.getElementById('coletaDateMonthsStep').classList.remove('hidden');document.getElementById('coletaDateCalendar').classList.remove('show');coletaDateRenderMonths_();coletaDateRenderYears_();}
+function coletaDateMoverMes_(d){_coletaDateMonth+=d;if(_coletaDateMonth<0){_coletaDateMonth=11;_coletaDateYear--;}else if(_coletaDateMonth>11){_coletaDateMonth=0;_coletaDateYear++;}coletaDateRenderCalendar_();}
+function coletaDateRenderCalendar_(){var label=document.getElementById('coletaDateCalLabel'),h=document.getElementById('coletaDateDays');if(!h)return;label.textContent=_coletaDateMonthNames[_coletaDateMonth]+' '+_coletaDateYear;var first=new Date(_coletaDateYear,_coletaDateMonth,1),offset=(first.getDay()+6)%7,total=new Date(_coletaDateYear,_coletaDateMonth+1,0).getDate(),html='';for(var x=0;x<offset;x++)html+='<button class="coleta-date-day empty" tabindex="-1" aria-hidden="true"></button>';for(var d=1;d<=total;d++){var sel=String((document.getElementById('fValidade')||{}).value||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/),selected=!!sel&&Number(sel[1])===d&&Number(sel[2])===_coletaDateMonth+1&&Number(sel[3])===_coletaDateYear;html+='<button type="button" class="coleta-date-day'+(selected?' selected':'')+'" onclick="coletaDateEscolherDia_('+d+')">'+d+'</button>';}h.innerHTML=html;}
+function coletaDateEscolherDia_(d){var dd=String(d).padStart(2,'0'),mm=String(_coletaDateMonth+1).padStart(2,'0'),yy=_coletaDateYear,val=dd+'/'+mm+'/'+yy;if(auraValidadeVencida21h_(val)){_vencPendente={dd:dd,mm:mm,yy:yy,valFormatada:val};document.getElementById('vencAlertData').textContent=val;document.getElementById('vencAlertBg').classList.add('open');return;}_aplicarValidade(dd,mm,yy,val);fecharDrum();}
+function coletaDateOutside_(e){if(e.target&&e.target.id==='coletaDatePicker')fecharDrum();}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharDrum();});
+
 // ═══════════════════════════════════════════════════════════
 //  LOTES JÁ CADASTRADOS PARA ESTE EAN (dispara logo ao bipar)
 // ═══════════════════════════════════════════════════════════
@@ -4733,8 +4778,7 @@ function pararConfete() {
 var _modoTablet = window.location.search.indexOf('tablet') >= 0
   || /tablet\.html$/i.test(window.location.pathname);
 // Variante do Individual para iPhone: escolhe colaborador por avatar, sem ativar as regras específicas do Tablet.
-var _modoAvatarLogin = /individual-iphone15-usuarios\.html$/i.test(window.location.pathname)
-  || /iphone\.html$/i.test(window.location.pathname);
+var _modoAvatarLogin = /individual-iphone15-usuarios\.html$/i.test(window.location.pathname);
 
 function iniciarModoTablet() {
   var grid = document.getElementById('tabletGrid');
