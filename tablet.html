@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.50 — câmera padrão e diagnóstico -->
+<!-- Coleta Tablet v7.51 — foco contínuo compatível e aprendizado de setor -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
@@ -138,7 +138,7 @@ body{
   body.nfe-fast-scan .corner.tr,body.nfe-fast-scan .corner.br{right:10px}
   body.nfe-fast-scan .laser{left:12px;right:12px}
   body.nfe-fast-scan .scan-wrap::after{
-    content:'NF-e: mantenha a chave inteira na largura — foco e zoom são ajustados automaticamente';
+    content:'NF-e: mantenha a chave inteira na largura — se desfocar, afaste um pouco até ficar nítida';
     position:absolute;left:12px;right:12px;bottom:8px;z-index:8;
     padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.58);color:#fff;
     font-size:9px;font-weight:800;text-align:center;letter-spacing:.01em;pointer-events:none
@@ -2051,6 +2051,20 @@ function patchVideoForIOS(videoEl) {
   videoEl.playsInline = true;
 }
 
+// Solicita foco contínuo somente quando o aparelho declara suporte. Não altera
+// resolução, zoom, exposição, lanterna nem a frequência do leitor.
+function scannerAtivarFocoAutomatico_(stream) {
+  try {
+    var track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+    if (!track || !track.getCapabilities || !track.applyConstraints) return;
+    var caps = track.getCapabilities() || {};
+    var modes = caps.focusMode;
+    if (Array.isArray(modes) && modes.indexOf('continuous') >= 0) {
+      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function() {});
+    }
+  } catch (e) {}
+}
+
 // ── Inicializar AudioContext no toque do usuário ──────────
 // iOS Safari só permite criar AudioContext dentro de uma interação direta
 function initAudioContext() {
@@ -2102,6 +2116,7 @@ async function iniciarScanner() {
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
+      scannerAtivarFocoAutomatico_(stream);
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
 
@@ -2196,6 +2211,7 @@ async function iniciarScanner() {
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
       var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       _videoStream = zxStream;
+      scannerAtivarFocoAutomatico_(zxStream);
 
       videoEl.srcObject = zxStream;
       await videoEl.play().catch(function(){});
@@ -4861,7 +4877,7 @@ function nfeSetorOptions_(atual){
   return vals.map(function(x){return '<option value="'+nfeEsc_(x.v)+'" '+(x.v===atual?'selected':'')+'>'+nfeEsc_(x.t)+'</option>';}).join('');
 }
 
-function nfeSetorOrigemTexto_(o){var m={aprendido_fornecedor:'aprendido pela AURA',historico_aura:'histórico de coletas',banco_dados:'Banco de Dados',regra_nome:'nomenclatura do produto',manual:'ajuste manual',nao_identificado:'não identificado'};return m[String(o||'')]||'automático';}
+function nfeSetorOrigemTexto_(o){var m={aprendido_fornecedor:'aprendido pela AURA',classificacao_confirmada:'classificação manual salva por EAN',historico_aura:'histórico de coletas',banco_dados:'Banco de Dados',regra_nome:'nomenclatura do produto',manual:'ajuste manual',nao_identificado:'não identificado'};return m[String(o||'')]||'automático';}
 function nfeSetorNotaHtml_(it){var s=String((it&&it.setor)||(it&&it.setorSugerido)||'Outros'),o=String((it&&it.setorOrigem)||'');if(s==='Outros'&&o!=='manual')return '<div class="nfe-setor-note warn"><i class="ti ti-alert-triangle"></i> Setor não identificado. Selecione uma vez e a AURA aprende.</div>';return '<div class="nfe-setor-note"><i class="ti ti-sparkles"></i> '+(o==='manual'?'Setor definido':'Setor automático')+': <b>'+nfeEsc_(s)+'</b> · '+nfeEsc_(nfeSetorOrigemTexto_(o))+'</div>';}
 async function nfePost_(dados){
   var url=nfeCfgUrl_(); if(!url) throw new Error('Configure a URL da AURA nas configurações.');
@@ -5507,7 +5523,30 @@ function nfeToggleItem_(i,v){
   nfeSalvarRascunho_();nfeRenderNota_();
 }
 function nfeDefinirValidadeIndeterminada_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var rec=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),q=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;if(rec==='NAO_RECEBIDO'||q<=0){mostrarToast('Este item está marcado como não recebido. Ajuste o recebimento antes de concluir.','warn');nfeRenderNota_();return;}it.controlar=false;it.validadeIndeterminada=true;it.conferenciaSemValidade=true;it.conferenciaManual=true;it.conferenciaEm=new Date().toISOString();(it.lotes||[]).forEach(function(l){l.validade='';});it.conferenciaAssinatura=nfeConferenciaAssinatura_(it);nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Validade indeterminada: item conferido sem criar lote de validade.','ok');nfeRolarProximaPendencia_(i);}
-function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
+function nfeSalvarSetorConfirmadoAgora_(ean,setor){
+  ean=nfeDigitos_(ean||'');setor=String(setor||'Outros');
+  if(!ean||!setor||setor==='Outros')return;
+  var actor=nfeOperadorAtual_();if(!actor){mostrarToast('Setor aplicado nesta NF-e, mas não aprendido: selecione o colaborador para salvar no banco.','warn');return;}
+  nfePost_({action:'nfeSalvarSetorConfirmado',actor:actor,email:actor,ean:ean,setor:setor}).then(function(j){
+    if(j&&j.ok){mostrarToast('Setor '+setor+' aprendido para este EAN e os próximos recebimentos.','ok');return;}
+    var err=(j&&j.erro)||'o servidor não confirmou a gravação';
+    mostrarToast('Setor aplicado nesta NF-e, mas não aprendido para a próxima: '+err,'warn');
+    console.error('[AURA Setores] Falha ao salvar setor manual:',err);
+  }).catch(function(e){
+    var err=String(e&&e.message||e||'falha de conexão');
+    mostrarToast('Setor aplicado nesta NF-e, mas não aprendido para a próxima: '+err,'warn');
+    console.error('[AURA Setores] Falha ao salvar setor manual:',err);
+  });
+}
+function nfeSetSetor_(i,v){
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
+  it.setor=v;it.setorOrigem='manual';
+  var inp=document.getElementById('nfeEan_'+i),ean=nfeDigitos_((inp&&inp.value)||it.eanAura||it.ean||'');
+  if(ean)it.eanAura=ean;
+  nfeSalvarRascunho_();
+  nfeSalvarSetorConfirmadoAgora_(ean,v);
+  nfeRenderNota_();
+}
 function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
 // v6.57 — busca no Banco AURA/Telecon por código ou nome durante o vínculo da NF-e
@@ -5903,7 +5942,7 @@ function nfeSalvarVinculoManual_(i){
   if(!it)return;if(!ean){mostrarToast('Informe o EAN ou código de barras.','warn');return;}if(!/^\d{4}-\d{2}-\d{2}$/.test(validade)){mostrarToast('Informe uma validade válida.','warn');return;}if(!(q>0)){mostrarToast('Informe uma quantidade maior que zero.','warn');return;}
   var fator=String(it.conversaoDecisao||'')==='converter'?(Number(it.fatorConversao||it.fatorConversaoSugerido)||1):1;it.eanAura=ean;it._campoBusca=ean;it.status='aguardando_cadastro';it.origemVinculo='manual_novo';it.setor=setor;it.setorOrigem='manual';it.controlar=true;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
   if(!Array.isArray(it.lotes))it.lotes=[];if(!it.lotes.length)it.lotes.push({validade:validade,quantidade:q*fator,lote:''});else{it.lotes[0].validade=validade;it.lotes[0].quantidade=q*fator;}
-  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
+  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeSalvarSetorConfirmadoAgora_(ean,setor);nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
 }
 function nfeTabletMostrarDiagnostico_(c,tipo,extra){
   var el=document.getElementById('nfeTabletDiag');if(!el)return;
@@ -6644,7 +6683,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.50-camera-padrao-diagnostico';console.info('[AURA] Coleta Tablet v7.50 — câmera padrão e diagnóstico');</script>
+<script>window.AURA_TABLET_BUILD='v7.51-foco-continuo-aprendizado-setor';console.info('[AURA] Coleta Tablet v7.51 — foco contínuo compatível e aprendizado de setor');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
