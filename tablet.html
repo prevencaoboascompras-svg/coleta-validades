@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.48 — leitura contínua, foco automático e apoio em baixa luz -->
+<!-- Coleta Tablet v7.50 — câmera padrão e diagnóstico -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
@@ -1904,8 +1904,6 @@ var _motorAtivo  = null;
 var _videoStream  = null;
 var _videoEl      = null;
 var _nativeLoop   = null;
-var _nativeFallbackTimer = null;
-var _forceZXingAfterNative = false;
 
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
@@ -1917,7 +1915,6 @@ var _zxingReader = null;
 var _zxingControls = null; // objeto retornado por decodeFromStream — .stop() cancela o loop de verdade
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
-var _nfeIOSZoomInterval = null;
 
 // ── SESSÃO DE SCAN ────────────────────────────────────────
 // PROBLEMA: o ZXing (decodeFromStream) roda um loop assíncrono interno.
@@ -1931,48 +1928,6 @@ var _nfeIOSZoomInterval = null;
 // callback de uma sessão anterior é descartado, mesmo que chegue atrasado.
 var _scanSessionId = 0;
 var _scannerIniciando = false;
-
-// ── FOCUS HELPER ──────────────────────────────────────────
-// Aplica autofocus continuo e tenta ajustar foco de perto
-// Funciona em ambos os motores (native e ZXing)
-function _scannerModoNFe_(){
-  return (typeof _nfeModoScan !== 'undefined') && !!_nfeModoScan;
-}
-
-function nfeIOSAjusteCamera_(stream){
-  if(!isIOS()||!_scannerModoNFe_()||!stream||!stream.getVideoTracks||!stream.getVideoTracks().length)return;
-  var track=stream.getVideoTracks()[0],caps={};try{caps=track.getCapabilities?track.getCapabilities():{};}catch(e){}
-  try{if('contentHint' in track)track.contentHint='text';}catch(e){}
-  var base={};
-  if(caps.focusMode&&caps.focusMode.indexOf&&caps.focusMode.indexOf('continuous')>=0)base.focusMode='continuous';
-  if(caps.exposureMode&&caps.exposureMode.indexOf&&caps.exposureMode.indexOf('continuous')>=0)base.exposureMode='continuous';
-  if(caps.whiteBalanceMode&&caps.whiteBalanceMode.indexOf&&caps.whiteBalanceMode.indexOf('continuous')>=0)base.whiteBalanceMode='continuous';
-  if(Object.keys(base).length)track.applyConstraints({advanced:[base]}).catch(function(){});
-  if(_nfeIOSZoomInterval)clearInterval(_nfeIOSZoomInterval);
-  if(caps.zoom&&caps.zoom.min!==undefined&&caps.zoom.max!==undefined){
-    var zmin=Number(caps.zoom.min)||1,zmax=Number(caps.zoom.max)||1,candidatos=[1,1.08,1.16,1.24].map(function(z){return Math.max(zmin,Math.min(zmax,z));});
-    candidatos=candidatos.filter(function(z,i,a){return i===0||Math.abs(z-a[i-1])>.001;});var zi=0;
-    var aplicar=function(){if(!_scannerModoNFe_()||!stream.getVideoTracks().length)return;var t=stream.getVideoTracks()[0];if(!t||t.readyState!=='live')return;var c={zoom:candidatos[zi%candidatos.length]};if(base.focusMode)c.focusMode=base.focusMode;t.applyConstraints({advanced:[c]}).catch(function(){});zi++;};
-    aplicar();_nfeIOSZoomInterval=setInterval(aplicar,1400);
-  }
-}
-
-function applyFocusConstraints(stream) {
-  if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
-  var track = stream.getVideoTracks()[0], caps = {}, advanced = {};
-  try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch(e) {}
-  // Deixa foco, exposição e balanço de branco trabalharem em modo contínuo.
-  // Não fixa foco mínimo nem zoom: isso fazia a lente caçar foco em distâncias
-  // comuns de leitura e podia escurecer/cortar o código.
-  if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) advanced.focusMode='continuous';
-  if (caps.exposureMode && caps.exposureMode.indexOf && caps.exposureMode.indexOf('continuous') >= 0) advanced.exposureMode='continuous';
-  if (caps.whiteBalanceMode && caps.whiteBalanceMode.indexOf && caps.whiteBalanceMode.indexOf('continuous') >= 0) advanced.whiteBalanceMode='continuous';
-  try { if ('contentHint' in track) track.contentHint='text'; } catch(e) {}
-  if (Object.keys(advanced).length) track.applyConstraints({advanced:[advanced]}).catch(function(){});
-  if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval=null; }
-}
-
-
 
 // ── Painel de diagnóstico on-page (debug sem precisar de Mac/DevTools) ──
 var _debugLines = [];
@@ -2016,6 +1971,12 @@ async function _coletarInfoAmbiente() {
     linhas.push('ZXingBrowser.BrowserMultiFormatReader: ' + (!!ZXingBrowser.BrowserMultiFormatReader));
   }
   linhas.push('getUserMedia disponível: ' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  linhas.push('Motor ativo: ' + (_motorAtivo || 'câmera fechada'));
+  try {
+    var tr = _videoStream && _videoStream.getVideoTracks && _videoStream.getVideoTracks()[0];
+    var cfg = tr && tr.getSettings ? tr.getSettings() : null;
+    if (cfg) linhas.push('Câmera ativa: ' + (cfg.width||'?') + '×' + (cfg.height||'?') + (cfg.frameRate ? ' a ' + cfg.frameRate + ' fps' : '') + (cfg.facingMode ? ' · ' + cfg.facingMode : ''));
+  } catch(eSettings) { linhas.push('Configuração da câmera ativa: não disponível'); }
 
   try {
     if (navigator.permissions && navigator.permissions.query) {
@@ -2105,28 +2066,6 @@ function initAudioContext() {
   }
 }
 
-function _scannerNativeFallbackZXing_(session) {
-  if (session !== _scanSessionId || _motorAtivo !== 'native' || !scannerAtivo) return;
-  console.warn('[AURA Scanner] BarcodeDetector sem leitura; alternando para ZXing.');
-  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
-  var nfeFast = document.body && document.body.classList.contains('nfe-fast-scan');
-  scannerAtivo = false;
-  _scannerIniciando = false;
-  _scanSessionId++;
-  if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
-  if (_videoStream) { try { _videoStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _videoStream = null; }
-  if (_videoEl) { try { _videoEl.srcObject = null; } catch(e){} _videoEl = null; }
-  _motorAtivo = null;
-  var wrap = document.getElementById('scannerView');
-  if (wrap) wrap.innerHTML = '';
-  var idle = document.getElementById('stateIdle'); if (idle) idle.style.display = 'none';
-  var erro = document.getElementById('stateErro'); if (erro) erro.style.display = 'none';
-  var laser = document.getElementById('laser'); if (laser) laser.style.display = 'none';
-  _forceZXingAfterNative = true;
-  iniciarScanner();
-  if (nfeFast && document.body) document.body.classList.add('nfe-fast-scan');
-}
-
 async function iniciarScanner() {
   // v7.11: identidade vem antes da câmera no tablet.
   if(_modoTablet && !_tabletUsuarioSelecionado){iniciarModoTablet(false);try{mostrarToast('Selecione o colaborador antes de usar a câmera','warn');}catch(e){}return;}
@@ -2158,16 +2097,13 @@ async function iniciarScanner() {
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
-  if (typeof BarcodeDetector !== 'undefined' && !isIOS() && !_forceZXingAfterNative) {
-    var constraints = {
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false
-    };
+  if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
+    var constraints = { video: { facingMode: { ideal: 'environment' } } };
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
-      applyFocusConstraints(stream);
 
       var wrap = document.getElementById('scannerView');
       wrap.innerHTML = '';
@@ -2188,8 +2124,6 @@ async function iniciarScanner() {
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
       scannerAtivo = true;
-      if (_nativeFallbackTimer) clearTimeout(_nativeFallbackTimer);
-      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 2800);
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
@@ -2204,7 +2138,6 @@ async function iniciarScanner() {
           try {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
-              if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
               if (meuSession !== _scanSessionId) { console.warn('Descartado: resultado nativo de sessão antiga #' + meuSession); return; }
               onScanSuccess(results[0].rawValue);
               return;
@@ -2220,8 +2153,6 @@ async function iniciarScanner() {
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
-
-  _forceZXingAfterNative = false;
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
   // Se o bundle ainda estiver carregando, aguardamos dentro da MESMA sessão.
@@ -2250,47 +2181,11 @@ async function iniciarScanner() {
     var videoEl = document.getElementById('zxing-video');
     patchVideoForIOS(videoEl);
 
-    // Criar reader do ZXing. No iPhone + NF-e usamos, quando disponível,
-    // o leitor 1D específico, pois a chave do DANFE é Code 128.
-    var _nfeIOSRapido = isIOS() && _scannerModoNFe_();
-    var _temLeitor1D = !!ZXingBrowser.BrowserMultiFormatOneDReader;
-    if (_temLeitor1D) {
-      _zxingReader = new ZXingBrowser.BrowserMultiFormatOneDReader();
-    } else {
-      _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
-    }
-    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 25 : (_temLeitor1D ? 50 : 100);
+    // Leitor multi-formato padrão, sem alternância automática de motor.
+    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
+    _zxingReader.timeBetweenScansMillis = 150;
 
-    // ── Restringir formatos de leitura ──────────────────────
-    // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
-    // BrowserMultiFormatReader tem o setter `possibleFormats` que já
-    // configura os hints internamente. Restringir os formatos deixa o
-    // decode mais rápido (menos formatos testados por frame = mais frames
-    // analisados por segundo) e mais preciso — importante no iPhone, que
-    // tem menos poder de processamento por frame que o motor nativo do
-    // Android.
-    try {
-      if (ZXingBrowser.BarcodeFormat) {
-        var bf = ZXingBrowser.BarcodeFormat;
-        var fmtsDesejados = _nfeIOSRapido
-          ? [bf.CODE_128]
-          : [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF];
-        fmtsDesejados = fmtsDesejados.filter(function(f) { return f !== undefined; });
-        var _zxHints = new Map();
-        var _zxHintTypes = ZXingBrowser.DecodeHintType;
-        if (_zxHintTypes && _zxHintTypes.TRY_HARDER !== undefined) {
-          _zxHints.set(_zxHintTypes.TRY_HARDER, true);
-        }
-        if (fmtsDesejados.length && _zxHintTypes && _zxHintTypes.POSSIBLE_FORMATS !== undefined) {
-          _zxHints.set(_zxHintTypes.POSSIBLE_FORMATS, fmtsDesejados);
-        }
-        if (_zxHints.size && typeof _zxingReader.setHints === 'function') {
-          _zxingReader.setHints(_zxHints);
-        } else if (fmtsDesejados.length) {
-          _zxingReader.possibleFormats = fmtsDesejados;
-        }
-      }
-    } catch(e) { /* se falhar, segue com as opções padrão do leitor */ }
+
 
     try {
       // ── CORREÇÃO iOS: pedir a câmera DIRETO via getUserMedia,
@@ -2299,36 +2194,13 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxConstraints = _nfeIOSRapido ? {
-        // 1280x720 reduz bastante o custo de decode no Safari sem perder
-        // resolução horizontal suficiente para a chave Code 128 do DANFE.
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-          aspectRatio: { ideal: 1.7777777778 }
-        },
-        audio: false
-      } : {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: false
-      };
-
-      var zxStream = await navigator.mediaDevices.getUserMedia(zxConstraints);
+      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       _videoStream = zxStream;
 
       videoEl.srcObject = zxStream;
       await videoEl.play().catch(function(){});
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
-      applyFocusConstraints(zxStream);
-      nfeIOSAjusteCamera_(zxStream);
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
       // decodeFromStream() retorna uma Promise que resolve num objeto de
@@ -2379,8 +2251,6 @@ async function iniciarScanner() {
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
-      // Iniciar timer de aviso (vibra após 3s sem leitura)
-      iniciarTimerAviso();
 
     } catch(err) {
       console.error('Erro ao iniciar câmera (ZXing/iOS):', err);
@@ -2408,9 +2278,6 @@ async function iniciarScanner() {
 }
 
 function pararScanner() {
-  if (window._scannerLowLightTimer) { clearInterval(window._scannerLowLightTimer); window._scannerLowLightTimer=null; }
-  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
-  _forceZXingAfterNative = false;
   scannerAtivo = false;
   if (document && document.body) document.body.classList.remove('nfe-fast-scan');
   _scannerIniciando = false;
@@ -2422,7 +2289,6 @@ function pararScanner() {
 
   // Limpar intervalo de foco
   if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval = null; }
-  if (_nfeIOSZoomInterval) { clearInterval(_nfeIOSZoomInterval); _nfeIOSZoomInterval = null; }
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
@@ -2541,31 +2407,11 @@ function tocarBipAgora() {
   }
 }
 
-// ── VIBRAÇÃO DE AVISO ─────────────────────────────────────
-// Vibra para avisar que não está conseguindo ler o código
-function vibrarAviso() {
-  if (navigator.vibrate) {
-    // Padrão: vibração curta, pausa, vibração curta (alerta)
-    navigator.vibrate([100, 50, 100]);
-  }
-}
+// Sem vibração durante a tentativa de leitura.
+function iniciarTimerAviso() { limparTimerAviso(); }
 
-// ── TIMER DE AVISO ────────────────────────────────────────
-// Um único aviso discreto após 8 segundos; não repete enquanto a câmera aguarda.
-function iniciarTimerAviso() {
-  limparTimerAviso();
-  _timerAviso = setTimeout(function() {
-    _timerAviso = null;
-    if (scannerAtivo && navigator.vibrate) navigator.vibrate(60);
-  }, 8000);
-}
-
-// Limpa o timer de aviso
 function limparTimerAviso() {
-  if (_timerAviso) {
-    clearTimeout(_timerAviso);
-    _timerAviso = null;
-  }
+  if (_timerAviso) { clearTimeout(_timerAviso); _timerAviso = null; }
 }
 
 function onScanSuccess(code) {
@@ -6798,7 +6644,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.49-scanner-e-setor-aprendido';console.info('[AURA] Coleta Tablet v7.49 — leitura rápida e setor aprendido');</script>
+<script>window.AURA_TABLET_BUILD='v7.50-camera-padrao-diagnostico';console.info('[AURA] Coleta Tablet v7.50 — câmera padrão e diagnóstico');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
