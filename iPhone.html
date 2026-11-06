@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual iPhone 15 v7.49 — leitura rápida e setor aprendido -->
+<!-- Coleta Individual iPhone 15 v7.54 — zoom inicial automático e aprendizado de setor -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -131,6 +131,12 @@ body{
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
+/* Zoom óptico/digital exposto pela câmera, sem alterar o padrão de leitura. */
+.scanner-zoom{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid rgba(255,255,255,.42);border-radius:999px;background:rgba(0,0,0,.72);box-shadow:0 2px 8px rgba(0,0,0,.25);color:#fff}
+.scanner-zoom button{width:32px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:21px;font-weight:800;line-height:1;touch-action:manipulation}
+.scanner-zoom button:active{background:rgba(255,255,255,.34)}
+.scanner-zoom-value{min-width:38px;text-align:center;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+
 
 /* v6.39 — modo NF-e otimizado para iPhone: mais área útil para enquadrar Code 128 longo */
 @media(max-width:480px){
@@ -139,7 +145,7 @@ body{
   body.nfe-fast-scan .corner.tr,body.nfe-fast-scan .corner.br{right:10px}
   body.nfe-fast-scan .laser{left:12px;right:12px}
   body.nfe-fast-scan .scan-wrap::after{
-    content:'NF-e: mantenha a chave inteira na largura — foco e zoom são ajustados automaticamente';
+    content:'NF-e: mantenha a chave inteira na largura — se desfocar, afaste um pouco até ficar nítida';
     position:absolute;left:12px;right:12px;bottom:8px;z-index:8;
     padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.58);color:#fff;
     font-size:9px;font-weight:800;text-align:center;letter-spacing:.01em;pointer-events:none
@@ -1270,7 +1276,7 @@ body.tarefas-hist-aberta{overflow:hidden}
   .hdr>div:last-child{gap:4px!important}.hdr-btn{width:32px;height:32px;border-radius:9px;font-size:15px}
   .scan-wrap{height:clamp(140px,18vh,158px);min-height:136px;margin:9px 10px;border-radius:10px;background:#101010;border:1px solid rgba(226,75,74,.55);isolation:isolate}
   #scannerView{z-index:1;background:#101010}
-  #scannerView video{width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:center!important;transform:translateZ(0)}
+  #scannerView video{width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:center!important}
   .corner{z-index:3;width:24px;height:24px}.corner.tl{top:9px;left:9px}.corner.tr{top:9px;right:9px}.corner.bl{bottom:9px;left:9px}.corner.br{bottom:9px;right:9px}
   .laser{z-index:4}.scan-flash{z-index:5}.scan-state{z-index:6}
   .prod-row{margin:0 10px 8px;padding:8px;gap:8px;border-radius:10px}
@@ -1882,9 +1888,27 @@ var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
+function scannerAplicarZoomInicial_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    var caps=track.getCapabilities()||{},range=caps.zoom;
+    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return;
+    var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),1.5));
+    var step=Number(range.step)||0.1;
+    target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
+    target=Math.max(Number(range.min),Math.min(Number(range.max),target));
+    if(current>=target-0.04)return;
+    track.applyConstraints({advanced:[{zoom:target}]}).then(function(){
+      console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
+    }).catch(function(err){
+      console.info('[AURA Scanner] Zoom da câmera indisponível; mantendo padrão:',String(err&&err.name||err||''));
+    });
+  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');}
+}
+
 var _nativeLoop   = null;
-var _nativeFallbackTimer = null;
-var _forceZXingAfterNative = false;
 
 // ═══════════════════════════════════════════════════════════
 //  SCANNER — dual engine
@@ -1896,7 +1920,6 @@ var _zxingReader = null;
 var _zxingControls = null; // objeto retornado por decodeFromStream — .stop() cancela o loop de verdade
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
-var _nfeIOSZoomInterval = null;
 
 // ── SESSÃO DE SCAN ────────────────────────────────────────
 // PROBLEMA: o ZXing (decodeFromStream) roda um loop assíncrono interno.
@@ -1910,48 +1933,6 @@ var _nfeIOSZoomInterval = null;
 // callback de uma sessão anterior é descartado, mesmo que chegue atrasado.
 var _scanSessionId = 0;
 var _scannerIniciando = false;
-
-// ── FOCUS HELPER ──────────────────────────────────────────
-// Aplica autofocus continuo e tenta ajustar foco de perto
-// Funciona em ambos os motores (native e ZXing)
-function _scannerModoNFe_(){
-  return (typeof _nfeModoScan !== 'undefined') && !!_nfeModoScan;
-}
-
-function nfeIOSAjusteCamera_(stream){
-  if(!isIOS()||!_scannerModoNFe_()||!stream||!stream.getVideoTracks||!stream.getVideoTracks().length)return;
-  var track=stream.getVideoTracks()[0],caps={};try{caps=track.getCapabilities?track.getCapabilities():{};}catch(e){}
-  try{if('contentHint' in track)track.contentHint='text';}catch(e){}
-  var base={};
-  if(caps.focusMode&&caps.focusMode.indexOf&&caps.focusMode.indexOf('continuous')>=0)base.focusMode='continuous';
-  if(caps.exposureMode&&caps.exposureMode.indexOf&&caps.exposureMode.indexOf('continuous')>=0)base.exposureMode='continuous';
-  if(caps.whiteBalanceMode&&caps.whiteBalanceMode.indexOf&&caps.whiteBalanceMode.indexOf('continuous')>=0)base.whiteBalanceMode='continuous';
-  if(Object.keys(base).length)track.applyConstraints({advanced:[base]}).catch(function(){});
-  if(_nfeIOSZoomInterval)clearInterval(_nfeIOSZoomInterval);
-  if(caps.zoom&&caps.zoom.min!==undefined&&caps.zoom.max!==undefined){
-    var zmin=Number(caps.zoom.min)||1,zmax=Number(caps.zoom.max)||1,candidatos=[1,1.08,1.16,1.24].map(function(z){return Math.max(zmin,Math.min(zmax,z));});
-    candidatos=candidatos.filter(function(z,i,a){return i===0||Math.abs(z-a[i-1])>.001;});var zi=0;
-    var aplicar=function(){if(!_scannerModoNFe_()||!stream.getVideoTracks().length)return;var t=stream.getVideoTracks()[0];if(!t||t.readyState!=='live')return;var c={zoom:candidatos[zi%candidatos.length]};if(base.focusMode)c.focusMode=base.focusMode;t.applyConstraints({advanced:[c]}).catch(function(){});zi++;};
-    aplicar();_nfeIOSZoomInterval=setInterval(aplicar,1400);
-  }
-}
-
-function applyFocusConstraints(stream) {
-  if (!stream || !stream.getVideoTracks || !stream.getVideoTracks().length) return;
-  var track = stream.getVideoTracks()[0], caps = {}, advanced = {};
-  try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch(e) {}
-  // Deixa foco, exposição e balanço de branco trabalharem em modo contínuo.
-  // Não fixa foco mínimo nem zoom: isso fazia a lente caçar foco em distâncias
-  // comuns de leitura e podia escurecer/cortar o código.
-  if (caps.focusMode && caps.focusMode.indexOf && caps.focusMode.indexOf('continuous') >= 0) advanced.focusMode='continuous';
-  if (caps.exposureMode && caps.exposureMode.indexOf && caps.exposureMode.indexOf('continuous') >= 0) advanced.exposureMode='continuous';
-  if (caps.whiteBalanceMode && caps.whiteBalanceMode.indexOf && caps.whiteBalanceMode.indexOf('continuous') >= 0) advanced.whiteBalanceMode='continuous';
-  try { if ('contentHint' in track) track.contentHint='text'; } catch(e) {}
-  if (Object.keys(advanced).length) track.applyConstraints({advanced:[advanced]}).catch(function(){});
-  if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval=null; }
-}
-
-
 
 // ── Painel de diagnóstico on-page (debug sem precisar de Mac/DevTools) ──
 var _debugLines = [];
@@ -1995,6 +1976,15 @@ async function _coletarInfoAmbiente() {
     linhas.push('ZXingBrowser.BrowserMultiFormatReader: ' + (!!ZXingBrowser.BrowserMultiFormatReader));
   }
   linhas.push('getUserMedia disponível: ' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  linhas.push('Motor de leitura ativo: ' + (_motorAtivo || 'nenhum'));
+  try {
+    var _trackDiag = _videoStream && _videoStream.getVideoTracks && _videoStream.getVideoTracks()[0];
+    var _settingsDiag = _trackDiag && _trackDiag.getSettings ? _trackDiag.getSettings() : null;
+    linhas.push('Câmera ativa: ' + (_trackDiag ? (_trackDiag.label || 'sim') : 'não'));
+    linhas.push('Resolução real: ' + (_settingsDiag && _settingsDiag.width && _settingsDiag.height ? (_settingsDiag.width + ' × ' + _settingsDiag.height) : 'indisponível'));
+    linhas.push('FPS real: ' + (_settingsDiag && _settingsDiag.frameRate ? _settingsDiag.frameRate : 'padrão/indisponível'));
+    linhas.push('Modo da câmera: ' + (_settingsDiag && _settingsDiag.facingMode ? _settingsDiag.facingMode : 'indisponível'));
+  } catch(_diagCameraError) { linhas.push('Dados da câmera ativa: indisponíveis'); }
 
   try {
     if (navigator.permissions && navigator.permissions.query) {
@@ -2084,28 +2074,6 @@ function initAudioContext() {
   }
 }
 
-function _scannerNativeFallbackZXing_(session) {
-  if (session !== _scanSessionId || _motorAtivo !== 'native' || !scannerAtivo) return;
-  console.warn('[AURA Scanner] BarcodeDetector sem leitura; alternando para ZXing.');
-  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
-  var nfeFast = document.body && document.body.classList.contains('nfe-fast-scan');
-  scannerAtivo = false;
-  _scannerIniciando = false;
-  _scanSessionId++;
-  if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
-  if (_videoStream) { try { _videoStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _videoStream = null; }
-  if (_videoEl) { try { _videoEl.srcObject = null; } catch(e){} _videoEl = null; }
-  _motorAtivo = null;
-  var wrap = document.getElementById('scannerView');
-  if (wrap) wrap.innerHTML = '';
-  var idle = document.getElementById('stateIdle'); if (idle) idle.style.display = 'none';
-  var erro = document.getElementById('stateErro'); if (erro) erro.style.display = 'none';
-  var laser = document.getElementById('laser'); if (laser) laser.style.display = 'none';
-  _forceZXingAfterNative = true;
-  iniciarScanner();
-  if (nfeFast && document.body) document.body.classList.add('nfe-fast-scan');
-}
-
 async function iniciarScanner() {
   // Inicializar AudioContext no toque do usuário (iOS requer interação direta)
   initAudioContext();
@@ -2135,16 +2103,14 @@ async function iniciarScanner() {
   // ── Motor 1: BarcodeDetector nativo (Android Chrome) ──
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
-  if (typeof BarcodeDetector !== 'undefined' && !isIOS() && !_forceZXingAfterNative) {
-    var constraints = {
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false
-    };
+  if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
+    var constraints = { video: { facingMode: { ideal: 'environment' } } };
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
+      scannerAplicarZoomInicial_(_videoStream);
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
-      applyFocusConstraints(stream);
 
       var wrap = document.getElementById('scannerView');
       wrap.innerHTML = '';
@@ -2165,8 +2131,6 @@ async function iniciarScanner() {
       var detector = new BarcodeDetector({ formats: usarFmts });
       _motorAtivo = 'native';
       scannerAtivo = true;
-      if (_nativeFallbackTimer) clearTimeout(_nativeFallbackTimer);
-      _nativeFallbackTimer = setTimeout(function(){ _scannerNativeFallbackZXing_(meuSession); }, 2800);
       _scannerIniciando = false;
       document.getElementById('laser').style.display = 'block';
 
@@ -2181,7 +2145,6 @@ async function iniciarScanner() {
           try {
             var results = await detector.detect(canvas);
             if (results && results.length > 0) {
-              if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
               if (meuSession !== _scanSessionId) { console.warn('Descartado: resultado nativo de sessão antiga #' + meuSession); return; }
               onScanSuccess(results[0].rawValue);
               return;
@@ -2197,8 +2160,6 @@ async function iniciarScanner() {
       if (_videoStream) { _videoStream.getTracks().forEach(function(t){ t.stop(); }); _videoStream = null; }
     }
   }
-
-  _forceZXingAfterNative = false;
 
   // ── Motor 2: ZXing (iOS Safari, Firefox, qualquer browser) ──
   // Se o bundle ainda estiver carregando, aguardamos dentro da MESMA sessão.
@@ -2227,47 +2188,9 @@ async function iniciarScanner() {
     var videoEl = document.getElementById('zxing-video');
     patchVideoForIOS(videoEl);
 
-    // Criar reader do ZXing. No iPhone + NF-e usamos, quando disponível,
-    // o leitor 1D específico, pois a chave do DANFE é Code 128.
-    var _nfeIOSRapido = isIOS() && _scannerModoNFe_();
-    var _temLeitor1D = !!ZXingBrowser.BrowserMultiFormatOneDReader;
-    if (_temLeitor1D) {
-      _zxingReader = new ZXingBrowser.BrowserMultiFormatOneDReader();
-    } else {
-      _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
-    }
-    _zxingReader.timeBetweenScansMillis = _nfeIOSRapido ? 25 : (_temLeitor1D ? 50 : 100);
-
-    // ── Restringir formatos de leitura ──────────────────────
-    // O bundle zxing-browser.min.js EXPÕE ZXingBrowser.BarcodeFormat, e o
-    // BrowserMultiFormatReader tem o setter `possibleFormats` que já
-    // configura os hints internamente. Restringir os formatos deixa o
-    // decode mais rápido (menos formatos testados por frame = mais frames
-    // analisados por segundo) e mais preciso — importante no iPhone, que
-    // tem menos poder de processamento por frame que o motor nativo do
-    // Android.
-    try {
-      if (ZXingBrowser.BarcodeFormat) {
-        var bf = ZXingBrowser.BarcodeFormat;
-        var fmtsDesejados = _nfeIOSRapido
-          ? [bf.CODE_128]
-          : [bf.EAN_13, bf.EAN_8, bf.UPC_A, bf.UPC_E, bf.CODE_128, bf.CODE_39, bf.ITF];
-        fmtsDesejados = fmtsDesejados.filter(function(f) { return f !== undefined; });
-        var _zxHints = new Map();
-        var _zxHintTypes = ZXingBrowser.DecodeHintType;
-        if (_zxHintTypes && _zxHintTypes.TRY_HARDER !== undefined) {
-          _zxHints.set(_zxHintTypes.TRY_HARDER, true);
-        }
-        if (fmtsDesejados.length && _zxHintTypes && _zxHintTypes.POSSIBLE_FORMATS !== undefined) {
-          _zxHints.set(_zxHintTypes.POSSIBLE_FORMATS, fmtsDesejados);
-        }
-        if (_zxHints.size && typeof _zxingReader.setHints === 'function') {
-          _zxingReader.setHints(_zxHints);
-        } else if (fmtsDesejados.length) {
-          _zxingReader.possibleFormats = fmtsDesejados;
-        }
-      }
-    } catch(e) { /* se falhar, segue com as opções padrão do leitor */ }
+    // Leitor multi-formato padrão, com configurações padrão de leitura.
+    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
+    _zxingReader.timeBetweenScansMillis = 150;
 
     try {
       // ── CORREÇÃO iOS: pedir a câmera DIRETO via getUserMedia,
@@ -2276,45 +2199,9 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxConstraints = _nfeIOSRapido ? {
-        // 1280x720 reduz bastante o custo de decode no Safari sem perder
-        // resolução horizontal suficiente para a chave Code 128 do DANFE.
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-          aspectRatio: { ideal: 1.7777777778 }
-        },
-        audio: false
-      } : (isIOS() ? {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      } : {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: false
-      });
-
-      var zxStream;
-      try {
-        zxStream = await navigator.mediaDevices.getUserMedia(zxConstraints);
-      } catch (cameraErr) {
-        // Alguns iPhones/PWAs recusam resolução ideal ou facingMode detalhado.
-        // Repete com a constraint mais simples antes de declarar falha.
-        if (!isIOS()) throw cameraErr;
-        console.warn('[AURA Scanner] Tentando abrir câmera do iPhone com configuração simples:', cameraErr && cameraErr.name || cameraErr);
-        zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-      }
+      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       _videoStream = zxStream;
+      scannerAplicarZoomInicial_(_videoStream);
 
       videoEl.muted = true;
       videoEl.autoplay = true;
@@ -2329,8 +2216,6 @@ async function iniciarScanner() {
       }
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
-      applyFocusConstraints(zxStream);
-      nfeIOSAjusteCamera_(zxStream);
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
       // decodeFromStream() retorna uma Promise que resolve num objeto de
@@ -2382,7 +2267,6 @@ async function iniciarScanner() {
       document.getElementById('laser').style.display = 'block';
 
       // Iniciar timer de aviso (vibra após 3s sem leitura)
-      iniciarTimerAviso();
 
     } catch(err) {
       console.error('Erro ao iniciar câmera (ZXing/iOS):', err);
@@ -2410,9 +2294,6 @@ async function iniciarScanner() {
 }
 
 function pararScanner() {
-  if (window._scannerLowLightTimer) { clearInterval(window._scannerLowLightTimer); window._scannerLowLightTimer=null; }
-  if (_nativeFallbackTimer) { clearTimeout(_nativeFallbackTimer); _nativeFallbackTimer = null; }
-  _forceZXingAfterNative = false;
   scannerAtivo = false;
   if (document && document.body) document.body.classList.remove('nfe-fast-scan');
   _scannerIniciando = false;
@@ -2424,7 +2305,6 @@ function pararScanner() {
 
   // Limpar intervalo de foco
   if (window._focusInterval) { clearInterval(window._focusInterval); window._focusInterval = null; }
-  if (_nfeIOSZoomInterval) { clearInterval(_nfeIOSZoomInterval); _nfeIOSZoomInterval = null; }
 
   if (_nativeLoop) { cancelAnimationFrame(_nativeLoop); _nativeLoop = null; }
 
@@ -2543,31 +2423,11 @@ function tocarBipAgora() {
   }
 }
 
-// ── VIBRAÇÃO DE AVISO ─────────────────────────────────────
-// Vibra para avisar que não está conseguindo ler o código
-function vibrarAviso() {
-  if (navigator.vibrate) {
-    // Padrão: vibração curta, pausa, vibração curta (alerta)
-    navigator.vibrate([100, 50, 100]);
-  }
-}
+// Sem vibração durante a tentativa de leitura.
+function iniciarTimerAviso() { limparTimerAviso(); }
 
-// ── TIMER DE AVISO ────────────────────────────────────────
-// Um único aviso discreto após 8 segundos; não repete enquanto a câmera aguarda.
-function iniciarTimerAviso() {
-  limparTimerAviso();
-  _timerAviso = setTimeout(function() {
-    _timerAviso = null;
-    if (scannerAtivo && navigator.vibrate) navigator.vibrate(60);
-  }, 8000);
-}
-
-// Limpa o timer de aviso
 function limparTimerAviso() {
-  if (_timerAviso) {
-    clearTimeout(_timerAviso);
-    _timerAviso = null;
-  }
+  if (_timerAviso) { clearTimeout(_timerAviso); _timerAviso = null; }
 }
 
 function onScanSuccess(code) {
@@ -5015,7 +4875,7 @@ function nfeSetorOptions_(atual){
   return vals.map(function(x){return '<option value="'+nfeEsc_(x.v)+'" '+(x.v===atual?'selected':'')+'>'+nfeEsc_(x.t)+'</option>';}).join('');
 }
 
-function nfeSetorOrigemTexto_(o){var m={aprendido_fornecedor:'aprendido pela AURA',historico_aura:'histórico de coletas',banco_dados:'Banco de Dados',regra_nome:'nomenclatura do produto',manual:'ajuste manual',nao_identificado:'não identificado'};return m[String(o||'')]||'automático';}
+function nfeSetorOrigemTexto_(o){var m={aprendido_fornecedor:'aprendido pela AURA',classificacao_confirmada:'classificação manual salva por EAN',historico_aura:'histórico de coletas',banco_dados:'Banco de Dados',regra_nome:'nomenclatura do produto',manual:'ajuste manual',nao_identificado:'não identificado'};return m[String(o||'')]||'automático';}
 function nfeSetorNotaHtml_(it){var s=String((it&&it.setor)||(it&&it.setorSugerido)||'Outros'),o=String((it&&it.setorOrigem)||'');if(s==='Outros'&&o!=='manual')return '<div class="nfe-setor-note warn"><i class="ti ti-alert-triangle"></i> Setor não identificado. Selecione uma vez e a AURA aprende.</div>';return '<div class="nfe-setor-note"><i class="ti ti-sparkles"></i> '+(o==='manual'?'Setor definido':'Setor automático')+': <b>'+nfeEsc_(s)+'</b> · '+nfeEsc_(nfeSetorOrigemTexto_(o))+'</div>';}
 async function nfePost_(dados){
   var url=nfeCfgUrl_(); if(!url) throw new Error('Configure a URL da AURA nas configurações.');
@@ -5661,7 +5521,30 @@ function nfeToggleItem_(i,v){
   nfeSalvarRascunho_();nfeRenderNota_();
 }
 function nfeDefinirValidadeIndeterminada_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var rec=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),q=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;if(rec==='NAO_RECEBIDO'||q<=0){mostrarToast('Este item está marcado como não recebido. Ajuste o recebimento antes de concluir.','warn');nfeRenderNota_();return;}it.controlar=false;it.validadeIndeterminada=true;it.conferenciaSemValidade=true;it.conferenciaManual=true;it.conferenciaEm=new Date().toISOString();(it.lotes||[]).forEach(function(l){l.validade='';});it.conferenciaAssinatura=nfeConferenciaAssinatura_(it);nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Validade indeterminada: item conferido sem criar lote de validade.','ok');nfeRolarProximaPendencia_(i);}
-function nfeSetSetor_(i,v){var it=_nfeColetaNota.itens[i];if(it){it.setor=v;it.setorOrigem='manual';}nfeSalvarRascunho_();nfeRenderNota_();}
+function nfeSalvarSetorConfirmadoAgora_(ean,setor){
+  ean=nfeDigitos_(ean||'');setor=String(setor||'Outros');
+  if(!ean||!setor||setor==='Outros')return;
+  var actor=nfeOperadorAtual_();if(!actor){mostrarToast('Setor aplicado nesta NF-e, mas não aprendido: selecione o colaborador para salvar no banco.','warn');return;}
+  nfePost_({action:'nfeSalvarSetorConfirmado',actor:actor,email:actor,ean:ean,setor:setor}).then(function(j){
+    if(j&&j.ok){mostrarToast('Setor '+setor+' aprendido para este EAN e os próximos recebimentos.','ok');return;}
+    var err=(j&&j.erro)||'o servidor não confirmou a gravação';
+    mostrarToast('Setor aplicado nesta NF-e, mas não aprendido para a próxima: '+err,'warn');
+    console.error('[AURA Setores] Falha ao salvar setor manual:',err);
+  }).catch(function(e){
+    var err=String(e&&e.message||e||'falha de conexão');
+    mostrarToast('Setor aplicado nesta NF-e, mas não aprendido para a próxima: '+err,'warn');
+    console.error('[AURA Setores] Falha ao salvar setor manual:',err);
+  });
+}
+function nfeSetSetor_(i,v){
+  var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
+  it.setor=v;it.setorOrigem='manual';
+  var inp=document.getElementById('nfeEan_'+i),ean=nfeDigitos_((inp&&inp.value)||it.eanAura||it.ean||'');
+  if(ean)it.eanAura=ean;
+  nfeSalvarRascunho_();
+  nfeSalvarSetorConfirmadoAgora_(ean,v);
+  nfeRenderNota_();
+}
 function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
 
 // v6.57 — busca no Banco AURA/Telecon por código ou nome durante o vínculo da NF-e
@@ -6083,7 +5966,7 @@ function nfeSalvarVinculoManual_(i){
   if(!it)return;if(!ean){mostrarToast('Informe o EAN ou código de barras.','warn');return;}if(!/^\d{4}-\d{2}-\d{2}$/.test(validade)){mostrarToast('Informe uma validade válida.','warn');return;}if(!(q>0)){mostrarToast('Informe uma quantidade maior que zero.','warn');return;}
   var fator=String(it.conversaoDecisao||'')==='converter'?(Number(it.fatorConversao||it.fatorConversaoSugerido)||1):1;it.eanAura=ean;it._campoBusca=ean;it.status='aguardando_cadastro';it.origemVinculo='manual_novo';it.setor=setor;it.setorOrigem='manual';it.controlar=true;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
   if(!Array.isArray(it.lotes))it.lotes=[];if(!it.lotes.length)it.lotes.push({validade:validade,quantidade:q*fator,lote:''});else{it.lotes[0].validade=validade;it.lotes[0].quantidade=q*fator;}
-  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
+  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeSalvarSetorConfirmadoAgora_(ean,setor);nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
 }
 function nfeIndividualMostrarDiagnostico_(c,tipo,extra){
   var el=document.getElementById('nfeIndDiag');if(!el)return;
