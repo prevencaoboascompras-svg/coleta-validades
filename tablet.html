@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Tablet v7.51 — foco contínuo compatível e aprendizado de setor -->
+<!-- Coleta Tablet v7.54 — zoom inicial automático e aprendizado de setor -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- AURA Coleta Tablet v7.00 — proteção anti pull-to-refresh + rascunho do item em andamento -->
 <!-- Coleta NF-e v6.99 — conferência visual por item com confirmação manual + aura azul -->
@@ -130,6 +130,12 @@ body{
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
+/* Zoom óptico/digital exposto pela câmera, sem alterar o padrão de leitura. */
+.scanner-zoom{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid rgba(255,255,255,.42);border-radius:999px;background:rgba(0,0,0,.72);box-shadow:0 2px 8px rgba(0,0,0,.25);color:#fff}
+.scanner-zoom button{width:32px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:21px;font-weight:800;line-height:1;touch-action:manipulation}
+.scanner-zoom button:active{background:rgba(255,255,255,.34)}
+.scanner-zoom-value{min-width:38px;text-align:center;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+
 
 /* v6.39 — modo NF-e otimizado para iPhone: mais área útil para enquadrar Code 128 longo */
 @media(max-width:480px){
@@ -1903,6 +1909,26 @@ var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
+function scannerAplicarZoomInicial_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    var caps=track.getCapabilities()||{},range=caps.zoom;
+    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return;
+    var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),1.5));
+    var step=Number(range.step)||0.1;
+    target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
+    target=Math.max(Number(range.min),Math.min(Number(range.max),target));
+    if(current>=target-0.04)return;
+    track.applyConstraints({advanced:[{zoom:target}]}).then(function(){
+      console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
+    }).catch(function(err){
+      console.info('[AURA Scanner] Zoom da câmera indisponível; mantendo padrão:',String(err&&err.name||err||''));
+    });
+  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');}
+}
+
 var _nativeLoop   = null;
 
 // ═══════════════════════════════════════════════════════════
@@ -2051,20 +2077,6 @@ function patchVideoForIOS(videoEl) {
   videoEl.playsInline = true;
 }
 
-// Solicita foco contínuo somente quando o aparelho declara suporte. Não altera
-// resolução, zoom, exposição, lanterna nem a frequência do leitor.
-function scannerAtivarFocoAutomatico_(stream) {
-  try {
-    var track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-    if (!track || !track.getCapabilities || !track.applyConstraints) return;
-    var caps = track.getCapabilities() || {};
-    var modes = caps.focusMode;
-    if (Array.isArray(modes) && modes.indexOf('continuous') >= 0) {
-      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function() {});
-    }
-  } catch (e) {}
-}
-
 // ── Inicializar AudioContext no toque do usuário ──────────
 // iOS Safari só permite criar AudioContext dentro de uma interação direta
 function initAudioContext() {
@@ -2116,7 +2128,7 @@ async function iniciarScanner() {
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
-      scannerAtivarFocoAutomatico_(stream);
+      scannerAplicarZoomInicial_(_videoStream);
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
 
@@ -2211,7 +2223,7 @@ async function iniciarScanner() {
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
       var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       _videoStream = zxStream;
-      scannerAtivarFocoAutomatico_(zxStream);
+      scannerAplicarZoomInicial_(_videoStream);
 
       videoEl.srcObject = zxStream;
       await videoEl.play().catch(function(){});
@@ -6683,7 +6695,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 </script>
 <script>window.addEventListener('storage',function(e){if(e&&e.key===NFE_DRAFT_KEY){try{nfeAtualizarCardPendente_();}catch(_e){}}});</script>
 
-<script>window.AURA_TABLET_BUILD='v7.51-foco-continuo-aprendizado-setor';console.info('[AURA] Coleta Tablet v7.51 — foco contínuo compatível e aprendizado de setor');</script>
+<script>window.AURA_TABLET_BUILD='v7.54-zoom-automatico-aprendizado-setor';console.info('[AURA] Coleta Tablet v7.54 — zoom inicial automático e aprendizado de setor');</script>
 <script id="auraSearchCoreV702">
 // ═══════════════════════════════════════════════════════════════
 // AURA SEARCH CORE v7.02
