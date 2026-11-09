@@ -4556,9 +4556,12 @@ function pararConfete() {
 var _modoTablet = window.location.search.indexOf('tablet') >= 0
   || /tablet\.html$/i.test(window.location.pathname);
 // Variante do Individual para iPhone: escolhe colaborador por avatar, sem ativar as regras específicas do Tablet.
-var _modoAvatarLogin = /individual-iphone15-usuarios\.html$/i.test(window.location.pathname);
+var _modoAvatarLogin = /iPhone|iPod/i.test(navigator.userAgent||'')
+  || /(?:individual-iphone15-usuarios|iphone)\.html(?:\/)?$/i.test(window.location.pathname)
+  || /[?&](?:iphone|iphone15)(?:=1)?(?:&|$)/i.test(window.location.search);
 
 function iniciarModoTablet() {
+  if (_modoAvatarLogin) { try { pararScanner(); } catch(e) {} }
   var grid = document.getElementById('tabletGrid');
   var usuarios = COLABORADORES.filter(function(c) {
     // inclui todos, mas marca quem não tem email
