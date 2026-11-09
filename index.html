@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Coleta Individual v7.51 — foco contínuo compatível e aprendizado de setor -->
+<!-- Coleta Individual v7.54 — zoom inicial automático e aprendizado de setor -->
 <!-- Envio de coletas idempotente; permissões legadas preservadas; preços com contraste reforçado -->
 <!-- Coleta NF-e v6.99 — histórico NF-e com layout visual da conferência + fotos -->
 <!-- AURA Coleta Individual v6.84 — NF-e com confirmação física em Respostas ao formulário 1 -->
@@ -131,6 +131,12 @@ body{
   animation:laserSweep 2.2s ease-in-out infinite;display:none;
 }
 @keyframes laserSweep{0%,100%{top:22%;opacity:.7}50%{top:76%;opacity:1}}
+/* Zoom óptico/digital exposto pela câmera, sem alterar o padrão de leitura. */
+.scanner-zoom{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid rgba(255,255,255,.42);border-radius:999px;background:rgba(0,0,0,.72);box-shadow:0 2px 8px rgba(0,0,0,.25);color:#fff}
+.scanner-zoom button{width:32px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:21px;font-weight:800;line-height:1;touch-action:manipulation}
+.scanner-zoom button:active{background:rgba(255,255,255,.34)}
+.scanner-zoom-value{min-width:38px;text-align:center;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+
 
 /* v6.39 — modo NF-e otimizado para iPhone: mais área útil para enquadrar Code 128 longo */
 @media(max-width:480px){
@@ -1814,6 +1820,26 @@ var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
+function scannerAplicarZoomInicial_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    var caps=track.getCapabilities()||{},range=caps.zoom;
+    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return;
+    var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),1.5));
+    var step=Number(range.step)||0.1;
+    target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
+    target=Math.max(Number(range.min),Math.min(Number(range.max),target));
+    if(current>=target-0.04)return;
+    track.applyConstraints({advanced:[{zoom:target}]}).then(function(){
+      console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
+    }).catch(function(err){
+      console.info('[AURA Scanner] Zoom da câmera indisponível; mantendo padrão:',String(err&&err.name||err||''));
+    });
+  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');}
+}
+
 var _nativeLoop   = null;
 
 // ═══════════════════════════════════════════════════════════
@@ -1962,20 +1988,6 @@ function patchVideoForIOS(videoEl) {
   videoEl.playsInline = true;
 }
 
-// Solicita foco contínuo somente quando o aparelho declara suporte. Não altera
-// resolução, zoom, exposição, lanterna nem a frequência do leitor.
-function scannerAtivarFocoAutomatico_(stream) {
-  try {
-    var track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-    if (!track || !track.getCapabilities || !track.applyConstraints) return;
-    var caps = track.getCapabilities() || {};
-    var modes = caps.focusMode;
-    if (Array.isArray(modes) && modes.indexOf('continuous') >= 0) {
-      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function() {});
-    }
-  } catch (e) {}
-}
-
 // ── Inicializar AudioContext no toque do usuário ──────────
 // iOS Safari só permite criar AudioContext dentro de uma interação direta
 function initAudioContext() {
@@ -2025,7 +2037,7 @@ async function iniciarScanner() {
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
-      scannerAtivarFocoAutomatico_(stream);
+      scannerAplicarZoomInicial_(_videoStream);
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
 
@@ -2120,7 +2132,7 @@ async function iniciarScanner() {
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
       var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
       _videoStream = zxStream;
-      scannerAtivarFocoAutomatico_(zxStream);
+      scannerAplicarZoomInicial_(_videoStream);
 
       videoEl.srcObject = zxStream;
       await videoEl.play().catch(function(){});
@@ -2382,6 +2394,7 @@ function onScanSuccess(code) {
 //  CODE DISPLAY — typewriter effect
 // ═══════════════════════════════════════════════════════════
 function exibirCodigo(code) {
+  window._auraSetorProdutoAtual_='';
   codigoAtual = code;
   var el = document.getElementById('codeDisplay');
   el.classList.remove('empty');
@@ -2425,6 +2438,7 @@ function ajustarFonteCodigo() {
 
 function resetCodigo() {
   if(window.auraCancelarConsultaProduto_)window.auraCancelarConsultaProduto_();
+  window._auraSetorProdutoAtual_='';
   codigoAtual = '';
   var el = document.getElementById('codeDisplay');
   el.textContent = 'Aguardando leitura…';
@@ -2797,6 +2811,9 @@ async function buscarDescricao(ean) {
 
   if (resultado && resultado.encontrado) {
     if(resultado.bancoAtualizadoEm)window._auraBancoAtualizadoEm_=resultado.bancoAtualizadoEm;
+    var setorProduto=String(resultado.setor||'').trim();
+    window._auraSetorProdutoAtual_=(setorProduto&&setorProduto!=='Outros')?setorProduto:'';
+    if(window._auraSetorProdutoAtual_){var setorInput=document.getElementById('fSetor');if(setorInput)setorInput.value=setorProduto;}
     el.textContent = resultado.descricao;
     el.className = 'prod-desc-val';
     descricaoAtual = resultado.descricao;
@@ -2865,6 +2882,8 @@ async function tentarBuscaCompleta(url, ean) {
       preco: data.preco,
       custo: data.custo,
       bancoAtualizadoEm: data.bancoAtualizadoEm || '',
+      setor: data.setor || '',
+      setorOrigem: data.setorOrigem || '',
       lotes: Array.isArray(data.lotes) ? data.lotes : []
     };
   } catch (e) {
@@ -4083,7 +4102,7 @@ function continuarEscaneandoLote() {
 // já existia pra este EAN. Mantém codigoAtual/descricaoAtual (não reseta
 // o código já bipado) para não ter que escanear de novo.
 function novoLoteClique() {
-  var setorAuto = (_lotesEncontrados && _lotesEncontrados[0] && _lotesEncontrados[0].setor) || '';
+  var setorAuto = window._auraSetorProdutoAtual_ || ((_lotesEncontrados && _lotesEncontrados[0] && _lotesEncontrados[0].setor) || '');
   if (setorAuto) {
     document.getElementById('fSetor').value = setorAuto;
   }
@@ -4751,7 +4770,7 @@ var _nfeConfirmarManualProduto = confirmarManual;
 
 function nfeDigitos_(v){ return String(v||'').replace(/\D/g,''); }
 function nfeEsc_(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-function nfeFmtQtd_(v){ var n=Number(v)||0; return Number.isInteger(n)?String(n):n.toLocaleString('pt-BR',{maximumFractionDigits:3}); }
+function nfeFmtQtd_(v){ var n=Number(v)||0,inteiro=Math.round(n); if(Math.abs(n-inteiro)<=0.0005)n=inteiro; return Number.isInteger(n)?String(n):n.toLocaleString('pt-BR',{maximumFractionDigits:3}); }
 function nfeCfgUrl_(){ var c=loadCfg(); return c&&c.url?String(c.url).trim():''; }
 function nfeSetorOptions_(atual){
   var vals=[]; var s=document.getElementById('fSetor');
@@ -4945,6 +4964,14 @@ function nfeColetaLerArquivoXml(file){
 function nfeNormUnidadeFront_(u){
   return String(u||'').trim().toUpperCase().replace(/[.\s_-]+/g,'');
 }
+function nfeFatorInteiroParaUnFront_(fator,unidadeDestino){
+  fator=Number(fator)||0;
+  if(!(fator>0))return 0;
+  var u=nfeNormUnidadeFront_(unidadeDestino);
+  if(['UN','UND','UNID','UNIDADE','PC','PCA','PECA','PÇ'].indexOf(u)<0)return fator;
+  var inteiro=Math.round(fator);
+  return inteiro>0&&Math.abs(fator-inteiro)<=0.001?inteiro:0;
+}
 function nfeEhUnidadeBaseFront_(u){
   u=nfeNormUnidadeFront_(u);
   return ['UN','UND','UNID','UNIDADE','PC','PCA','PECA','KG','KGS','QUILO','QUILOGRAMA','G','GR','GRAMA','L','LT','LITRO','ML','M','MT','METRO','CM','MM','M2','M3','T','TON','TONELADA'].indexOf(u)>=0;
@@ -5015,20 +5042,25 @@ function nfePrepararLotes_(nota){
       it.conversaoExigirDecisao=true;
       if(it.conversaoDecisao!=='converter'&&it.conversaoDecisao!=='nao_converter')it.conversaoDecisao='';
 
-      var fAtual=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
-      var fXml=nfeFatorXmlFront_(it);
-      if((!fAtual||Math.abs(fAtual-1)<0.000001)&&fXml>0&&Math.abs(fXml-1)>0.000001){
+      var ud=nfeUnidadeDestinoFront_(it);
+      var fatorBruto=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
+      var fAtual=nfeFatorInteiroParaUnFront_(fatorBruto,ud);
+      var fatorFracionadoIgnorado=!!it.conversaoFatorFracionadoIgnorado||!(fAtual>0);
+      if(!(fAtual>0))fAtual=1;
+      var fXml=nfeFatorInteiroParaUnFront_(nfeFatorXmlFront_(it),ud);
+      if((Math.abs(fAtual-1)<0.000001)&&fXml>0&&Math.abs(fXml-1)>0.000001){
         fAtual=fXml;
         it.conversaoOrigem='xml_tributavel';
+        fatorFracionadoIgnorado=false;
       }
-      if(!fAtual||Math.abs(fAtual-1)<0.000001){
+      if(Math.abs(fAtual-1)<0.000001){
         var fDesc=nfeInferirFatorDescricaoFront_(it.nome||'');
-        if(fDesc>1){fAtual=fDesc;it.conversaoOrigem=it.conversaoOrigem&&it.conversaoOrigem!=='unitario'?it.conversaoOrigem:'descricao_c';}
+        if(fDesc>1){fAtual=fDesc;it.conversaoOrigem=it.conversaoOrigem&&it.conversaoOrigem!=='unitario'?it.conversaoOrigem:'descricao_c';fatorFracionadoIgnorado=false;}
       }
       if(!(fAtual>0))fAtual=1;
+      it.conversaoFatorFracionadoIgnorado=fatorFracionadoIgnorado;
       it.fatorConversaoSugerido=fAtual;
       it.qtdConversaoSugerida=(Number(it.qCom)||0)*fAtual;
-      var ud=nfeUnidadeDestinoFront_(it);
       it.unidadeDestinoSugerida=ud;
       if(!it.unidadeAura||nfeEhEmbalagemFront_(it.unidadeAura)||nfeNormUnidadeFront_(it.unidadeAura)!==nfeNormUnidadeFront_(ud))it.unidadeAura=ud;
       if(it.conversaoDecisao==='converter'){
@@ -5306,9 +5338,11 @@ function nfeItemHtml_(it,i){
   var recebimentoStatus=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
 
   var embalagem=nfePrecisaConversaoFront_(it);
-  var fator=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
   var unNF=String(it.uCom||'');
   var unDestino=nfeUnidadeDestinoFront_(it);
+  var fatorBruto=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
+  var fator=nfeFatorInteiroParaUnFront_(fatorBruto,unDestino);
+  if(!(fator>0)){fator=1;it.conversaoFatorFracionadoIgnorado=true;}
   var qtdSug=(Number(it.qCom)||0)*fator;
   var decisao=String(it.conversaoDecisao||'');
   var convOrig=String(it.conversaoOrigem||'');
@@ -5320,7 +5354,7 @@ function nfeItemHtml_(it,i){
   var totalSugConversao=qtdBaseConversao*fator;
   var decisaoFeita=['converter','nao_converter'].indexOf(decisao)>=0;
   var conversionHtml=embalagem?('<div class="nfe-conv-box '+(decisaoFeita?'decidida':'pendente')+'"><div class="nfe-conv-title"><i class="ti ti-arrows-exchange"></i> Conversão de unidade</div>'
-    +'<div class="nfe-conv-source">'+(fator>1?('Sugestão: '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+' × '+nfeFmtQtd_(fator)+' = <b>'+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</b>'):'A NF-e informa '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+'. Confirme se essa quantidade deve ser convertida para '+nfeEsc_(unDestino)+'.')+'</div>'
+    +'<div class="nfe-conv-source">'+(it.conversaoFatorFracionadoIgnorado?'O fator salvo anteriormente era fracionado para '+nfeEsc_(unDestino)+'. Revise a embalagem ou informe o total; a sugestão inválida foi descartada.':(fator>1?('Sugestão: '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+' × '+nfeFmtQtd_(fator)+' = <b>'+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</b>'):'A NF-e informa '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unNF)+'. Confirme se essa quantidade deve ser convertida para '+nfeEsc_(unDestino)+'.'))+'</div>'
     +(decisaoFeita?('<div class="nfe-conv-decision">'+(decisao==='converter'?'Conversão aplicada: ':'Sem conversão: ')+nfeFmtQtd_(Number(it.qtdEstoque)||qtdBaseConversao)+' '+nfeEsc_(it.unidadeAura||unDestino)+'</div>'):'')
     +'<div class="nfe-conv-choices"><button type="button" class="nfe-conv-choice yes '+(decisao==='converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',true)">SIM · '+nfeFmtQtd_(totalSugConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice no '+(decisao==='nao_converter'?'selected':'')+'" onclick="nfeEscolherConversao_('+i+',false)">NÃO · manter '+nfeFmtQtd_(qtdBaseConversao)+' '+nfeEsc_(unDestino)+'</button><button type="button" class="nfe-conv-choice manual" onclick="nfeAbrirQtdManual_('+i+')">DIGITAR TOTAL</button></div>'
     +'<div class="nfe-conv-manual">'
@@ -5406,12 +5440,13 @@ function nfeToggleItem_(i,v){
   nfeSalvarRascunho_();nfeRenderNota_();
 }
 function nfeDefinirValidadeIndeterminada_(i){var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;var rec=String(it.recebimentoStatus||'RECEBIDO').toUpperCase(),q=Number(it.qtdRecebida!==undefined?it.qtdRecebida:it.qCom)||0;if(rec==='NAO_RECEBIDO'||q<=0){mostrarToast('Este item está marcado como não recebido. Ajuste o recebimento antes de concluir.','warn');nfeRenderNota_();return;}it.controlar=false;it.validadeIndeterminada=true;it.conferenciaSemValidade=true;it.conferenciaManual=true;it.conferenciaEm=new Date().toISOString();(it.lotes||[]).forEach(function(l){l.validade='';});it.conferenciaAssinatura=nfeConferenciaAssinatura_(it);nfeSalvarRascunho_();nfeRenderNota_();mostrarToast('Validade indeterminada: item conferido sem criar lote de validade.','ok');nfeRolarProximaPendencia_(i);}
-function nfeSalvarSetorConfirmadoAgora_(ean,setor){
-  ean=nfeDigitos_(ean||'');setor=String(setor||'Outros');
-  if(!ean||!setor||setor==='Outros')return;
+function nfeSalvarSetorConfirmadoAgora_(ean,setor,it){
+  ean=nfeDigitos_(ean||'');setor=String(setor||'Outros');it=it||{};
+  if(!setor||setor==='Outros')return;
   var actor=nfeOperadorAtual_();if(!actor){mostrarToast('Setor aplicado nesta NF-e, mas não aprendido: selecione o colaborador para salvar no banco.','warn');return;}
-  nfePost_({action:'nfeSalvarSetorConfirmado',actor:actor,email:actor,ean:ean,setor:setor}).then(function(j){
-    if(j&&j.ok){mostrarToast('Setor '+setor+' aprendido para este EAN e os próximos recebimentos.','ok');return;}
+  var nota=_nfeColetaNota||{};
+  nfePost_({action:'nfeSalvarSetorConfirmado',actor:actor,email:actor,ean:ean,cnpjFornecedor:nota.cnpjFornecedor||'',cProd:it.cProd||'',descricao:it.nome||it.nomeAura||'',setor:setor}).then(function(j){
+    if(j&&j.ok){mostrarToast('Setor '+setor+' salvo para este EAN e fornecedor/produto.','ok');return;}
     var err=(j&&j.erro)||'o servidor não confirmou a gravação';
     mostrarToast('Setor aplicado nesta NF-e, mas não aprendido para a próxima: '+err,'warn');
     console.error('[AURA Setores] Falha ao salvar setor manual:',err);
@@ -5427,7 +5462,7 @@ function nfeSetSetor_(i,v){
   var inp=document.getElementById('nfeEan_'+i),ean=nfeDigitos_((inp&&inp.value)||it.eanAura||it.ean||'');
   if(ean)it.eanAura=ean;
   nfeSalvarRascunho_();
-  nfeSalvarSetorConfirmadoAgora_(ean,v);
+  nfeSalvarSetorConfirmadoAgora_(ean,v,it);
   nfeRenderNota_();
 }
 function nfeSetEan_(i,v){var it=_nfeColetaNota.itens[i];if(it){it._campoBusca=String(v||'');it.eanAura=nfeDigitos_(v);it.status='nao_encontrado';it.origemVinculo='manual_novo';it.nomeAura='';it.fornecedorBanco='';it.fotoDataUrl='';it.fotoCarregando=false;}nfeSalvarRascunho_();nfeAtualizarVisualConferenciaItem_(i);}
@@ -5518,6 +5553,9 @@ function nfeAjustarConversao_(i,v){
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   var f=Number(String(v||'').replace(',','.'));
   if(!(f>0)){mostrarToast('Informe um fator de conversão maior que zero','err');nfeRenderNota_();return;}
+  var destino=nfeUnidadeDestinoFront_(it),fValidado=nfeFatorInteiroParaUnFront_(f,destino);
+  if(!(fValidado>0)){mostrarToast('Para unidade UN, o fator precisa ser um número inteiro. Use DIGITAR TOTAL se necessário.','err');nfeRenderNota_();return;}
+  f=fValidado;it.conversaoFatorFracionadoIgnorado=false;
   it.fatorConversaoSugerido=f;
   it.qtdConversaoSugerida=(Number(it.qCom)||0)*f;
   if(it.conversaoDecisao==='converter'){
@@ -5544,6 +5582,8 @@ function nfeDefinirTotalConversao_(i,v){
   if(!(total>=0)||(!total&&status!=='NAO_RECEBIDO')){mostrarToast('Informe uma quantidade final maior que zero','err');nfeRenderNota_();return;}
   if(status==='NAO_RECEBIDO'){it.qtdEstoque=0;nfeSalvarRascunho_();nfeRenderNota_();return;}
   if(!(base>0)){mostrarToast('A quantidade recebida está zerada; não foi possível calcular a conversão','err');nfeRenderNota_();return;}
+  var destinoTotal=nfeUnidadeDestinoFront_(it);
+  if(nfeFatorInteiroParaUnFront_(total,destinoTotal)===0){mostrarToast('A quantidade em UN precisa ser inteira. Confira o total informado.','err');nfeRenderNota_();return;}
   var antiga=Number(it.qtdEstoque||base)||base, fator=total/base;
   var embalagem=!!it.conversaoExigirDecisao||nfeEhEmbalagemFront_(it.uCom);
   var mudou=Math.abs(total-base)>0.001;
@@ -5564,8 +5604,9 @@ function nfeDefinirTotalConversao_(i,v){
 function nfeEscolherConversao_(i,aplicar){
   var it=_nfeColetaNota&&_nfeColetaNota.itens&&_nfeColetaNota.itens[i];if(!it)return;
   var antiga=Number(it.qtdEstoque||it.qCom||0)||0;
-  var f=Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1;
   var destino=nfeUnidadeDestinoFront_(it);
+  var f=nfeFatorInteiroParaUnFront_(Number(it.fatorConversaoSugerido||it.fatorConversao||1)||1,destino);
+  if(!(f>0)){mostrarToast('O fator fracionado não serve para converter em unidades. Informe o total correto.','err');return;}
   var recebimento=String(it.recebimentoStatus||'RECEBIDO').toUpperCase();
   var qtdBase=recebimento==='NAO_RECEBIDO'?0:(recebimento==='PARCIAL'?Number(it.qtdRecebida)||0:Number(it.qCom)||0);
   var nova=qtdBase*(aplicar?f:1);
@@ -5825,7 +5866,7 @@ function nfeSalvarVinculoManual_(i){
   if(!it)return;if(!ean){mostrarToast('Informe o EAN ou código de barras.','warn');return;}if(!/^\d{4}-\d{2}-\d{2}$/.test(validade)){mostrarToast('Informe uma validade válida.','warn');return;}if(!(q>0)){mostrarToast('Informe uma quantidade maior que zero.','warn');return;}
   var fator=String(it.conversaoDecisao||'')==='converter'?(Number(it.fatorConversao||it.fatorConversaoSugerido)||1):1;it.eanAura=ean;it._campoBusca=ean;it.status='aguardando_cadastro';it.origemVinculo='manual_novo';it.setor=setor;it.setorOrigem='manual';it.controlar=true;it.validadeIndeterminada=false;it.conferenciaSemValidade=false;it.conferenciaManual=false;it.conferenciaAssinatura='';it.conferenciaEm='';
   if(!Array.isArray(it.lotes))it.lotes=[];if(!it.lotes.length)it.lotes.push({validade:validade,quantidade:q*fator,lote:''});else{it.lotes[0].validade=validade;it.lotes[0].quantidade=q*fator;}
-  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeSalvarSetorConfirmadoAgora_(ean,setor);nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
+  it.qtdEstoque=it.lotes.reduce(function(a,l){return a+(Number(l.quantidade)||0);},0);it.qtdRecebida=fator?it.qtdEstoque/fator:q;it.recebimentoStatus=it.qtdRecebida<(Number(it.qCom)||0)-0.001?'PARCIAL':'RECEBIDO';it._erroGravacao='';var modal=document.getElementById('nfeVinculoManualModal');if(modal)modal.remove();nfeSalvarRascunho_();nfeSalvarSetorConfirmadoAgora_(ean,setor,it);nfeRenderNota_();mostrarToast('EAN, validade, quantidade e setor aplicados. Revise o item e grave a NF-e.','ok');
 }
 function nfeIndividualMostrarDiagnostico_(c,tipo,extra){
   var el=document.getElementById('nfeIndDiag');if(!el)return;
