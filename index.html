@@ -4461,8 +4461,12 @@ function pararConfete() {
 //     string, o modo tablet continua ativo por causa do nome do arquivo.
 var _modoTablet = window.location.search.indexOf('tablet') >= 0
   || /tablet\.html$/i.test(window.location.pathname);
+var _modoAvatarLogin = /iPhone|iPod/i.test(navigator.userAgent||'')
+  || /(?:individual-iphone15-usuarios|iphone)\.html(?:\/)?$/i.test(window.location.pathname)
+  || /[?&](?:iphone|iphone15)(?:=1)?(?:&|$)/i.test(window.location.search);
 
 function iniciarModoTablet() {
+  if (_modoAvatarLogin) { try { pararScanner(); } catch(e) {} }
   var grid = document.getElementById('tabletGrid');
   var usuarios = COLABORADORES.filter(function(c) {
     // inclui todos, mas marca quem não tem email
@@ -4551,6 +4555,11 @@ function selecionarUsuarioTablet(nome, email) {
   var btn = document.getElementById('trocaUsuarioBtn');
   if (btn) btn.style.display = 'flex';
   document.getElementById('tabletSearch').value = '';
+
+  if (_modoAvatarLogin) {
+    try { iniciarScanner(); }
+    catch(e) { console.warn('[AURA Coleta iPhone] Câmera será iniciada ao tocar no leitor:', e && e.message || e); }
+  }
 
   // Verifica aniversário e busca tarefas
   setTimeout(function() { verificarAniversario(email, nome); }, 400);
@@ -6467,6 +6476,17 @@ async function nfeHistSalvarEdicao_(idx){
   atualizarPendUI();
   setTimeout(nfeAtualizarCardPendente_, 120);
 
+  if (_modoAvatarLogin) {
+    try {
+      var cacheUsuarios=localStorage.getItem('colaboradoresCache');
+      if(cacheUsuarios){var usuariosCache=JSON.parse(cacheUsuarios);if(Array.isArray(usuariosCache))COLABORADORES=usuariosCache;}
+    } catch(e) { console.warn('[AURA Coleta iPhone] Cache de colaboradores indisponível:', e); }
+    var modalUsuarios=document.getElementById('tabletModal');
+    if(modalUsuarios)modalUsuarios.classList.add('open');
+    if(COLABORADORES.length)renderGridTablet(COLABORADORES);
+    else {var gridUsuarios=document.getElementById('tabletGrid');if(gridUsuarios)gridUsuarios.innerHTML='<div class="tablet-loading"><i class="ti ti-loader-2"></i> Carregando colaboradores…</div>';}
+  }
+
   // Carrega a lista de colaboradores da planilha antes de qualquer coisa
   // que dependa dela (seletor do tablet, verificação de aniversário, etc.)
   await carregarColaboradores();
@@ -6474,6 +6494,9 @@ async function nfeHistSalvarEdicao_(idx){
   if (_modoTablet) {
     // Modo tablet: sempre mostra o seletor de usuário
     setTimeout(iniciarModoTablet, 100);
+  } else if (_modoAvatarLogin) {
+    var modalAvatar=document.getElementById('tabletModal');
+    if(modalAvatar&&modalAvatar.classList.contains('open'))renderGridTablet(COLABORADORES);
   } else {
     // Modo pessoal: inicia a leitura ao retornar com usuário já configurado.
     if (cfg.email) setTimeout(function(){if(document.visibilityState!=='hidden'&&!scannerAtivo&&!_scannerIniciando)iniciarScanner();},120);
