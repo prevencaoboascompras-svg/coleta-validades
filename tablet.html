@@ -2115,7 +2115,7 @@ async function iniciarScanner() {
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
   if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
-    var constraints = { video: { facingMode: { ideal: 'environment' } } };
+    var constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
@@ -2211,7 +2211,7 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
       _videoStream = zxStream;
 
       videoEl.srcObject = zxStream;
@@ -2444,8 +2444,6 @@ function onScanSuccess(code) {
   // Normalizar EAN-13 → UPC-A (cortar zero na frente)
   code = normalizarCodigo(code);
   console.log('onScanSuccess chamado com código: ' + code + ' (codigoAtual era: ' + (codigoAtual || '(vazio)') + ')');
-
-  if (code === codigoAtual) { console.warn('Ignorado: código igual ao atual'); return; }
 
   pararScanner();
 
