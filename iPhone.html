@@ -1398,6 +1398,17 @@ body.tarefas-hist-aberta{overflow:hidden}
     </button>
   </div>
 </header>
+<div id="auraRetiradasBanner" class="aura-alert-banner aura-alert-red" hidden role="alert">
+  <span class="aura-alert-icon"><i class="ti ti-alert-triangle"></i></span>
+  <span class="aura-alert-copy"><b>RETIRADAS PENDENTES</b><small><span id="auraRetiradasCount">0</span> produto(s) vencido(s) ainda com saldo. Retire na abertura.</small></span>
+  <button type="button" onclick="abrirRetiradasPendentes_()">Ver pendências <i class="ti ti-chevron-right"></i></button>
+</div>
+<div id="auraTarefasBanner" class="aura-alert-banner aura-alert-yellow" hidden role="button" tabindex="0" onclick="abrirTarefasPeloBanner_()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirTarefasPeloBanner_();}">
+  <span class="aura-alert-icon"><i class="ti ti-clipboard-check"></i></span>
+  <span class="aura-alert-copy"><b>TAREFAS PENDENTES</b><small><span id="auraTarefasCount">0</span> tarefa(s) aguardando conferência ou execução. Toque para abrir e registrar.</small></span>
+  <span class="aura-alert-go"><i class="ti ti-chevron-right"></i></span>
+</div>
+
 
 <!-- BANNER DE REGISTROS PENDENTES (v-fix: aviso explícito, visível direto
      na tela principal, em vez de só a bolinha no ícone de configurações) -->
@@ -6120,6 +6131,7 @@ async function nfeColetaSalvar(){
 //  RETIRADAS — restaurado v6.45 · consulta dentro do app + PDF
 // ═══════════════════════════════════════════════════════════
 var _retiradaItens=[];
+var _retiradaModoPendentes=false;
 var _retiradaFotos=Object.create(null);
 var _retiradaToken=0;
 var _retiradaScannerEstavaAtivo=false;
@@ -6185,6 +6197,7 @@ function abrirRetiradas(){
 function fecharRetiradas(){
   if(!_retiradaAberta)return;
   _retiradaAberta=false;
+  _retiradaModoPendentes=false;
   _retiradaToken++;
   var view=document.getElementById('retiradaView');
   if(view){
@@ -6206,6 +6219,7 @@ function fecharRetiradas(){
 function retiradaAtalho(delta){
   var d=new Date();
   d.setDate(d.getDate()+Number(delta||0));
+  _retiradaModoPendentes=false;
   var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   var inp=document.getElementById('retiradaData');
   if(inp)inp.value=iso;
@@ -6213,6 +6227,8 @@ function retiradaAtalho(delta){
 }
 
 async function carregarRetiradas(manual){
+  if(manual)_retiradaModoPendentes=false;
+  var modoPendentes=!!_retiradaModoPendentes;
   var cfg=loadCfg();
   var inp=document.getElementById('retiradaData');
   var iso=(inp&&inp.value)||retiradaHojeIso_();
@@ -6232,7 +6248,7 @@ async function carregarRetiradas(manual){
   document.getElementById('retiradaTotalProdutos').textContent='—';
   document.getElementById('retiradaTotalQtd').textContent='—';
   var ctx=document.getElementById('retiradaContexto');
-  if(ctx)ctx.innerHTML='<i class="ti ti-calendar"></i><span>'+retiradaMensagemData_(iso)+'.</span>';
+  if(ctx)ctx.innerHTML=modoPendentes?'<i class="ti ti-alert-triangle"></i><span>Todos os lotes vencidos com saldo pendentes de retirada, de qualquer data anterior a hoje.</span>':'<i class="ti ti-calendar"></i><span>'+retiradaMensagemData_(iso)+'.</span>';
 
   if(!cfg.url){
     var semUrl='Configure a URL do Apps Script para consultar as retiradas.';if(status)status.innerHTML='<i class="ti ti-alert-circle"></i> '+semUrl;
@@ -6244,7 +6260,7 @@ async function carregarRetiradas(manual){
   }
 
   try{
-    var retiradaUrl=cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now();
+    var retiradaUrl=modoPendentes?cfg.url+'?action=buscarRetiradasPendentes&_='+Date.now():cfg.url+'?action=buscarRetiradasValidades&data='+encodeURIComponent(iso)+'&_='+Date.now();
     var resp;
     try{
       resp=await fetchComTimeout(retiradaUrl,{method:'GET',cache:'no-store'},60000);
@@ -6305,7 +6321,7 @@ function renderRetiradas_(iso){
       if(alvo.getTime()===hoje.getTime())msg='Nenhum produto vence hoje';
       else if(alvo<hoje)msg='Nenhum produto venceu nesse dia';
     }
-    lista.innerHTML='<div class="retirada-empty"><i class="ti ti-circle-check"></i><strong>'+msg+'</strong><span>Tudo dentro da validade para a data consultada.</span></div>';
+    if(_retiradaModoPendentes){msg='Nenhuma retirada pendente';}lista.innerHTML='<div class="retirada-empty"><i class="ti ti-circle-check"></i><strong>'+msg+'</strong><span>'+(_retiradaModoPendentes?'Não há lotes vencidos com saldo positivo.':'Tudo dentro da validade para a data consultada.')+'</span></div>';
     return;
   }
 
@@ -6888,20 +6904,10 @@ async function nfeHistSalvarEdicao_(idx){
     var temCache=cached!==null&&cached>0,numero=temCache?String(cached):'…',rot=temCache?(' tarefa'+(cached===1?'':'s')+' pendente'+(cached===1?'':'s')+' para hoje'):' tarefas de hoje';
     return '<div class="aura-task-notice"><div class="aura-task-notice-kicker">AURA · Tarefas do dia</div><h3><span id="auraTaskNome">'+nome+'</span>, há <span id="auraTaskCount" class="count'+(temCache?'':' loading')+'">'+numero+'</span><span id="auraTaskRotulo">'+rot+'</span></h3><p>Verifique os produtos pendentes. Se for de <b>prateleira</b>, leve para o carrinho de ofertas. Se for <b>refrigerado</b>, etiquete e mantenha na frente do expositor.</p><div class="aura-task-notice-price">Quando houver ação por validade, use o <b>preço sugerido</b> mostrado pela AURA.</div><div class="aura-task-notice-actions"><button id="auraTaskContinueBtn">Continuar no app</button><button id="auraTaskOpenBtn" class="primary">Ver tarefas</button></div></div>';
   }
-  function prepararAvisoImediato_(){
-    var cfg=loadCfg();if(!cfg||!cfg.email)return null;var nome=nomeAtual_(cfg),sess=getSessao_(cfg.email),ctx={cfg:cfg,nome:nome,sess:sess,qtd:0,acao:'',fechado:false,regAcesso:false};
-    registrarAcessoBg_(ctx);
-    if(!perfilPodeTarefas_(cfg)){cacheCountSet_(cfg.email,0);_tarefasLimparPerfilSemAcessoColeta_();return null;}
-    var emailEntrada=String(cfg.email||'').toLowerCase();if(_auraEntradaPopupEmail_===emailEntrada)return null;_auraEntradaPopupEmail_=emailEntrada;
-    window._auraTaskCurrentSession=sess;window._auraTaskAppLabel=APP_LABEL;
-    var cached=cacheCountGet_(cfg.email),back=document.createElement('div');back.id='auraTaskNotice';back.className='aura-task-notice-back';back.innerHTML=htmlAviso_(nome,cached);document.body.appendChild(back);ctx.el=back;window._auraTaskNoticeCtx=ctx;
-    var bc=document.getElementById('auraTaskContinueBtn'),bv=document.getElementById('auraTaskOpenBtn');
-    if(bc)bc.onclick=function(){ctx.acao='continuar';ctx.fechado=true;fecharAviso_();registrarAvisoBg_(ctx,'continuar',true);};
-    if(bv)bv.onclick=function(){ctx.acao='ver_tarefas';ctx.fechado=true;fecharAviso_();registrarAvisoBg_(ctx,'ver_tarefas',true);try{abrirCentralTarefas();}catch(e){}};
-    return ctx;
-  }
+  function prepararAvisoImediato_(){var cfg=loadCfg();if(!cfg||!cfg.email)return null;var ctx={cfg:cfg,nome:nomeAtual_(cfg),sess:getSessao_(cfg.email),qtd:0,regAcesso:false,suppressAutoNotice:true};window._auraTaskCurrentSession=ctx.sess;window._auraTaskAppLabel=APP_LABEL;registrarAcessoBg_(ctx);return ctx;}
   function aplicarQtdAviso_(ctx,qtd){
     qtd=Math.max(0,Number(qtd)||0);cacheCountSet_(ctx&&ctx.cfg&&ctx.cfg.email,qtd);if(!ctx)return;ctx.qtd=qtd;
+    if(ctx.suppressAutoNotice)return;
     if(qtd<=0){if(!ctx.fechado){fecharAviso_();ctx.fechado=true;}registrarAvisoBg_(ctx,'sem_pendencias',false);return;}
     if(ctx.fechado)return;var c=document.getElementById('auraTaskCount'),r=document.getElementById('auraTaskRotulo');if(c){c.textContent=String(qtd);c.classList.remove('loading');}if(r)r.textContent=' tarefa'+(qtd===1?'':'s')+' pendente'+(qtd===1?'':'s')+' para hoje';registrarAvisoBg_(ctx,'exibido',true);
   }
@@ -7144,5 +7150,28 @@ async function nfeHistSalvarEdicao_(idx){
     return '<div class="aura-validade-price'+(eligible&&d<=10?' urgent':'')+'">'+badgeHtml(sale,promo,status,context)+'</div>';};
 })();
 </script>
+<style id="auraPendingBannersStyle">
+.aura-alert-banner{margin:10px 16px;padding:11px 13px;border-radius:12px;display:flex;align-items:center;gap:10px;cursor:pointer;position:relative;z-index:2;box-shadow:0 4px 18px rgba(0,0,0,.20)}
+.aura-alert-banner[hidden]{display:none!important}.aura-alert-icon{font-size:21px;flex:none}.aura-alert-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}.aura-alert-copy b{font-size:12px;font-weight:950;letter-spacing:.035em}.aura-alert-copy small{font-size:10px;line-height:1.35}.aura-alert-go{font-size:20px;flex:none}.aura-alert-red{color:#fff;background:#bd171c;border:1px solid #ff7777;animation:auraRedPulse 1.1s ease-in-out infinite;cursor:default}.aura-alert-red .aura-alert-icon{color:#fff}.aura-alert-red button{border:1px solid rgba(255,255,255,.55);background:#fff;color:#9d1015;border-radius:9px;padding:8px 10px;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}.aura-alert-yellow{color:#422d00;background:linear-gradient(110deg,#fff3a1,#ffd52e 48%,#fff0a0);border:1px solid #ffed74;box-shadow:0 0 0 2px rgba(255,219,65,.24),0 0 20px rgba(255,205,0,.62);animation:auraYellowGlow 1.7s ease-in-out infinite}.aura-alert-yellow .aura-alert-icon{color:#8a6100}.aura-alert-yellow .aura-alert-copy small{color:#503900}.aura-alert-yellow:focus-visible{outline:3px solid #8a6100;outline-offset:2px}@keyframes auraRedPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,30,30,.42);filter:brightness(1)}50%{box-shadow:0 0 0 5px rgba(255,30,30,.12);filter:brightness(1.12)}}@keyframes auraYellowGlow{0%,100%{box-shadow:0 0 0 2px rgba(255,219,65,.20),0 0 14px rgba(255,205,0,.42)}50%{box-shadow:0 0 0 3px rgba(255,219,65,.38),0 0 24px rgba(255,205,0,.78)}}@media(max-width:480px){.aura-alert-banner{margin:8px 10px;padding:10px;gap:8px}.aura-alert-copy b{font-size:11px}.aura-alert-copy small{font-size:9px}.aura-alert-red button{padding:8px 7px;font-size:9px}}@media(prefers-reduced-motion:reduce){.aura-alert-banner{animation:none}}
+</style>
+
+<script id="auraPendingBannersScript">
+(function(){
+  'use strict';
+  var retiradaBusy=false,retiradaNext=0,taskViewBusy=false;
+  function cfg_(){try{return loadCfg()||{};}catch(e){return {};}}
+  function atualizarTarefas_(){var box=document.getElementById('auraTarefasBanner'),count=document.getElementById('auraTarefasCount'),cfg=cfg_(),u=(window.COLABORADORES||[]).filter(function(x){return String(x.email||'').toLowerCase()===String(cfg.email||'').toLowerCase();})[0];if(!box)return;if(typeof _tarefasPerfilAtualColeta_==='function')u=_tarefasPerfilAtualColeta_();var permitido=!!u&&u.veTarefas===true&&u.recebeTarefas===true;var n=permitido?((_tarefasPendentes||[]).filter(function(t){var f=t.fase||tarefasHistFaseLocal_(t);return (f==='pendente'||f==='respondida');}).length):0;if(count)count.textContent=n;box.hidden=n<1;}
+  function buscarRetiradas_(){var cfg=cfg_(),box=document.getElementById('auraRetiradasBanner');if(!box||!cfg.url||!navigator.onLine||retiradaBusy||Date.now()<retiradaNext)return;retiradaBusy=true;retiradaNext=Date.now()+300000;fetch(cfg.url+'?action=buscarRetiradasPendentes&_='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(d){if(!d||d.ok===false)throw new Error((d&&d.erro)||'Consulta indisponível');var n=Math.max(0,Number(d.totalProdutos)||((d.itens||[]).length));var c=document.getElementById('auraRetiradasCount');if(c)c.textContent=n;box.hidden=n<1;window._auraRetiradasPendentesCache_=Array.isArray(d.itens)?d.itens:[];}).catch(function(e){console.warn('[AURA] Não foi possível atualizar o banner de retiradas:',e);}).finally(function(){retiradaBusy=false;});}
+  window.abrirRetiradasPendentes_=function(){_retiradaModoPendentes=true;abrirRetiradas();};
+  function registrarVisualizacaoTarefas_(){var cfg=cfg_(),email=String(cfg.email||'').toLowerCase(),u=typeof _tarefasPerfilAtualColeta_==='function'?_tarefasPerfilAtualColeta_():null,app=window._auraTaskAppLabel||'Coleta',sess=window._auraTaskCurrentSession||('view-'+app+'-'+Date.now());if(cfg.url&&email)fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'registrarVisualizacaoTarefas',sessao:sess,email:email,nome:u&&u.nome||'',app:app,pendentes:Number((_tarefasPendentes||[]).length)||0,acao:'visualizou_tarefas',exibiu:true,exibidoEmCliente:new Date().toISOString()})}).catch(function(){});}
+  window.abrirTarefasPeloBanner_=function(){if(taskViewBusy)return;taskViewBusy=true;try{abrirCentralTarefas();}finally{setTimeout(function(){taskViewBusy=false;},600);}};
+  function ligarAberturaTarefas_(){var f=window.abrirCentralTarefas;if(typeof f!=='function'||f.__auraViewWrapped)return;var w=function(){registrarVisualizacaoTarefas_();if(window.auraAuditarAcaoMobile_)window.auraAuditarAcaoMobile_('Tarefas','Abriu e visualizou tarefas','visualizada');return f.apply(this,arguments);};w.__auraViewWrapped=true;window.abrirCentralTarefas=w;}
+  ligarAberturaTarefas_();
+  setInterval(function(){atualizarTarefas_();ligarAberturaTarefas_();if(document.visibilityState==='visible')buscarRetiradas_();},1500);
+  window.addEventListener('online',function(){retiradaNext=0;buscarRetiradas_();});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){retiradaNext=0;buscarRetiradas_();atualizarTarefas_();}});
+  setTimeout(function(){atualizarTarefas_();buscarRetiradas_();},1800);
+})();
+</script>
+
 </body>
 </html>
