@@ -1231,7 +1231,10 @@ body.tarefas-hist-aberta{overflow:hidden}
 @media(max-width:430px){
   body{width:100%;max-width:480px;margin:0 auto}
   .hdr{width:100%;max-width:480px;padding-left:16px;padding-right:16px}
-  .scan-wrap{margin:12px;height:clamp(100px,14vh,150px);min-height:100px}
+  .scan-wrap{margin:9px 10px;height:clamp(180px,25vh,230px);min-height:180px;border-radius:10px;background:#101010;border:1px solid rgba(226,75,74,.55);isolation:isolate}
+  #scannerView{z-index:1;display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;background:#101010;overflow:hidden!important}
+  #scannerView video{position:absolute!important;inset:0!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;transform:none!important;object-fit:cover!important;object-position:center center!important}
+  .corner{z-index:3;width:24px;height:24px}.corner.tl{top:9px;left:9px}.corner.tr{top:9px;right:9px}.corner.bl{bottom:9px;left:9px}.corner.br{bottom:9px;right:9px}
   .prod-row{margin:0 10px 8px;padding:8px;gap:9px;align-items:flex-start}
   .prod-foto{width:108px;height:108px}
   .prod-info{gap:5px}
@@ -2024,7 +2027,7 @@ async function iniciarScanner() {
   // Em iOS pulamos esse motor: o BarcodeDetector do WebKit existe mas
   // .detect() nunca retorna resultado real (bug WebKit #281848).
   if (typeof BarcodeDetector !== 'undefined' && !isIOS()) {
-    var constraints = { video: { facingMode: { ideal: 'environment' } } };
+    var constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
@@ -2120,7 +2123,7 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
       _videoStream = zxStream;
 
       videoEl.srcObject = zxStream;
@@ -2353,8 +2356,6 @@ function onScanSuccess(code) {
   // Normalizar EAN-13 → UPC-A (cortar zero na frente)
   code = normalizarCodigo(code);
   console.log('onScanSuccess chamado com código: ' + code + ' (codigoAtual era: ' + (codigoAtual || '(vazio)') + ')');
-
-  if (code === codigoAtual) { console.warn('Ignorado: código igual ao atual'); return; }
 
   pararScanner();
 
