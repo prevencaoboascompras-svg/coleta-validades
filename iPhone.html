@@ -1899,6 +1899,48 @@ var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
+async function scannerAplicarZoomInicial_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return false;
+    var caps=track.getCapabilities()||{},range=caps.zoom;
+    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return false;
+    var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),1.5));
+    var step=Number(range.step)||0.1;
+    target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
+    target=Math.max(Number(range.min),Math.min(Number(range.max),target));
+    if(current>=target-0.04)return true;
+    await track.applyConstraints({advanced:[{zoom:target}]});
+    console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
+    return true;
+  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');return false;}
+}
+
+async function scannerAbrirCameraIOS_(){
+  var devices=navigator.mediaDevices;
+  if(!devices||!devices.getUserMedia)throw new Error('Câmera indisponível neste navegador.');
+  var video={facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}};
+  try{
+    return await devices.getUserMedia({audio:false,video:video});
+  }catch(e){
+    // Alguns iPhones/WebViews rejeitam resolução ou frame rate ideais.
+    // Reabre com as restrições básicas, sem trocar o fluxo de leitura.
+    return await devices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+  }
+}
+
+async function scannerAtivarFocoContinuo_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    var focus=(track.getCapabilities()||{}).focusMode;
+    if(Array.isArray(focus)&&focus.indexOf('continuous')!==-1){
+      await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+    }
+  }catch(e){console.info('[AURA Scanner] Foco contínuo permanece no padrão automático.');}
+}
+
 var _nativeLoop   = null;
 
 // ═══════════════════════════════════════════════════════════
@@ -2099,6 +2141,7 @@ async function iniciarScanner() {
     try {
       var stream = await navigator.mediaDevices.getUserMedia(constraints);
       _videoStream = stream;
+      scannerAplicarZoomInicial_(_videoStream);
 
       // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
 
@@ -2189,8 +2232,10 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      var zxStream = await scannerAbrirCameraIOS_();
       _videoStream = zxStream;
+      await scannerAplicarZoomInicial_(_videoStream);
+      await scannerAtivarFocoContinuo_(_videoStream);
 
       videoEl.muted = true;
       videoEl.autoplay = true;
@@ -2204,7 +2249,7 @@ async function iniciarScanner() {
         });
       }
 
-      // Mantém foco automático e seleção de câmera no padrão do navegador.
+      // Solicita foco contínuo apenas quando o iPhone expõe esse recurso.
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
       // decodeFromStream() retorna uma Promise que resolve num objeto de
