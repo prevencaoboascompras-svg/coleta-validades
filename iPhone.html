@@ -1274,9 +1274,9 @@ body.tarefas-hist-aberta{overflow:hidden}
   .hdr{padding:calc(10px + env(safe-area-inset-top,0px)) 11px 8px;gap:6px}
   .hdr-title{font-size:15px}.hdr-sub{font-size:9px;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hdr>div:last-child{gap:4px!important}.hdr-btn{width:32px;height:32px;border-radius:9px;font-size:15px}
-  .scan-wrap{height:clamp(140px,18vh,158px);min-height:136px;margin:9px 10px;border-radius:10px;background:#101010;border:1px solid rgba(226,75,74,.55);isolation:isolate}
-  #scannerView{z-index:1;background:#101010}
-  #scannerView video{width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:center!important}
+  .scan-wrap{height:clamp(180px,25vh,230px);min-height:180px;margin:9px 10px;border-radius:10px;background:#101010;border:1px solid rgba(226,75,74,.55);isolation:isolate}
+  #scannerView{z-index:1;display:block;background:#101010;overflow:hidden}
+  #scannerView video{width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:center center!important}
   .corner{z-index:3;width:24px;height:24px}.corner.tl{top:9px;left:9px}.corner.tr{top:9px;right:9px}.corner.bl{bottom:9px;left:9px}.corner.br{bottom:9px;right:9px}
   .laser{z-index:4}.scan-flash{z-index:5}.scan-state{z-index:6}
   .prod-row{margin:0 10px 8px;padding:8px;gap:8px;border-radius:10px}
@@ -1899,24 +1899,46 @@ var _motorAtivo  = null;
 // referências para parar
 var _videoStream  = null;
 var _videoEl      = null;
-function scannerAplicarZoomInicial_(stream){
+async function scannerAplicarZoomInicial_(stream){
   try{
     var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
-    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    if(!track||!track.getCapabilities||!track.applyConstraints)return false;
     var caps=track.getCapabilities()||{},range=caps.zoom;
-    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return;
+    if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return false;
     var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
     var target=Math.max(Number(range.min),Math.min(Number(range.max),1.5));
     var step=Number(range.step)||0.1;
     target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
     target=Math.max(Number(range.min),Math.min(Number(range.max),target));
-    if(current>=target-0.04)return;
-    track.applyConstraints({advanced:[{zoom:target}]}).then(function(){
-      console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
-    }).catch(function(err){
-      console.info('[AURA Scanner] Zoom da câmera indisponível; mantendo padrão:',String(err&&err.name||err||''));
-    });
-  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');}
+    if(current>=target-0.04)return true;
+    await track.applyConstraints({advanced:[{zoom:target}]});
+    console.info('[AURA Scanner] Zoom inicial aplicado:',target+'x');
+    return true;
+  }catch(e){console.info('[AURA Scanner] Zoom da câmera não exposto; mantendo padrão.');return false;}
+}
+
+async function scannerAbrirCameraIOS_(){
+  var devices=navigator.mediaDevices;
+  if(!devices||!devices.getUserMedia)throw new Error('Câmera indisponível neste navegador.');
+  var video={facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}};
+  try{
+    return await devices.getUserMedia({audio:false,video:video});
+  }catch(e){
+    // Alguns iPhones/WebViews rejeitam resolução ou frame rate ideais.
+    // Reabre com as restrições básicas, sem trocar o fluxo de leitura.
+    return await devices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+  }
+}
+
+async function scannerAtivarFocoContinuo_(stream){
+  try{
+    var track=stream&&stream.getVideoTracks&&stream.getVideoTracks()[0];
+    if(!track||!track.getCapabilities||!track.applyConstraints)return;
+    var focus=(track.getCapabilities()||{}).focusMode;
+    if(Array.isArray(focus)&&focus.indexOf('continuous')!==-1){
+      await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+    }
+  }catch(e){console.info('[AURA Scanner] Foco contínuo permanece no padrão automático.');}
 }
 
 var _nativeLoop   = null;
@@ -2210,9 +2232,10 @@ async function iniciarScanner() {
       // ser concedida, recebe um device "fantasma" sem deviceId real, e a
       // constraint falha silenciosamente sem nunca mostrar o popup de permissão
       // (é por isso que "Permissão de câmera" ficava travada em "prompt").
-      var zxStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      var zxStream = await scannerAbrirCameraIOS_();
       _videoStream = zxStream;
-      scannerAplicarZoomInicial_(_videoStream);
+      await scannerAplicarZoomInicial_(_videoStream);
+      await scannerAtivarFocoContinuo_(_videoStream);
 
       videoEl.muted = true;
       videoEl.autoplay = true;
@@ -2226,7 +2249,7 @@ async function iniciarScanner() {
         });
       }
 
-      // Mantém o foco automático contínuo sem fixar zoom ou distância de foco.
+      // Solicita foco contínuo apenas quando o iPhone expõe esse recurso.
 
       // Agora entrega o stream já autorizado pro ZXing decodificar
       // decodeFromStream() retorna uma Promise que resolve num objeto de
