@@ -1906,7 +1906,7 @@ async function scannerAplicarZoomInicial_(stream){
     var caps=track.getCapabilities()||{},range=caps.zoom;
     if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return false;
     var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
-    var target=Math.max(Number(range.min),Math.min(Number(range.max),4));
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),3));
     var step=Number(range.step)||0.1;
     target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
     target=Math.max(Number(range.min),Math.min(Number(range.max),target));
@@ -1951,6 +1951,7 @@ var _nativeLoop   = null;
 var _zxingAtivo = false;
 var _zxingReader = null;
 var _zxingControls = null; // objeto retornado por decodeFromStream — .stop() cancela o loop de verdade
+var _zxTryHarderAtivo = false;
 var _timerAviso = null; // Timer para vibrar quando não detecta código
 var _ultimoScan = 0; // Timestamp do último scan bem-sucedido
 
@@ -2007,6 +2008,7 @@ async function _coletarInfoAmbiente() {
   linhas.push('ZXingBrowser carregado: ' + (typeof ZXingBrowser !== 'undefined'));
   if (typeof ZXingBrowser !== 'undefined') {
     linhas.push('ZXingBrowser.BrowserMultiFormatReader: ' + (!!ZXingBrowser.BrowserMultiFormatReader));
+    linhas.push('ZXing TRY_HARDER: ' + (_zxTryHarderAtivo ? 'ativo — tenta código invertido e rotação de 90°' : 'não aplicado'));
   }
   linhas.push('getUserMedia disponível: ' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
   linhas.push('Motor de leitura ativo: ' + (_motorAtivo || 'nenhum'));
@@ -2222,7 +2224,8 @@ async function iniciarScanner() {
     patchVideoForIOS(videoEl);
 
     // Leitor multi-formato padrão, com configurações padrão de leitura.
-    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader();
+    var zxHints=scannerCriarHintsZXing_();
+    _zxingReader = new ZXingBrowser.BrowserMultiFormatReader(zxHints||undefined);
     _zxingReader.timeBetweenScansMillis = 150;
 
     try {
@@ -2462,6 +2465,22 @@ function iniciarTimerAviso() { limparTimerAviso(); }
 
 function limparTimerAviso() {
   if (_timerAviso) { clearTimeout(_timerAviso); _timerAviso = null; }
+}
+
+function scannerCriarHintsZXing_(){
+  _zxTryHarderAtivo=false;
+  try{
+    var F=ZXingBrowser&&ZXingBrowser.BarcodeFormat;
+    if(!F||typeof Map==='undefined')return null;
+    var hints=new Map();
+    var formats=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39,F.CODE_93,F.ITF].filter(function(x){return x!==undefined&&x!==null;});
+    // @zxing/browser 0.1.5 nao expoe DecodeHintType no global UMD.
+    // Valores numericos correspondem ao enum de @zxing/library: POSSIBLE_FORMATS=2, TRY_HARDER=3.
+    if(formats.length)hints.set(2,formats);
+    hints.set(3,true);
+    _zxTryHarderAtivo=true;
+    return hints.size?hints:null;
+  }catch(e){_zxTryHarderAtivo=false;return null;}
 }
 
 function onScanSuccess(code) {
