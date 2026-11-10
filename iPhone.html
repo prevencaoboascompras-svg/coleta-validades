@@ -1906,7 +1906,7 @@ async function scannerAplicarZoomInicial_(stream){
     var caps=track.getCapabilities()||{},range=caps.zoom;
     if(!range||!isFinite(Number(range.min))||!isFinite(Number(range.max))||Number(range.max)<=Number(range.min))return false;
     var settings=track.getSettings?track.getSettings():{},current=Number(settings.zoom)||Number(range.min);
-    var target=Math.max(Number(range.min),Math.min(Number(range.max),2));
+    var target=Math.max(Number(range.min),Math.min(Number(range.max),4));
     var step=Number(range.step)||0.1;
     target=Number(range.min)+Math.round((target-Number(range.min))/step)*step;
     target=Math.max(Number(range.min),Math.min(Number(range.max),target));
